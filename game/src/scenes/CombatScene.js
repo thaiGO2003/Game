@@ -1,16 +1,15 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
-import { BASE_ITEMS, CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
-import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
-import { loadUiSettings, saveUiSettings } from "../core/uiSettings.js";
-import { createDefaultRunState, hydrateRunState, serializeRunState } from "../core/runState.js";
+import { VfxController } from "../core/vfx.js";
+import { saveUiSettings } from "../core/uiSettings.js";
+import { hydrateRunState } from "../core/runState.js";
 import {
   clamp,
   createUnitUid,
@@ -106,16 +105,12 @@ const UI_COLORS = {
   panelEdge: 0x5aa8c8,
   panelEdgeSoft: 0x39576f,
   accent: 0x8de8ff,
-  accentSoft: 0x50bfd8,
   cta: 0xbdcf47,
   ctaHover: 0xd4e665,
   ctaEdge: 0xf2ff9a,
   textPrimary: "#e9f5ff",
   textSecondary: "#a6bed3",
   textMuted: "#7f94a7",
-  badgeTier: 0x1c3c58,
-  badgeRole: 0x1f4a3a,
-  badgeCost: 0x4b3a1f,
   boardLeft: 0x133627,
   boardLeftEdge: 0x4cc99b,
   boardRight: 0x3d2523,
@@ -140,9 +135,9 @@ const HISTORY_FILTERS = [
   { key: "EVENT", label: "Sự kiện" }
 ];
 
-export class PlanningScene extends Phaser.Scene {
+export class CombatScene extends Phaser.Scene {
   constructor() {
-    super("PlanningScene");
+    super("CombatScene");
     this.phase = PHASE.PLANNING;
     this.aiMode = "MEDIUM";
     this.tileLookup = new Map();
@@ -160,20 +155,10 @@ export class PlanningScene extends Phaser.Scene {
     this.actionCount = 0;
     this.globalDamageMult = 1;
     this.isActing = false;
-    this.persistEnabled = true;
-    this.incomingData = null;
+    this.runStatePayload = null;
     this.layout = null;
-    this.runtimeSettings = loadUiSettings();
-    this.gameMode = "PVE_JOURNEY";
-    this.boardZoom = 1;
-    this.boardPanX = 0;
-    this.boardPanY = 0;
-    this.isBoardDragging = false;
-    this.lastDragPoint = null;
-    this.boardPointerDown = null;
-    this.boardDragConsumed = false;
-    this.gapMarkers = [];
-    this.boardEdgeLabels = [];
+    this.settingsVisible = false;
+    this.settingsOverlay = [];
     this.roundBackgroundImage = null;
     this.roundBackgroundMask = null;
     this.roundBackgroundKey = null;
@@ -190,909 +175,33 @@ export class PlanningScene extends Phaser.Scene {
     this.attackPreviewLayer = null;
     this.attackPreviewSword = null;
     this.previewHoverUnit = null;
-    this.headerStatChips = {};
-    this.headerMetaText = null;
-    this.enemyInfoExpanded = false;
-    this.inventoryCells = [];
-    this.storageSummaryText = null;
-    this.storageCraftText = null;
-    this.rightPanelContentWidth = 0;
     this.rightPanelArea = null;
     this.rightPanelMask = null;
     this.rightPanelMaskShape = null;
     this.rightPanelScrollItems = [];
     this.rightPanelScrollOffset = 0;
     this.rightPanelMaxScroll = 0;
+    this.boardEdgeLabels = [];
+    this.gapMarkers = [];
   }
 
   init(data) {
-    this.incomingData = data ?? null;
+    this.runStatePayload = data?.runState ?? null;
   }
 
   create() {
     this.cameras.main.setBackgroundColor("#10141b");
-    this.input.mouse?.disableContextMenu();
     this.layout = this.computeLayout();
-    this.runtimeSettings = this.incomingData?.settings ?? loadUiSettings();
-    this.gameMode = this.incomingData?.mode ?? this.gameMode;
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
-    this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
-    this.audioFx.startBgm("bgm_planning", 0.2);
+    this.vfx = new VfxController(this);
     this.drawBoard();
     this.createHud();
-    this.createButtons();
     this.createHistoryModal();
     this.createSettingsOverlay();
-    this.createPlayerCellZones();
-    this.createBenchSlots();
-    this.setupBoardViewInput();
-    this.setupInput();
-
-    const forceNewRun = this.incomingData?.forceNewRun === true;
-    if (forceNewRun) {
-      this.startNewRun();
-    } else {
-      const loaded = this.incomingData?.restoredState
-        ? hydrateRunState(this.incomingData.restoredState)
-        : hydrateRunState(loadProgress());
-      if (loaded) {
-        this.applyRunState(loaded);
-        this.prepareEnemyPreview();
-        this.addLog("Đã khôi phục tiến trình.");
-      } else {
-        this.startNewRun();
-      }
-    }
-
-    this.applyRuntimeSettings(this.runtimeSettings);
-
-    if (this.incomingData?.combatResult) {
-      this.applyCombatResult(this.incomingData.combatResult);
-    }
-  }
-
-  applyRuntimeSettings(settings) {
-    if (!settings) return;
-    this.runtimeSettings = { ...this.runtimeSettings, ...settings };
-    if (settings.aiMode && AI_SETTINGS[settings.aiMode]) this.aiMode = settings.aiMode;
-    if (typeof settings.audioEnabled === "boolean") this.audioFx.setEnabled(settings.audioEnabled);
-    this.audioFx.startBgm("bgm_planning", 0.2);
-    this.refreshPlanningUi();
-  }
-
-  setupInput() {
-    this.input.keyboard.on("keydown-SPACE", () => {
-      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.beginCombat();
-    });
-    this.input.keyboard.on("keydown-R", () => this.startNewRun());
-    this.input.keyboard.on("keydown-ONE", () => this.setAIMode("EASY"));
-    this.input.keyboard.on("keydown-TWO", () => this.setAIMode("MEDIUM"));
-    this.input.keyboard.on("keydown-THREE", () => this.setAIMode("HARD"));
-    this.input.keyboard.on("keydown-NUMPAD_ONE", () => this.setAIMode("EASY"));
-    this.input.keyboard.on("keydown-NUMPAD_TWO", () => this.setAIMode("MEDIUM"));
-    this.input.keyboard.on("keydown-NUMPAD_THREE", () => this.setAIMode("HARD"));
-    this.input.keyboard.on("keydown-ESC", () => {
-      if (this.historyModalVisible) {
-        this.toggleHistoryModal(false);
-        return;
-      }
-      this.toggleSettingsOverlay();
-    });
-  }
-
-  setAIMode(mode) {
-    if (!AI_SETTINGS[mode]) return;
-    this.aiMode = mode;
-    this.runtimeSettings.aiMode = mode;
-    saveUiSettings(this.runtimeSettings);
-    this.audioFx.play("click");
-    this.addLog(`Độ khó AI -> ${AI_SETTINGS[mode].label}`);
-    this.refreshHeader();
-    this.persistProgress();
-  }
-
-  startNewRun() {
-    this.toggleSettingsOverlay(false);
-    this.toggleHistoryModal(false);
-    this.clearCombatSprites();
-    this.clearPlanningSprites();
-    this.clearOverlay();
-    this.selectedBenchIndex = null;
-    this.turnQueue = [];
-    this.turnIndex = 0;
-    this.actionCount = 0;
-    this.globalDamageMult = 1;
-    this.isActing = false;
-    this.phase = PHASE.PLANNING;
-    this.logs = [];
-    this.logHistory = [];
-    this.historyScrollOffset = 0;
-    this.historyFilter = "ALL";
-
-    this.applyRunState(createDefaultRunState());
-    this.player.gameMode = this.gameMode;
-    this.applyRuntimeSettings(this.runtimeSettings);
-    this.enterPlanning(false);
-    this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
-    this.persistProgress();
-  }
-
-  applyRunState(state) {
-    this.aiMode = state.aiMode ?? "MEDIUM";
-    this.audioFx.setEnabled(state.audioEnabled !== false);
-    this.player = state.player;
-    this.ensurePlayerStateFields();
-    this.refreshPlanningUi();
-  }
-
-  ensurePlayerStateFields() {
-    if (!Array.isArray(this.player.itemBag)) this.player.itemBag = [];
-    if (!Array.isArray(this.player.craftedItems)) this.player.craftedItems = [];
-    if (!Array.isArray(this.player.enemyPreview)) this.player.enemyPreview = [];
-    if (!Number.isInteger(this.player.enemyPreviewRound)) this.player.enemyPreviewRound = 0;
-    if (!Number.isFinite(this.player.enemyBudget)) this.player.enemyBudget = 0;
-    if (!this.player.gameMode) this.player.gameMode = this.gameMode;
-    if (!this.player.itemBag.length) {
-      this.player.itemBag.push(randomItem(BASE_ITEMS).id, randomItem(BASE_ITEMS).id);
-    }
-  }
-
-  exportRunState() {
-    return serializeRunState({
-      aiMode: this.aiMode,
-      audioEnabled: this.audioFx?.enabled !== false,
-      player: this.player
-    });
-  }
-
-  persistProgress() {
-    if (!this.persistEnabled) return;
-    saveProgress(this.exportRunState());
-  }
-
-  applyCombatResult(result) {
-    if (!result) return;
-    const won = result.winnerSide === "LEFT";
-    if (result.winnerSide === "LEFT") {
-      this.player.winStreak += 1;
-      this.player.loseStreak = 0;
-      this.player.gold += result.goldDelta ?? 0;
-      this.addLog(`Thắng vòng ${result.round}. +${result.goldDelta ?? 0} vàng.`);
-    } else {
-      this.player.loseStreak += 1;
-      this.player.winStreak = 0;
-      this.player.hp -= result.hpLoss ?? 0;
-      this.addLog(`Thua vòng ${result.round}. -${result.hpLoss ?? 0} máu.`);
-    }
-
-    if (this.player.hp <= 0) {
-      this.handleTotalDefeat();
-      return;
-    }
-
-    this.player.round = (result.round ?? this.player.round) + 1;
-    this.enterPlanning(true);
-    this.showRoundResultBanner(won ? "CHIẾN THẮNG" : "THẤT BẠI", won);
-    this.persistProgress();
-  }
-
-  handleTotalDefeat() {
-    this.player.hp = 0;
-    this.phase = PHASE.GAME_OVER;
-    this.refreshPlanningUi();
-    this.addLog("Bạn đã thất bại. Đang quay về màn hình chính...");
-    clearProgress();
-    this.showRoundResultBanner("THẤT BẠI TOÀN CUỘC", false, 1450, () => {
-      this.scene.start("MainMenuScene");
-    });
-  }
-
-  createEmptyBoard() {
-    return Array.from({ length: ROWS }, () => Array.from({ length: PLAYER_COLS }, () => null));
-  }
-
-  seedStarterUnits() {
-    const tierOne = UNIT_CATALOG.filter((u) => u.tier === 1);
-    const picks = sampleWithoutReplacement(tierOne, 3);
-    picks.forEach((base) => {
-      const owned = this.createOwnedUnit(base.id, 1);
-      if (owned) this.player.bench.push(owned);
-    });
-  }
-
-  createOwnedUnit(baseId, star = 1) {
-    const base = UNIT_BY_ID[baseId];
-    if (!base) return null;
-    return {
-      uid: createUnitUid(),
-      baseId: base.id,
-      star,
-      base
-    };
-  }
-
-  computeLayout() {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const margin = Math.max(UI_SPACING.SM, Math.floor(w * 0.015));
-    const gridCols = 12;
-    const colGap = UI_SPACING.SM;
-    const gridW = w - margin * 2;
-    const colW = Math.floor((gridW - colGap * (gridCols - 1)) / gridCols);
-    const boardCols = 9;
-    const sideCols = 3;
-    const contentW = boardCols * colW + (boardCols - 1) * colGap;
-    const sidePanelW = sideCols * colW + (sideCols - 1) * colGap;
-    const topPanelY = margin;
-    const topPanelH = 126;
-    const boardPanelX = margin;
-    const rightPanelX = boardPanelX + contentW + colGap;
-    const boardPanelY = topPanelY + topPanelH + UI_SPACING.LG;
-    const sidePanelY = boardPanelY;
-    const sidePanelH = h - sidePanelY - margin;
-
-    const actionsH = 52;
-    const controlsH = 22;
-    const lowerSplitGap = UI_SPACING.LG;
-    const benchRegionW = clamp(Math.floor(contentW * 0.42), 360, Math.floor(contentW * 0.55));
-    const shopRegionW = Math.max(320, contentW - benchRegionW - lowerSplitGap);
-    const benchRegionX = boardPanelX;
-    const shopRegionX = benchRegionX + benchRegionW + lowerSplitGap;
-
-    const shopCardH = 154;
-    const benchCols = benchRegionW >= 450 ? 6 : 5;
-    const benchRows = benchCols === 6 ? 2 : 3;
-    const benchSlotH = benchCols === 6 ? 78 : 68;
-    const benchRowGap = UI_SPACING.XS;
-    const lowerPanelH = Math.max(shopCardH, benchRows * benchSlotH + benchRowGap * Math.max(0, benchRows - 1));
-    const lowerTopY = h - margin - lowerPanelH;
-    const benchY = lowerTopY;
-    const shopY = lowerTopY + Math.floor((lowerPanelH - shopCardH) * 0.5);
-    const controlsY = lowerTopY - UI_SPACING.SM - controlsH;
-    const actionsY = controlsY - UI_SPACING.SM - actionsH;
-    const boardPanelH = Math.max(250, actionsY - UI_SPACING.LG - boardPanelY);
-
-    const shopGap = UI_SPACING.SM;
-    const shopCardW = clamp(Math.floor((shopRegionW - shopGap * 4) / 5), 104, 186);
-    const benchGap = UI_SPACING.XS;
-    const benchSlotW = Math.max(68, Math.floor((benchRegionW - benchGap * (benchCols - 1)) / benchCols));
-
-    return {
-      width: w,
-      height: h,
-      margin,
-      colW,
-      colGap,
-      gridCols,
-      sidePanelW,
-      contentW,
-      rightPanelX,
-      topPanelY,
-      topPanelH,
-      boardOriginX: boardPanelX + Math.floor(contentW * 0.28),
-      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.78),
-      boardPanelX,
-      boardPanelY,
-      boardPanelW: contentW,
-      boardPanelH,
-      sidePanelY,
-      sidePanelH,
-      benchRegionX,
-      benchRegionW,
-      shopRegionX,
-      shopRegionW,
-      actionsY,
-      controlsY,
-      shopY,
-      benchY,
-      benchRows,
-      benchCols,
-      benchRowGap,
-      shopCardW,
-      shopCardH,
-      shopGap,
-      benchSlotW,
-      benchSlotH,
-      benchGap
-    };
-  }
-
-  toVisualCol(col) {
-    return col >= RIGHT_COL_START ? col + BOARD_GAP_COLS : col;
-  }
-
-  toChessCoord(row, col) {
-    const file = BOARD_FILES[this.toVisualCol(col)] ?? "?";
-    const rank = ROWS - row;
-    return `${file}${rank}`;
-  }
-
-  createBoardBackground() {
-    const l = this.layout;
-    const startRound = this.player?.round ?? 1;
-    const key = getForestBackgroundKeyByRound(startRound);
-    if (!this.textures.exists(key)) return;
-    this.roundBackgroundKey = key;
-    this.roundBackgroundImage = this.add
-      .image(l.boardPanelX + l.boardPanelW / 2, l.boardPanelY + l.boardPanelH / 2, key)
-      .setDisplaySize(l.boardPanelW, l.boardPanelH)
-      .setAlpha(0.5)
-      .setDepth(-20);
-
-    const maskGfx = this.add.graphics();
-    maskGfx.fillStyle(0xffffff, 1);
-    maskGfx.fillRect(l.boardPanelX, l.boardPanelY, l.boardPanelW, l.boardPanelH);
-    this.roundBackgroundMask = maskGfx.createGeometryMask();
-    this.roundBackgroundImage.setMask(this.roundBackgroundMask);
-    maskGfx.setVisible(false);
-  }
-
-  refreshRoundBackground() {
-    if (!this.roundBackgroundImage) return;
-    const nextKey = getForestBackgroundKeyByRound(this.player?.round ?? 1);
-    if (!this.textures.exists(nextKey)) return;
-    if (nextKey === this.roundBackgroundKey) return;
-    this.roundBackgroundKey = nextKey;
-    this.roundBackgroundImage.setTexture(nextKey);
-  }
-
-  drawBoard() {
-    this.originX = this.layout.boardOriginX;
-    this.originY = this.layout.boardOriginY;
-    this.createBoardBackground();
-
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < COLS; col += 1) {
-        const center = this.gridToScreen(col, row);
-        const tile = this.add.graphics();
-        this.paintGrassTile(tile, center.x, center.y, row, col);
-        const label = this.add.text(center.x - 14, center.y - 10, "", {
-          fontFamily: UI_FONT,
-          fontSize: "11px",
-          color: UI_COLORS.textSecondary
-        });
-        label.setAlpha(0);
-        label.setVisible(false);
-        label.setDepth(center.y + 1);
-
-        this.tileLookup.set(gridKey(row, col), { tile, center, label });
-      }
-    }
-    this.createBoardEdgeLabels();
-
-    for (let row = 0; row < ROWS; row += 1) {
-      const a = this.gridToScreen(4, row);
-      const b = this.gridToScreen(5, row);
-      const mx = (a.x + b.x) * 0.5;
-      const my = (a.y + b.y) * 0.5;
-      const token = this.add.graphics();
-      this.paintRiverTile(token, mx, my - 2, row);
-      token.setDepth(my + 2);
-      this.gapMarkers.push(token);
-    }
-
-    this.add.text(this.layout.boardPanelX + 14, this.layout.boardPanelY + this.layout.boardPanelH - 24, "PHE TA", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary
-    }).setDepth(2100);
-
-    this.add.text(this.layout.boardPanelX + this.layout.boardPanelW - 88, this.layout.boardPanelY + 10, "PHE ĐỊCH", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary
-    }).setDepth(2100);
-
-    this.highlightLayer = this.add.graphics();
-    this.highlightLayer.setDepth(999);
-    this.attackPreviewLayer = this.add.graphics();
-    this.attackPreviewLayer.setDepth(1000);
-    this.attackPreviewSword = this.add.graphics();
-    this.attackPreviewSword.setDepth(1001);
-    this.attackPreviewSword.setVisible(false);
-  }
-
-  createBoardEdgeLabels() {
-    this.boardEdgeLabels.forEach((x) => x.label.destroy());
-    this.boardEdgeLabels = [];
-    const style = {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    };
-    const add = (text, col, row, anchor) => {
-      const label = this.add.text(0, 0, text, style).setOrigin(0.5).setDepth(2100);
-      this.boardEdgeLabels.push({ label, col, row, anchor });
-    };
-    for (let col = 0; col < PLAYER_COLS; col += 1) {
-      add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, ROWS - 1, "bottom");
-    }
-    for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), 0, row, "left");
-    }
-    for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-      add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, 0, "top");
-    }
-    for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), RIGHT_COL_END, row, "right");
-    }
-    this.refreshBoardEdgeLabels();
-  }
-
-  refreshBoardEdgeLabels() {
-    const { tileW, tileH } = this.getTileSize();
-    this.boardEdgeLabels.forEach((entry) => {
-      const p = this.gridToScreen(entry.col, entry.row);
-      let dx = 0;
-      let dy = 0;
-      if (entry.anchor === "bottom") dy = tileH * 0.7;
-      if (entry.anchor === "top") dy = -tileH * 0.72;
-      if (entry.anchor === "left") dx = -tileW * 0.7;
-      if (entry.anchor === "right") dx = tileW * 0.7;
-      entry.label.setPosition(p.x + dx, p.y + dy);
-      entry.label.setDepth(p.y + 4);
-    });
-  }
-
-  getGrassTileStyle(row, col) {
-    const even = (row + col) % 2 === 0;
-    if (even) {
-      return { fill: UI_COLORS.grassA, stroke: UI_COLORS.grassEdgeA };
-    }
-    return { fill: UI_COLORS.grassB, stroke: UI_COLORS.grassEdgeB };
-  }
-
-  paintGrassTile(graphics, x, y, row, col) {
-    const { fill, stroke } = this.getGrassTileStyle(row, col);
-    const { tileW, tileH } = this.getTileSize();
-    graphics.fillStyle(fill, 0.72);
-    graphics.lineStyle(1, stroke, 0.92);
-    this.drawDiamond(graphics, x, y);
-
-    // Add a soft top highlight so each grass tile reads as a textured piece.
-    graphics.lineStyle(1, UI_COLORS.grassHighlight, 0.2);
-    graphics.beginPath();
-    graphics.moveTo(x - tileW / 2 + 4, y);
-    graphics.lineTo(x, y - tileH / 2 + 2);
-    graphics.lineTo(x + tileW / 2 - 4, y);
-    graphics.strokePath();
-  }
-
-  paintRiverTile(graphics, x, y, row) {
-    const { tileW, tileH } = this.getTileSize();
-    const w = tileW * 0.42;
-    const h = tileH * 0.42;
-    const even = row % 2 === 0;
-    const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
-    const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
-    graphics.fillStyle(fill, 0.94);
-    graphics.lineStyle(1, edge, 0.92);
-    graphics.beginPath();
-    graphics.moveTo(x, y - h / 2);
-    graphics.lineTo(x + w / 2, y);
-    graphics.lineTo(x, y + h / 2);
-    graphics.lineTo(x - w / 2, y);
-    graphics.closePath();
-    graphics.fillPath();
-    graphics.strokePath();
-
-    graphics.lineStyle(1, UI_COLORS.riverHighlight, 0.26);
-    graphics.beginPath();
-    graphics.moveTo(x - w / 2 + 3, y);
-    graphics.lineTo(x, y - h / 2 + 2);
-    graphics.lineTo(x + w / 2 - 3, y);
-    graphics.strokePath();
-  }
-
-  drawDiamond(graphics, x, y, fill = true) {
-    const { tileW, tileH } = this.getTileSize();
-    graphics.beginPath();
-    graphics.moveTo(x, y - tileH / 2);
-    graphics.lineTo(x + tileW / 2, y);
-    graphics.lineTo(x, y + tileH / 2);
-    graphics.lineTo(x - tileW / 2, y);
-    graphics.closePath();
-    if (fill) graphics.fillPath();
-    graphics.strokePath();
-  }
-
-  getRoleTheme(classType) {
-    return ROLE_THEME[classType] ?? ROLE_THEME.FIGHTER;
-  }
-
-  createHud() {
-    const l = this.layout;
-    const screenOverlay = this.add.rectangle(l.width / 2, l.height / 2, l.width, l.height, UI_COLORS.screenOverlay, 0.36);
-    screenOverlay.setDepth(-30);
-
-    const topPanel = this.add.rectangle(
-      l.boardPanelX + l.boardPanelW / 2,
-      l.topPanelY + l.topPanelH / 2,
-      l.boardPanelW,
-      l.topPanelH,
-      UI_COLORS.panelSoft,
-      0.88
-    );
-    topPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.75);
-    topPanel.setDepth(1800);
-
-    const boardPanel = this.add.rectangle(
-      l.boardPanelX + l.boardPanelW / 2,
-      l.boardPanelY + l.boardPanelH / 2,
-      l.boardPanelW,
-      l.boardPanelH,
-      UI_COLORS.panel,
-      0.5
-    );
-    boardPanel.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.75);
-    boardPanel.setDepth(-12);
-
-    const rightPanel = this.add.rectangle(
-      l.rightPanelX + l.sidePanelW / 2,
-      l.sidePanelY + l.sidePanelH / 2,
-      l.sidePanelW,
-      l.sidePanelH,
-      UI_COLORS.panelSoft,
-      0.9
-    );
-    rightPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.72);
-    rightPanel.setDepth(1800);
-    this.rightPanelArea = {
-      x: l.rightPanelX + 2,
-      y: l.sidePanelY + 2,
-      w: l.sidePanelW - 4,
-      h: l.sidePanelH - 52
-    };
-    this.rightPanelMaskShape = this.add.graphics();
-    this.rightPanelMaskShape.fillStyle(0xffffff, 1);
-    this.rightPanelMaskShape.fillRect(
-      this.rightPanelArea.x,
-      this.rightPanelArea.y,
-      this.rightPanelArea.w,
-      this.rightPanelArea.h
-    );
-    this.rightPanelMaskShape.setVisible(false);
-    this.rightPanelMask = this.rightPanelMaskShape.createGeometryMask();
-
-    this.titleText = this.add
-      .text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM - 4, "FOREST THRONE • BÁ CHỦ KHU RỪNG", {
-        fontFamily: UI_FONT,
-        fontSize: "24px",
-        color: UI_COLORS.textPrimary,
-        fontStyle: "bold"
-      })
-      .setDepth(2000);
-
-    this.ruleText = this.add
-      .text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 25, "Luật quét: Ta (hàng 0→4, cột 4→0) | Địch (hàng 0→4, cột 5→9)", {
-        fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: UI_COLORS.textSecondary
-      })
-      .setDepth(2000);
-
-    this.headerMetaText = this.add
-      .text(l.boardPanelX + l.boardPanelW - UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 6, "", {
-        fontFamily: UI_FONT,
-        fontSize: "13px",
-        color: UI_COLORS.textSecondary,
-        align: "right"
-      })
-      .setOrigin(1, 0)
-      .setDepth(2000);
-
-    const statDefs = [
-      { key: "round", icon: "🧭", label: "Vòng" },
-      { key: "hp", icon: "❤", label: "Máu" },
-      { key: "gold", icon: "🪙", label: "Vàng" },
-      { key: "level", icon: "⬆", label: "Cấp" },
-      { key: "xp", icon: "✦", label: "XP" },
-      { key: "deploy", icon: "⚔", label: "Triển khai" }
-    ];
-    const chipGap = 10;
-    const chipY = l.topPanelY + 58;
-    const totalChipW = l.boardPanelW - UI_SPACING.SM * 2;
-    const chipW = clamp(Math.floor((totalChipW - chipGap * (statDefs.length - 1)) / statDefs.length), 108, 200);
-    const chipsRowW = chipW * statDefs.length + chipGap * (statDefs.length - 1);
-    const chipStartX = l.boardPanelX + UI_SPACING.SM + Math.max(0, Math.floor((totalChipW - chipsRowW) * 0.5));
-    this.headerStatChips = {};
-
-    statDefs.forEach((def, idx) => {
-      const x = chipStartX + idx * (chipW + chipGap);
-      const bg = this.add.rectangle(x + chipW / 2, chipY + 20, chipW, 40, 0x13273d, 0.94);
-      bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.82);
-      bg.setDepth(2000);
-
-      const icon = this.add
-        .text(x + 14, chipY + 20, def.icon, {
-          fontFamily: "Segoe UI Emoji",
-          fontSize: "16px",
-          color: "#d8eeff"
-        })
-        .setOrigin(0, 0.5)
-        .setDepth(2001);
-
-      const label = this.add
-        .text(x + 38, chipY + 11, def.label, {
-          fontFamily: UI_FONT,
-          fontSize: "11px",
-          color: UI_COLORS.textMuted
-        })
-        .setDepth(2001);
-
-      const value = this.add
-        .text(x + chipW - 10, chipY + 21, "-", {
-          fontFamily: UI_FONT,
-          fontSize: "14px",
-          color: UI_COLORS.textPrimary,
-          fontStyle: "bold"
-        })
-        .setOrigin(1, 0.5)
-        .setDepth(2001);
-
-      this.headerStatChips[def.key] = { bg, icon, label, value };
-    });
-
-    const rightX = l.rightPanelX + UI_SPACING.SM;
-    const rightW = l.sidePanelW - UI_SPACING.SM * 2;
-    this.rightPanelContentWidth = rightW;
-    let y = l.sidePanelY + UI_SPACING.SM;
-
-    this.phaseTitleText = this.add.text(rightX, y, "◉ PHA", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.phaseTitleText);
-    this.phaseText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "16px",
-      color: UI_COLORS.textPrimary
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.phaseText);
-    y += 62;
-
-    this.synergyTitleText = this.add.text(rightX, y, "◎ HỆ KÍCH HOẠT", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.synergyTitleText);
-    this.synergyText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 6,
-      wordWrap: { width: rightW }
-    }).setDepth(2000);
-    this.synergyText.setFixedSize(rightW, 160);
-    this.synergyText.setInteractive({ useHandCursor: true });
-    this.tooltip.attach(this.synergyText, () => this.getSynergyTooltip());
-    this.registerRightPanelScrollItem(this.synergyText);
-    y += 192;
-
-    this.enemyTitleText = this.add.text(rightX, y, "◈ THÔNG TIN ĐỊCH", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.enemyTitleText);
-
-    this.enemyToggleText = this.add
-      .text(rightX + rightW, y, "Chi tiết ▸", {
-        fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: "#8de8ff",
-        fontStyle: "bold"
-      })
-      .setOrigin(1, 0)
-      .setDepth(2000);
-    this.enemyToggleText.setInteractive({ useHandCursor: true });
-    this.enemyToggleText.on("pointerdown", () => {
-      this.enemyInfoExpanded = !this.enemyInfoExpanded;
-      this.audioFx.play("click");
-      this.refreshQueuePreview();
-    });
-    this.registerRightPanelScrollItem(this.enemyToggleText);
-
-    this.queueText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 5,
-      wordWrap: { width: rightW }
-    }).setDepth(2000);
-    this.queueText.setFixedSize(rightW, 90);
-    this.registerRightPanelScrollItem(this.queueText);
-    y += 122;
-
-    this.storageTitleText = this.add.text(rightX, y, "◆ KHO ĐỒ", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.storageTitleText);
-
-    this.storageSummaryText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 4
-    }).setDepth(2000);
-    this.storageSummaryText.setFixedSize(rightW, 38);
-    this.registerRightPanelScrollItem(this.storageSummaryText);
-    y += 62;
-
-    const invCols = 4;
-    const invRows = 2;
-    const invGap = UI_SPACING.XS;
-    const invCell = clamp(Math.floor((rightW - invGap * (invCols - 1)) / invCols), 50, 70);
-    const invTotalW = invCols * invCell + invGap * (invCols - 1);
-    const invStartX = rightX + Math.max(0, Math.floor((rightW - invTotalW) * 0.5));
-    this.inventoryCells = [];
-    for (let i = 0; i < invCols * invRows; i += 1) {
-      const col = i % invCols;
-      const row = Math.floor(i / invCols);
-      const x = invStartX + col * (invCell + invGap);
-      const yy = y + row * (invCell + invGap);
-      const bg = this.add.rectangle(x + invCell / 2, yy + invCell / 2, invCell, invCell, 0x162639, 0.95);
-      bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
-      bg.setDepth(2000);
-      bg.setInteractive({ useHandCursor: true });
-      const icon = this.add
-        .text(x + 8, yy + 6, "＋", {
-          fontFamily: "Segoe UI Emoji",
-          fontSize: "20px",
-          color: UI_COLORS.textMuted
-        })
-        .setDepth(2001);
-      const count = this.add
-        .text(x + invCell - 6, yy + invCell - 6, "", {
-          fontFamily: UI_FONT,
-          fontSize: "10px",
-          color: UI_COLORS.textSecondary
-        })
-        .setOrigin(1, 1)
-        .setDepth(2001);
-
-      const cell = { bg, icon, count, itemId: null, amount: 0 };
-      this.tooltip.attach(bg, () => {
-        if (!cell.itemId) return { title: "Ô vật phẩm", body: "Trống." };
-        const item = ITEM_BY_ID[cell.itemId];
-        return {
-          title: `${item?.icon ?? "❔"} ${item?.name ?? cell.itemId}`,
-          body: `Số lượng: ${cell.amount}`
-        };
-      });
-      this.registerRightPanelScrollItem(bg);
-      this.registerRightPanelScrollItem(icon);
-      this.registerRightPanelScrollItem(count);
-      this.inventoryCells.push(cell);
-    }
-
-    y += invRows * invCell + invGap * (invRows - 1) + 10;
-
-    this.storageCraftText = this.add.text(rightX, y, "", {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: UI_COLORS.textSecondary,
-      lineSpacing: 3,
-      wordWrap: { width: rightW }
-    }).setDepth(2000);
-    this.storageCraftText.setFixedSize(rightW, 38);
-    this.registerRightPanelScrollItem(this.storageCraftText);
-    y += 54;
-
-    this.logTitleText = this.add.text(rightX, y, "• NHẬT KÝ", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.logTitleText);
-
-    this.logText = this.add.text(rightX, y + 22, "", {
-      fontFamily: UI_FONT,
-      fontSize: "11px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 3,
-      wordWrap: { width: rightW - 154 }
-    }).setDepth(2000);
-    this.logText.setFixedSize(rightW - 154, 32);
-    this.registerRightPanelScrollItem(this.logText);
-    this.historyButtonRect = {
-      x: rightX + rightW - 146,
-      y: y + 14,
-      w: 146,
-      h: 26
-    };
-    this.refreshRightPanelScrollMetrics();
-  }
-
-  registerRightPanelScrollItem(item) {
-    if (!item) return;
-    if (this.rightPanelMask && typeof item.setMask === "function") {
-      item.setMask(this.rightPanelMask);
-    }
-    this.rightPanelScrollItems.push({ item, baseY: item.y });
-  }
-
-  registerRightPanelButton(button) {
-    if (!button) return;
-    this.registerRightPanelScrollItem(button.shadow);
-    this.registerRightPanelScrollItem(button.bg);
-    this.registerRightPanelScrollItem(button.text);
-  }
-
-  applyRightPanelScroll() {
-    this.rightPanelScrollItems.forEach((entry) => {
-      entry.item.y = entry.baseY - this.rightPanelScrollOffset;
-    });
-  }
-
-  refreshRightPanelScrollMetrics() {
-    if (!this.rightPanelArea || !this.rightPanelScrollItems.length) return;
-    const viewBottom = this.rightPanelArea.y + this.rightPanelArea.h;
-    let contentBottom = this.rightPanelArea.y;
-    this.rightPanelScrollItems.forEach((entry) => {
-      if (!entry.item.visible) return;
-      const bounds = entry.item.getBounds?.();
-      if (!bounds) return;
-      const baseBottom = bounds.bottom + this.rightPanelScrollOffset;
-      if (baseBottom > contentBottom) contentBottom = baseBottom;
-    });
-    this.rightPanelMaxScroll = Math.max(0, Math.ceil(contentBottom - viewBottom + 8));
-    this.rightPanelScrollOffset = clamp(this.rightPanelScrollOffset, 0, this.rightPanelMaxScroll);
-    this.applyRightPanelScroll();
-  }
-
-  onRightPanelWheel(deltaY) {
-    if (!this.rightPanelArea) return;
-    const next = clamp(this.rightPanelScrollOffset + (deltaY > 0 ? 34 : -34), 0, this.rightPanelMaxScroll);
-    if (next === this.rightPanelScrollOffset) return;
-    this.rightPanelScrollOffset = next;
-    this.applyRightPanelScroll();
-  }
-
-  createButtons() {
-    const l = this.layout;
-    const x = l.boardPanelX;
-    const y1 = l.actionsY;
-    const strip = this.add.rectangle(l.boardPanelX + l.boardPanelW / 2, y1 + 24, l.boardPanelW, 52, 0x101f31, 0.52);
-    strip.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.7);
-    strip.setDepth(1888);
-
-    const smallW = 132;
-    const mediumW = 144;
-    const gap = UI_SPACING.SM;
-    const ctaW = 280;
-
-    this.buttons.roll = this.createButton(x, y1, smallW, 44, "Đổi tướng", () => this.rollShop());
-    this.buttons.xp = this.createButton(x + smallW + gap, y1, smallW, 44, "Mua XP", () => this.buyXp());
-    this.buttons.lock = this.createButton(x + (smallW + gap) * 2, y1, smallW, 44, "Khóa: Tắt", () => this.toggleLock());
-    this.buttons.reset = this.createButton(x + (smallW + gap) * 3, y1, mediumW, 44, "Ván mới", () => this.startNewRun(), {
-      variant: "ghost"
-    });
-    this.buttons.start = this.createButton(
-      l.boardPanelX + l.boardPanelW - ctaW,
-      y1 - 2,
-      ctaW,
-      48,
-      "Bắt đầu giao tranh",
-      () => this.beginCombat(),
-      { variant: "cta", fontSize: 16, bold: true }
-    );
-    this.buttons.start.bg.setStrokeStyle(1.4, UI_COLORS.ctaEdge, 0.98);
-    this.buttons.start.shadow.setFillStyle(UI_COLORS.cta, 0.24);
     this.buttons.settings = this.createButton(
-      l.rightPanelX + l.sidePanelW - 124,
-      l.topPanelY + 8,
+      this.layout.rightPanelX + this.layout.sidePanelW - 124,
+      this.layout.topPanelY + 8,
       108,
       34,
       "Cài đặt",
@@ -1109,129 +218,59 @@ export class PlanningScene extends Phaser.Scene {
         () => this.toggleHistoryModal(true),
         { variant: "ghost", fontSize: 12, bold: true }
       );
-      this.registerRightPanelButton(this.buttons.history);
     }
+    this.setupInput();
 
-    const craftY = l.sidePanelY + l.sidePanelH - 40;
-    const craftGap = UI_SPACING.XS;
-    const craftW = Math.floor((l.sidePanelW - UI_SPACING.SM * 2 - craftGap * 2) / 3);
-    const craftX = l.rightPanelX + UI_SPACING.SM;
-    this.buttons.craft1 = this.createButton(craftX, craftY, craftW, 30, "Ghép Móng", () => this.craftItem("claw_bark"), {
-      variant: "subtle"
-    });
-    this.buttons.craft2 = this.createButton(craftX + craftW + craftGap, craftY, craftW, 30, "Ghép Cung", () => this.craftItem("crystal_feather"), {
-      variant: "subtle"
-    });
-    this.buttons.craft3 = this.createButton(
-      craftX + (craftW + craftGap) * 2,
-      craftY,
-      craftW,
-      30,
-      "Ghép Khiên",
-      () => this.craftItem("bark_crystal"),
-      { variant: "subtle" }
-    );
-
-    this.controlsText = this.add.text(
-      l.boardPanelX,
-      l.controlsY,
-      "[SPACE] Giao tranh • [R] Ván mới • [ESC] Cài đặt • Lăn chuột: Zoom • Giữ chuột/mid/right để kéo bản đồ",
-      {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textMuted
+    this.combatTickEvent = this.time.addEvent({
+      delay: 420,
+      loop: true,
+      callback: () => {
+        if (!this.settingsVisible && this.phase === PHASE.COMBAT) this.stepCombat();
       }
-    );
-    this.controlsText.setDepth(2000);
-    this.refreshRightPanelScrollMetrics();
+    });
+
+    this.startFromPayload();
   }
 
-  createButton(x, y, w, h, label, onClick, options = {}) {
-    const variants = {
-      secondary: {
-        fill: 0x1a2d42,
-        edge: UI_COLORS.panelEdge,
-        hover: 0x25405d,
-        text: UI_COLORS.textPrimary
-      },
-      ghost: {
-        fill: 0x162433,
-        edge: UI_COLORS.panelEdgeSoft,
-        hover: 0x21354c,
-        text: UI_COLORS.textSecondary
-      },
-      subtle: {
-        fill: 0x172638,
-        edge: UI_COLORS.panelEdgeSoft,
-        hover: 0x22384f,
-        text: UI_COLORS.textSecondary
-      },
-      cta: {
-        fill: UI_COLORS.cta,
-        edge: UI_COLORS.ctaEdge,
-        hover: UI_COLORS.ctaHover,
-        text: "#141f04"
+  setupInput() {
+    this.input.keyboard.on("keydown-SPACE", () => {
+      if (!this.settingsVisible && this.phase === PHASE.COMBAT) this.stepCombat();
+    });
+    this.input.keyboard.on("keydown-ESC", () => {
+      if (this.historyModalVisible) {
+        this.toggleHistoryModal(false);
+        return;
       }
-    };
-    const variant = variants[options.variant] ?? variants.secondary;
+      this.toggleSettingsOverlay();
+    });
+    this.input.on("wheel", (_pointer, _gos, _dx, dy) => {
+      if (this.historyModalVisible) this.onHistoryWheel(dy);
+    });
+  }
 
-    const shadow = this.add.rectangle(x + w / 2, y + h / 2 + 2, w, h, 0x000000, 0.22);
-    shadow.setDepth(1998);
-    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, variant.fill, 0.94);
-    bg.setStrokeStyle(1, variant.edge, 0.95);
-    bg.setDepth(1999);
-    const text = this.add.text(x + w / 2, y + h / 2, label, {
-      fontFamily: UI_FONT,
-      fontSize: `${options.fontSize ?? (options.variant === "cta" ? 16 : 14)}px`,
-      color: variant.text,
-      fontStyle: options.bold || options.variant === "cta" ? "bold" : "normal"
-    });
-    text.setOrigin(0.5);
-    text.setDepth(2000);
-    const btn = {
-      x,
-      y,
-      w,
-      h,
-      shadow,
-      bg,
-      text,
-      enabled: true,
-      setLabel: (v) => text.setText(v),
-      setEnabled: (enabled) => {
-        btn.enabled = enabled;
-        bg.setFillStyle(enabled ? variant.fill : 0x323943, enabled ? 0.94 : 0.7);
-        bg.setStrokeStyle(1, enabled ? variant.edge : 0x5b6572, 0.85);
-        text.setColor(enabled ? variant.text : "#8d98a6");
-        shadow.setVisible(enabled);
-      },
-      setVisible: (visible) => {
-        shadow.setVisible(visible && btn.enabled);
-        bg.setVisible(visible);
-        text.setVisible(visible);
-      }
-    };
-
-    bg.setInteractive({ useHandCursor: true });
-    bg.on("pointerover", () => {
-      if (btn.enabled) bg.setFillStyle(variant.hover, 0.96);
-    });
-    bg.on("pointerout", () => {
-      if (btn.enabled) bg.setFillStyle(variant.fill, 0.94);
-    });
-    bg.on("pointerdown", () => {
-      if (!btn.enabled) return;
-      onClick();
-    });
-
-    return btn;
+  startFromPayload() {
+    const hydrated = hydrateRunState(this.runStatePayload);
+    if (!hydrated?.player?.board) {
+      this.scene.start("PlanningScene");
+      return;
+    }
+    this.runStatePayload = hydrated;
+    this.aiMode = hydrated.aiMode ?? "MEDIUM";
+    this.audioFx.setEnabled(hydrated.audioEnabled !== false);
+    this.audioFx.startBgm("bgm_combat", 0.2);
+    this.player = hydrated.player;
+    this.phase = PHASE.PLANNING;
+    this.logs = [];
+    this.logHistory = [];
+    this.historyFilter = "ALL";
+    this.historyScrollOffset = 0;
+    this.toggleHistoryModal(false);
+    this.beginCombat();
   }
 
   createSettingsOverlay() {
     const cx = this.scale.width * 0.5;
     const cy = this.scale.height * 0.5;
-    this.settingsVisible = false;
-    this.settingsOverlay = [];
 
     const shade = this.add.rectangle(cx, cy, this.scale.width, this.scale.height, 0x05070c, 0.62);
     shade.setDepth(5000);
@@ -1239,13 +278,13 @@ export class PlanningScene extends Phaser.Scene {
     shade.setInteractive();
     this.settingsOverlay.push(shade);
 
-    const panel = this.add.rectangle(cx, cy, 520, 370, 0x102035, 0.98);
+    const panel = this.add.rectangle(cx, cy, 520, 320, 0x102035, 0.98);
     panel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.9);
     panel.setDepth(5001);
     panel.setVisible(false);
     this.settingsOverlay.push(panel);
 
-    const title = this.add.text(cx, cy - 150, "Cài đặt trong trận", {
+    const title = this.add.text(cx, cy - 130, "Cài đặt giao tranh", {
       fontFamily: UI_FONT,
       fontSize: "26px",
       color: "#ffeab0"
@@ -1255,8 +294,8 @@ export class PlanningScene extends Phaser.Scene {
     title.setVisible(false);
     this.settingsOverlay.push(title);
 
-    const makeModalBtn = (dx, dy, w, h, label, onClick) => {
-      const btn = this.createButton(cx + dx - w / 2, cy + dy - h / 2, w, h, label, onClick, { variant: "ghost" });
+    const makeModalBtn = (dx, dy, w, h, label, onClick, variant = "ghost") => {
+      const btn = this.createButton(cx + dx - w / 2, cy + dy - h / 2, w, h, label, onClick, { variant });
       btn.shadow.setDepth(5002);
       btn.bg.setDepth(5003);
       btn.text.setDepth(5004);
@@ -1266,21 +305,17 @@ export class PlanningScene extends Phaser.Scene {
     };
 
     this.modalButtons = {};
-    this.modalButtons.save = makeModalBtn(0, -70, 230, 44, "Lưu tiến trình", () => this.onSaveClick());
-    this.modalButtons.load = makeModalBtn(0, -18, 230, 44, "Tải tiến trình", () => this.onLoadClick());
-    this.modalButtons.clear = makeModalBtn(0, 34, 230, 44, "Xóa tiến trình lưu", () => this.onClearClick());
-    this.modalButtons.audio = makeModalBtn(0, 86, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.menu = makeModalBtn(-126, 146, 220, 44, "Về trang chủ", () => this.goMainMenu());
-    this.modalButtons.close = makeModalBtn(126, 146, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
+    this.modalButtons.audio = makeModalBtn(0, -40, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
+    this.modalButtons.exit = makeModalBtn(0, 14, 230, 44, "Thoát về chuẩn bị", () => this.exitToPlanning());
+    this.modalButtons.menu = makeModalBtn(-126, 92, 220, 44, "Trang chủ", () => this.scene.start("MainMenuScene"), "secondary");
+    this.modalButtons.close = makeModalBtn(126, 92, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
   toggleSettingsOverlay(force = null) {
     const next = typeof force === "boolean" ? force : !this.settingsVisible;
     if (next) this.toggleHistoryModal(false);
     this.settingsVisible = next;
-    if (this.modalButtons?.audio) {
-      this.modalButtons.audio.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
-    }
+    this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
 
@@ -1305,7 +340,7 @@ export class PlanningScene extends Phaser.Scene {
     panel.setDepth(5801);
     panel.setVisible(false);
 
-    const title = this.add.text(x0 + 20, y0 + 14, "Lịch sử / Nhật ký trận", {
+    const title = this.add.text(x0 + 20, y0 + 14, "Lich su / Nhat ky tran", {
       fontFamily: UI_FONT,
       fontSize: "20px",
       color: UI_COLORS.textPrimary,
@@ -1320,7 +355,7 @@ export class PlanningScene extends Phaser.Scene {
     closeBg.setVisible(false);
     closeBg.setInteractive({ useHandCursor: true });
     closeBg.on("pointerdown", () => this.toggleHistoryModal(false));
-    const closeText = this.add.text(x0 + panelW - 24, y0 + 24, "×", {
+    const closeText = this.add.text(x0 + panelW - 24, y0 + 24, "x", {
       fontFamily: UI_FONT,
       fontSize: "20px",
       color: UI_COLORS.textPrimary
@@ -1422,8 +457,9 @@ export class PlanningScene extends Phaser.Scene {
     const sorted = [...logs].reverse();
     const width = this.historyListViewport.w - 14;
     let y = 0;
+
     if (!sorted.length) {
-      const empty = this.add.text(0, 0, "Chưa có dữ liệu lịch sử cho bộ lọc này.", {
+      const empty = this.add.text(0, 0, "Chua co du lieu lich su cho bo loc nay.", {
         fontFamily: UI_FONT,
         fontSize: "13px",
         color: UI_COLORS.textMuted,
@@ -1435,7 +471,7 @@ export class PlanningScene extends Phaser.Scene {
     } else {
       sorted.forEach((entry) => {
         const categoryLabel = HISTORY_FILTERS.find((f) => f.key === entry.category)?.label ?? entry.category;
-        const block = this.add.text(0, y, `[Vòng ${entry.round}] [${categoryLabel}] ${entry.message}`, {
+        const block = this.add.text(0, y, `[Vong ${entry.round}] [${categoryLabel}] ${entry.message}`, {
           fontFamily: UI_FONT,
           fontSize: "13px",
           color: UI_COLORS.textPrimary,
@@ -1453,355 +489,634 @@ export class PlanningScene extends Phaser.Scene {
     this.historyListContainer.y = this.historyListViewport.y - this.historyScrollOffset;
   }
 
-  onSaveClick() {
-    const ok = saveProgress(this.exportRunState());
-    this.audioFx.play("click");
-    this.addLog(ok ? "Đã lưu tiến trình vào localStorage." : "Không thể lưu tiến trình.");
-  }
-
-  onLoadClick() {
-    const loaded = hydrateRunState(loadProgress());
-    if (!loaded) {
-      this.addLog("Không tìm thấy dữ liệu lưu hợp lệ.");
-      return;
-    }
-    this.applyRunState(loaded);
-    this.audioFx.setEnabled(loaded.audioEnabled !== false);
-    this.runtimeSettings.audioEnabled = this.audioFx.enabled;
-    this.runtimeSettings.aiMode = this.aiMode;
-    saveUiSettings(this.runtimeSettings);
-    this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
-    this.prepareEnemyPreview();
-    this.addLog("Đã tải tiến trình.");
-  }
-
-  onClearClick() {
-    const ok = clearProgress();
-    this.audioFx.play("click");
-    this.addLog(ok ? "Đã xóa dữ liệu lưu cục bộ." : "Không xóa được dữ liệu lưu.");
-  }
-
   toggleAudio() {
     this.audioFx.setEnabled(!this.audioFx.enabled);
-    this.runtimeSettings.audioEnabled = this.audioFx.enabled;
-    saveUiSettings(this.runtimeSettings);
+    this.runStatePayload.audioEnabled = this.audioFx.enabled;
+    saveUiSettings({ aiMode: this.runStatePayload.aiMode ?? "MEDIUM", audioEnabled: this.audioFx.enabled });
     this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
-    this.addLog(`Âm thanh ${this.audioFx.enabled ? "Bật" : "Tắt"}.`);
-    this.persistProgress();
   }
 
-  goMainMenu() {
+  exitToPlanning() {
     this.toggleSettingsOverlay(false);
-    this.persistProgress();
-    this.scene.start("MainMenuScene");
+    this.scene.start("PlanningScene", { restoredState: this.runStatePayload });
   }
 
-  createPlayerCellZones() {
-    const { tileW, tileH } = this.getTileSize();
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const tile = this.tileLookup.get(gridKey(row, col));
-        const zone = this.add.zone(tile.center.x, tile.center.y, tileW - 10, tileH - 10);
-        zone.setRectangleDropZone(tileW - 10, tileH - 10);
-        zone.setInteractive({ useHandCursor: true });
-        this.tooltip.attach(zone, () => {
-          const unit = this.player?.board?.[row]?.[col];
-          if (!unit) return { title: `Ô ${BOARD_FILES[col]}${row + 1}`, body: "Ô trống." };
-          return this.getUnitTooltip(unit.baseId, unit.star);
-        });
-        zone.on("pointerover", () => {
-          const unit = this.player?.board?.[row]?.[col];
-          if (!unit || this.phase !== PHASE.PLANNING) return;
-          const actor = this.buildPlanningPreviewActor(
-            "LEFT",
-            row,
-            col,
-            unit.base.classType,
-            unit.star,
-            unit.base.skillId,
-            unit.base.stats.range
-          );
-          this.showAttackPreviewForUnit(actor);
-        });
-        zone.on("pointerout", () => this.clearAttackPreview());
-        zone.on("pointerup", (pointer) => {
-          if (this.boardDragConsumed) return;
-          if (this.isPanPointer(pointer)) return;
-          this.onPlayerCellClick(row, col);
-        });
-        zone.setDepth(20);
-        this.playerCellZones.push({ row, col, zone });
-      }
-    }
-  }
-  createBenchSlots() {
-    const l = this.layout;
-    const maxSlots = l.benchCols * l.benchRows;
-    const startX = l.benchRegionX;
-    const y = l.benchY;
-    const slotW = l.benchSlotW;
-    const slotH = l.benchSlotH;
-    const cols = l.benchCols;
-    for (let i = 0; i < maxSlots; i += 1) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + col * (slotW + l.benchGap);
-      const yy = y + row * (slotH + l.benchRowGap);
-      const bg = this.add.rectangle(x + slotW / 2, yy + slotH / 2, slotW, slotH, 0x141f2d, 0.9);
-      bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.85);
-      bg.setDepth(1500);
-      const label = this.createBenchSlotLabel(x, yy, slotW);
-      const icon = this.createBenchSlotIcon(x, yy, slotH);
-      bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => this.onBenchClick(i));
-      this.tooltip.attach(bg, () => {
-        const unit = this.player?.bench?.[i];
-        if (!unit) return { title: `Dự bị ${i + 1}`, body: "Ô trống." };
-        return this.getUnitTooltip(unit.baseId, unit.star);
-      });
-      this.benchSlots.push({ x, y: yy, slotW, slotH, bg, label, icon });
-    }
-
-    this.shopTitle = this.add.text(l.shopRegionX, l.shopY - 30, "Cửa hàng", {
-      fontFamily: UI_FONT,
-      fontSize: "17px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    });
-    this.shopTitle.setDepth(2000);
-
-    this.benchTitle = this.add.text(l.benchRegionX, l.benchY - 24, "Dự bị", {
-      fontFamily: UI_FONT,
-      fontSize: "17px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    });
-    this.benchTitle.setDepth(2000);
+  setAIMode(mode) {
+    if (!AI_SETTINGS[mode]) return;
+    this.aiMode = mode;
+    this.addLog(`Độ khó AI -> ${AI_SETTINGS[mode].label}`);
+    this.refreshHeader();
   }
 
-  createBenchSlotLabel(x, y, slotW) {
-    const label = this.add.text(x + 8, y + 8, "", {
-      fontFamily: UI_FONT,
-      fontSize: "10px",
-      color: UI_COLORS.textPrimary,
-      wordWrap: { width: slotW - 14 }
-    });
-    label.setDepth(1501);
-    return label;
-  }
+  startNewRun() {
+    this.clearCombatSprites();
+    this.clearPlanningSprites();
+    this.clearOverlay();
+    this.selectedBenchIndex = null;
+    this.turnQueue = [];
+    this.turnIndex = 0;
+    this.actionCount = 0;
+    this.globalDamageMult = 1;
+    this.isActing = false;
+    this.phase = PHASE.PLANNING;
+    this.logs = [];
+    this.logHistory = [];
+    this.historyFilter = "ALL";
+    this.historyScrollOffset = 0;
+    this.toggleHistoryModal(false);
 
-  createBenchSlotIcon(x, y, slotH) {
-    const icon = this.add.text(x + 8, y + slotH - 24, "", {
-      fontFamily: "Segoe UI Emoji",
-      fontSize: "16px",
-      color: "#ffffff"
-    });
-    icon.setDepth(1502);
-    return icon;
-  }
-
-  isTextRenderable(obj) {
-    return Boolean(obj && obj.active && obj.scene && obj.texture?.source?.[0]?.image);
-  }
-
-  ensureBenchSlotTextObjects(slot) {
-    if (!slot) return;
-    if (!this.isTextRenderable(slot.label)) {
-      slot.label?.destroy();
-      slot.label = this.createBenchSlotLabel(slot.x, slot.y, slot.slotW);
-    }
-    if (!this.isTextRenderable(slot.icon)) {
-      slot.icon?.destroy();
-      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotH);
-    }
-  }
-
-  safeUpdateBenchSlotText(slot, labelText, labelColor, iconText) {
-    if (!slot) return;
-    const safeLabelText = String(labelText ?? "");
-    const safeIconText = String(iconText ?? "");
-    const apply = () => {
-      this.ensureBenchSlotTextObjects(slot);
-      if (slot.label.text !== safeLabelText) slot.label.setText(safeLabelText);
-      const currentColor = slot.label.style?.color;
-      if (labelColor && currentColor !== labelColor) {
-        try {
-          slot.label.setColor(labelColor);
-        } catch (_colorErr) {
-          slot.label.setStyle({ color: labelColor });
-        }
-      }
-      if (slot.icon.text !== safeIconText) slot.icon.setText(safeIconText);
-      slot.icon.setVisible(Boolean(safeIconText));
+    this.player = {
+      hp: 100,
+      gold: 10,
+      xp: 0,
+      level: 1,
+      round: 1,
+      gameMode: "PVE_JOURNEY",
+      audioEnabled: this.audioFx?.enabled !== false,
+      winStreak: 0,
+      loseStreak: 0,
+      board: this.createEmptyBoard(),
+      bench: [],
+      shop: [],
+      shopLocked: false,
+      augments: [],
+      augmentRoundsTaken: [],
+      deployCapBonus: 0,
+      benchBonus: 0,
+      interestCapBonus: 0,
+      rollCostDelta: 0,
+      startingRage: 0,
+      startingShield: 0,
+      teamAtkPct: 0,
+      teamMatkPct: 0,
+      teamHpPct: 0,
+      lifestealPct: 0,
+      hpLossReduce: 0,
+      extraClassCount: 0,
+      extraTribeCount: 0,
+      itemBag: [],
+      craftedItems: [],
+      enemyPreview: [],
+      enemyPreviewRound: 0,
+      enemyBudget: 0
     };
 
-    try {
-      apply();
-    } catch (_err) {
-      slot.label?.destroy();
-      slot.icon?.destroy();
-      slot.label = this.createBenchSlotLabel(slot.x, slot.y, slot.slotW);
-      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotH);
-      apply();
-    }
+    this.refreshShop(true);
+    this.enterPlanning(false);
+    this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
   }
 
-  getTileSize() {
+  createEmptyBoard() {
+    return Array.from({ length: ROWS }, () => Array.from({ length: PLAYER_COLS }, () => null));
+  }
+
+  createOwnedUnit(baseId, star = 1) {
+    const base = UNIT_BY_ID[baseId];
     return {
-      tileW: TILE_W * this.boardZoom,
-      tileH: TILE_H * this.boardZoom
+      uid: createUnitUid(),
+      baseId,
+      star,
+      base
     };
   }
 
-  setupBoardViewInput() {
-    this.input.on("wheel", (pointer, _gos, _dx, dy) => {
-      if (this.historyModalVisible) {
-        this.onHistoryWheel(dy);
-        return;
-      }
-      if (this.pointInRightPanel(pointer.x, pointer.y)) {
-        this.onRightPanelWheel(dy);
-        return;
-      }
-      if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
-      const before = this.boardZoom;
-      this.boardZoom = clamp(this.boardZoom - dy * 0.0012, 0.65, 1.85);
-      if (Math.abs(before - this.boardZoom) < 0.0001) return;
-      this.refreshBoardGeometry();
-    });
+  computeLayout() {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const margin = Math.max(UI_SPACING.SM, Math.floor(w * 0.015));
+    const gridCols = 12;
+    const colGap = UI_SPACING.SM;
+    const gridW = w - margin * 2;
+    const colW = Math.floor((gridW - colGap * (gridCols - 1)) / gridCols);
+    const boardCols = 9;
+    const sideCols = 3;
+    const contentW = boardCols * colW + (boardCols - 1) * colGap;
+    const sidePanelW = sideCols * colW + (sideCols - 1) * colGap;
+    const topPanelY = margin;
+    const topPanelH = 100;
+    const boardPanelX = margin;
+    const rightPanelX = boardPanelX + contentW + colGap;
+    const boardPanelY = topPanelY + topPanelH + UI_SPACING.LG;
+    const sidePanelY = boardPanelY;
+    const sidePanelH = h - sidePanelY - margin;
 
-    this.input.on("pointerdown", (pointer) => {
-      if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
-      this.boardPointerDown = { x: pointer.x, y: pointer.y };
-      this.boardDragConsumed = false;
-      if (!this.isPanPointer(pointer)) return;
-      this.isBoardDragging = true;
-      this.lastDragPoint = { x: pointer.x, y: pointer.y };
-    });
+    const actionsH = 48;
+    const controlsH = 24;
+    const shopCardH = 130;
+    const benchSlotH = 86;
+    const benchY = h - margin - benchSlotH;
+    const shopY = benchY - UI_SPACING.SM - shopCardH;
+    const controlsY = shopY - UI_SPACING.SM - controlsH;
+    const actionsY = controlsY - UI_SPACING.SM - actionsH;
+    const boardPanelH = Math.max(250, actionsY - UI_SPACING.LG - boardPanelY);
 
-    this.input.on("pointermove", (pointer) => {
-      if (!this.isBoardDragging || !this.lastDragPoint) {
-        if (!this.boardPointerDown) return;
-        if (!this.pointInBoardPanel(this.boardPointerDown.x, this.boardPointerDown.y)) return;
-        const dx0 = pointer.x - this.boardPointerDown.x;
-        const dy0 = pointer.y - this.boardPointerDown.y;
-        const moved = Math.hypot(dx0, dy0);
-        const buttons = pointer.event?.buttons ?? 0;
-        const allowLeftDrag = (buttons & 1) !== 0;
-        const allowRightOrMiddle = (buttons & 2) !== 0 || (buttons & 4) !== 0;
-        if (!this.isPanPointer(pointer) && !allowLeftDrag && !allowRightOrMiddle) return;
-        if (moved < 6) return;
-        this.isBoardDragging = true;
-        this.boardDragConsumed = true;
-        this.lastDragPoint = { x: pointer.x, y: pointer.y };
-        return;
-      }
-      const dx = pointer.x - this.lastDragPoint.x;
-      const dy = pointer.y - this.lastDragPoint.y;
-      if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
-      this.boardDragConsumed = true;
-      this.boardPanX += dx;
-      this.boardPanY += dy;
-      this.lastDragPoint = { x: pointer.x, y: pointer.y };
-      this.refreshBoardGeometry();
-    });
-
-    const releaseDrag = () => {
-      this.isBoardDragging = false;
-      this.lastDragPoint = null;
-      this.boardPointerDown = null;
-      if (this.boardDragConsumed) {
-        this.time.delayedCall(0, () => {
-          this.boardDragConsumed = false;
-        });
-      } else {
-        this.boardDragConsumed = false;
-      }
+    return {
+      width: w,
+      height: h,
+      margin,
+      colW,
+      colGap,
+      gridCols,
+      sidePanelW,
+      contentW,
+      rightPanelX,
+      topPanelY,
+      topPanelH,
+      boardOriginX: boardPanelX + Math.floor(contentW * 0.28),
+      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.78),
+      boardPanelX,
+      boardPanelY,
+      boardPanelW: contentW,
+      boardPanelH,
+      sidePanelY,
+      sidePanelH,
+      actionsY,
+      controlsY,
+      shopY,
+      benchY
     };
-    this.input.on("pointerup", releaseDrag);
-    this.input.on("pointerupoutside", releaseDrag);
   }
 
-  isPanPointer(pointer) {
-    if (!pointer) return false;
-    const buttons = pointer.event?.buttons ?? 0;
-    if (typeof pointer.rightButtonDown === "function" && pointer.rightButtonDown()) return true;
-    if (typeof pointer.middleButtonDown === "function" && pointer.middleButtonDown()) return true;
-    if (pointer.button === 2 || pointer.button === 1) return true;
-    if ((buttons & 2) !== 0 || (buttons & 4) !== 0) return true;
-    if ((buttons & 1) !== 0 && (pointer.event?.altKey || pointer.event?.ctrlKey)) return true;
-    return false;
+  toVisualCol(col) {
+    return col >= RIGHT_COL_START ? col + BOARD_GAP_COLS : col;
   }
 
-  pointInBoardPanel(x, y) {
+  toChessCoord(row, col) {
+    const file = BOARD_FILES[this.toVisualCol(col)] ?? "?";
+    const rank = ROWS - row;
+    return `${file}${rank}`;
+  }
+
+  createBoardBackground() {
     const l = this.layout;
-    return x >= l.boardPanelX && x <= l.boardPanelX + l.boardPanelW && y >= l.boardPanelY && y <= l.boardPanelY + l.boardPanelH;
+    const startRound = this.player?.round ?? this.runStatePayload?.player?.round ?? 1;
+    const key = getForestBackgroundKeyByRound(startRound);
+    if (!this.textures.exists(key)) return;
+    this.roundBackgroundKey = key;
+    this.roundBackgroundImage = this.add
+      .image(l.boardPanelX + l.boardPanelW / 2, l.boardPanelY + l.boardPanelH / 2, key)
+      .setDisplaySize(l.boardPanelW, l.boardPanelH)
+      .setAlpha(0.5)
+      .setDepth(-20);
+
+    const maskGfx = this.add.graphics();
+    maskGfx.fillStyle(0xffffff, 1);
+    maskGfx.fillRect(l.boardPanelX, l.boardPanelY, l.boardPanelW, l.boardPanelH);
+    this.roundBackgroundMask = maskGfx.createGeometryMask();
+    this.roundBackgroundImage.setMask(this.roundBackgroundMask);
+    maskGfx.setVisible(false);
   }
 
-  pointInRightPanel(x, y) {
-    if (!this.rightPanelArea) return false;
-    return (
-      x >= this.rightPanelArea.x &&
-      x <= this.rightPanelArea.x + this.rightPanelArea.w &&
-      y >= this.rightPanelArea.y &&
-      y <= this.rightPanelArea.y + this.rightPanelArea.h
-    );
+  refreshRoundBackground() {
+    if (!this.roundBackgroundImage) return;
+    const nextKey = getForestBackgroundKeyByRound(this.player?.round ?? this.runStatePayload?.player?.round ?? 1);
+    if (!this.textures.exists(nextKey)) return;
+    if (nextKey === this.roundBackgroundKey) return;
+    this.roundBackgroundKey = nextKey;
+    this.roundBackgroundImage.setTexture(nextKey);
   }
 
-  refreshBoardGeometry() {
+  drawBoard() {
+    this.originX = this.layout.boardOriginX;
+    this.originY = this.layout.boardOriginY;
+    this.createBoardBackground();
+
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < COLS; col += 1) {
-        const data = this.tileLookup.get(gridKey(row, col));
-        if (!data) continue;
         const center = this.gridToScreen(col, row);
+        const tile = this.add.graphics();
+        this.paintGrassTile(tile, center.x, center.y, row, col);
+        const label = this.add.text(center.x - 14, center.y - 10, "", {
+          fontFamily: UI_FONT,
+          fontSize: "11px",
+          color: UI_COLORS.textSecondary
+        });
+        label.setAlpha(0);
+        label.setVisible(false);
+        label.setDepth(center.y + 1);
 
-        data.center = center;
-        data.tile.clear();
-        this.paintGrassTile(data.tile, center.x, center.y, row, col);
-        if (data.label?.visible) data.label.setPosition(center.x - 14, center.y - 10);
+        this.tileLookup.set(gridKey(row, col), { tile, center, label });
       }
     }
-    this.refreshBoardEdgeLabels();
+    this.createBoardEdgeLabels();
 
-    const { tileW, tileH } = this.getTileSize();
-    this.playerCellZones.forEach((ref) => {
-      const tile = this.tileLookup.get(gridKey(ref.row, ref.col));
-      if (!tile) return;
-      ref.zone.setPosition(tile.center.x, tile.center.y);
-      ref.zone.setSize(tileW - 10, tileH - 10);
-    });
-
-    if (this.phase === PHASE.PLANNING || this.phase === PHASE.AUGMENT) {
-      this.refreshBoardUi();
-    }
-
-    this.gapMarkers.forEach((token, row) => {
+    for (let row = 0; row < ROWS; row += 1) {
       const a = this.gridToScreen(4, row);
       const b = this.gridToScreen(5, row);
       const mx = (a.x + b.x) * 0.5;
       const my = (a.y + b.y) * 0.5;
-      token.clear();
+      const token = this.add.graphics();
       this.paintRiverTile(token, mx, my - 2, row);
       token.setDepth(my + 2);
-    });
-
-    if (this.previewHoverUnit) {
-      this.showAttackPreviewForUnit(this.previewHoverUnit);
+      this.gapMarkers.push(token);
     }
+
+    this.add.text(this.layout.boardPanelX + 14, this.layout.boardPanelY + this.layout.boardPanelH - 24, "PHE TA", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary
+    }).setDepth(2100);
+
+    this.add.text(this.layout.boardPanelX + this.layout.boardPanelW - 88, this.layout.boardPanelY + 10, "PHE ĐỊCH", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary
+    }).setDepth(2100);
+
+    this.highlightLayer = this.add.graphics();
+    this.highlightLayer.setDepth(999);
+    this.attackPreviewLayer = this.add.graphics();
+    this.attackPreviewLayer.setDepth(1000);
+    this.attackPreviewSword = this.add.graphics();
+    this.attackPreviewSword.setDepth(1001);
+    this.attackPreviewSword.setVisible(false);
   }
 
-  canInteractFormation() {
-    if (this.phase === PHASE.PLANNING) return true;
-    if (this.phase === PHASE.AUGMENT && !this.overlaySprites.length) return true;
-    return false;
+  createBoardEdgeLabels() {
+    this.boardEdgeLabels.forEach((x) => x.label.destroy());
+    this.boardEdgeLabels = [];
+    const style = {
+      fontFamily: UI_FONT,
+      fontSize: "13px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    };
+    const add = (text, col, row, anchor) => {
+      const label = this.add.text(0, 0, text, style).setOrigin(0.5).setDepth(2100);
+      this.boardEdgeLabels.push({ label, col, row, anchor });
+    };
+    for (let col = 0; col < PLAYER_COLS; col += 1) {
+      add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, ROWS - 1, "bottom");
+    }
+    for (let row = 0; row < ROWS; row += 1) {
+      add(String(ROWS - row), 0, row, "left");
+    }
+    for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
+      add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, 0, "top");
+    }
+    for (let row = 0; row < ROWS; row += 1) {
+      add(String(ROWS - row), RIGHT_COL_END, row, "right");
+    }
+    this.refreshBoardEdgeLabels();
+  }
+
+  refreshBoardEdgeLabels() {
+    this.boardEdgeLabels.forEach((entry) => {
+      const p = this.gridToScreen(entry.col, entry.row);
+      let dx = 0;
+      let dy = 0;
+      if (entry.anchor === "bottom") dy = TILE_H * 0.72;
+      if (entry.anchor === "top") dy = -TILE_H * 0.72;
+      if (entry.anchor === "left") dx = -TILE_W * 0.68;
+      if (entry.anchor === "right") dx = TILE_W * 0.68;
+      entry.label.setPosition(p.x + dx, p.y + dy);
+      entry.label.setDepth(p.y + 4);
+    });
+  }
+
+  getGrassTileStyle(row, col) {
+    const even = (row + col) % 2 === 0;
+    if (even) {
+      return { fill: UI_COLORS.grassA, stroke: UI_COLORS.grassEdgeA };
+    }
+    return { fill: UI_COLORS.grassB, stroke: UI_COLORS.grassEdgeB };
+  }
+
+  paintGrassTile(graphics, x, y, row, col) {
+    const { fill, stroke } = this.getGrassTileStyle(row, col);
+    graphics.fillStyle(fill, 0.72);
+    graphics.lineStyle(1, stroke, 0.92);
+    this.drawDiamond(graphics, x, y);
+
+    // Add a subtle top highlight for a checkerboard grass-tile look.
+    graphics.lineStyle(1, UI_COLORS.grassHighlight, 0.2);
+    graphics.beginPath();
+    graphics.moveTo(x - TILE_W / 2 + 4, y);
+    graphics.lineTo(x, y - TILE_H / 2 + 2);
+    graphics.lineTo(x + TILE_W / 2 - 4, y);
+    graphics.strokePath();
+  }
+
+  paintRiverTile(graphics, x, y, row) {
+    const w = TILE_W * 0.42;
+    const h = TILE_H * 0.42;
+    const even = row % 2 === 0;
+    const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
+    const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
+    graphics.fillStyle(fill, 0.94);
+    graphics.lineStyle(1, edge, 0.92);
+    graphics.beginPath();
+    graphics.moveTo(x, y - h / 2);
+    graphics.lineTo(x + w / 2, y);
+    graphics.lineTo(x, y + h / 2);
+    graphics.lineTo(x - w / 2, y);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.strokePath();
+
+    graphics.lineStyle(1, UI_COLORS.riverHighlight, 0.26);
+    graphics.beginPath();
+    graphics.moveTo(x - w / 2 + 3, y);
+    graphics.lineTo(x, y - h / 2 + 2);
+    graphics.lineTo(x + w / 2 - 3, y);
+    graphics.strokePath();
+  }
+
+  drawDiamond(graphics, x, y, fill = true) {
+    graphics.beginPath();
+    graphics.moveTo(x, y - TILE_H / 2);
+    graphics.lineTo(x + TILE_W / 2, y);
+    graphics.lineTo(x, y + TILE_H / 2);
+    graphics.lineTo(x - TILE_W / 2, y);
+    graphics.closePath();
+    if (fill) graphics.fillPath();
+    graphics.strokePath();
+  }
+
+  getRoleTheme(classType) {
+    return ROLE_THEME[classType] ?? ROLE_THEME.FIGHTER;
+  }
+
+  createHud() {
+    const l = this.layout;
+    const screenOverlay = this.add.rectangle(l.width / 2, l.height / 2, l.width, l.height, UI_COLORS.screenOverlay, 0.36);
+    screenOverlay.setDepth(-30);
+
+    const topPanel = this.add.rectangle(
+      l.boardPanelX + l.boardPanelW / 2,
+      l.topPanelY + l.topPanelH / 2,
+      l.boardPanelW,
+      l.topPanelH,
+      UI_COLORS.panelSoft,
+      0.88
+    );
+    topPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.75);
+    topPanel.setDepth(1800);
+
+    const boardPanel = this.add.rectangle(
+      l.boardPanelX + l.boardPanelW / 2,
+      l.boardPanelY + l.boardPanelH / 2,
+      l.boardPanelW,
+      l.boardPanelH,
+      UI_COLORS.panel,
+      0.5
+    );
+    boardPanel.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.75);
+    boardPanel.setDepth(-12);
+
+    const rightPanel = this.add.rectangle(
+      l.rightPanelX + l.sidePanelW / 2,
+      l.sidePanelY + l.sidePanelH / 2,
+      l.sidePanelW,
+      l.sidePanelH,
+      UI_COLORS.panelSoft,
+      0.9
+    );
+    rightPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.72);
+    rightPanel.setDepth(1800);
+
+    this.titleText = this.add.text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM - 2, "FOREST THRONE • BÁ CHỦ KHU RỪNG", {
+      fontFamily: UI_FONT,
+      fontSize: "24px",
+      color: UI_COLORS.textPrimary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+
+    this.ruleText = this.add.text(
+      l.boardPanelX + UI_SPACING.SM,
+      l.topPanelY + UI_SPACING.SM + 30,
+      "Luật quét: Ta (hàng 0→4, cột 4→0) | Địch (hàng 0→4, cột 5→9)",
+      {
+        fontFamily: UI_FONT,
+        fontSize: "13px",
+        color: UI_COLORS.textSecondary
+      }
+    ).setDepth(2000);
+
+    this.headerText = this.add.text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 52, "", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textPrimary
+    }).setDepth(2000);
+
+    const rightX = l.rightPanelX + UI_SPACING.SM;
+    const rightW = l.sidePanelW - UI_SPACING.SM * 2;
+    let y = l.sidePanelY + UI_SPACING.SM;
+
+    this.phaseTitleText = this.add.text(rightX, y, "◉ PHA", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+    this.phaseText = this.add.text(rightX, y + 20, "", {
+      fontFamily: UI_FONT,
+      fontSize: "16px",
+      color: UI_COLORS.textPrimary
+    }).setDepth(2000);
+    y += 62;
+
+    this.synergyTitleText = this.add.text(rightX, y, "◎ SYNERGY", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+    this.synergyText = this.add.text(rightX, y + 20, "", {
+      fontFamily: UI_FONT,
+      fontSize: "13px",
+      color: UI_COLORS.textPrimary,
+      lineSpacing: 6,
+      wordWrap: { width: rightW }
+    }).setDepth(2000);
+    this.synergyText.setFixedSize(rightW, 200);
+    this.synergyText.setInteractive({ useHandCursor: true });
+    this.tooltip.attach(this.synergyText, () => this.getSynergyTooltip());
+    y += 232;
+
+    this.enemyTitleText = this.add.text(rightX, y, "◈ ENEMY INFO", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+    this.queueText = this.add.text(rightX, y + 20, "", {
+      fontFamily: UI_FONT,
+      fontSize: "13px",
+      color: UI_COLORS.textPrimary,
+      lineSpacing: 5,
+      wordWrap: { width: rightW }
+    }).setDepth(2000);
+    this.queueText.setFixedSize(rightW, 126);
+    y += 160;
+
+    this.logTitleText = this.add.text(rightX, y, "• NHẬT KÝ", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+    this.logText = this.add.text(rightX, y + 22, "", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: UI_COLORS.textPrimary,
+      lineSpacing: 4,
+      wordWrap: { width: rightW - 178 }
+    }).setDepth(2000);
+    this.logText.setFixedSize(rightW - 178, 44);
+    this.historyButtonRect = {
+      x: rightX + rightW - 170,
+      y: y + 16,
+      w: 170,
+      h: 30
+    };
+  }
+
+  createButtons() {
+    this.buttons.roll = this.createButton(40, 600, 120, 36, "Roll", () => this.rollShop());
+    this.buttons.xp = this.createButton(170, 600, 120, 36, "Buy XP", () => this.buyXp());
+    this.buttons.lock = this.createButton(300, 600, 120, 36, "Lock: Off", () => this.toggleLock());
+    this.buttons.start = this.createButton(430, 600, 160, 36, "Start Combat", () => this.beginCombat());
+    this.buttons.reset = this.createButton(600, 600, 120, 36, "New Run", () => this.startNewRun());
+    this.buttons.easy = this.createButton(730, 600, 60, 36, "1", () => this.setAIMode("EASY"));
+    this.buttons.medium = this.createButton(796, 600, 60, 36, "2", () => this.setAIMode("MEDIUM"));
+    this.buttons.hard = this.createButton(862, 600, 60, 36, "3", () => this.setAIMode("HARD"));
+
+    this.controlsText = this.add.text(40, 640, "[SPACE] combat step/start | [R] new run | [1/2/3] AI mode", {
+      fontFamily: "Consolas",
+      fontSize: "14px",
+      color: "#99cdfa"
+    });
+    this.controlsText.setDepth(2000);
+  }
+
+  createButton(x, y, w, h, label, onClick, options = {}) {
+    const variants = {
+      secondary: {
+        fill: 0x1a2d42,
+        edge: UI_COLORS.panelEdge,
+        hover: 0x25405d,
+        text: UI_COLORS.textPrimary
+      },
+      ghost: {
+        fill: 0x162433,
+        edge: UI_COLORS.panelEdgeSoft,
+        hover: 0x21354c,
+        text: UI_COLORS.textSecondary
+      },
+      cta: {
+        fill: UI_COLORS.cta,
+        edge: UI_COLORS.ctaEdge,
+        hover: UI_COLORS.ctaHover,
+        text: "#141f04"
+      }
+    };
+    const variant = variants[options.variant] ?? variants.secondary;
+    const shadow = this.add.rectangle(x + w / 2, y + h / 2 + 2, w, h, 0x000000, 0.22);
+    shadow.setDepth(1998);
+    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, variant.fill, 0.94);
+    bg.setStrokeStyle(1, variant.edge, 0.95);
+    bg.setDepth(1999);
+    const text = this.add.text(x + w / 2, y + h / 2, label, {
+      fontFamily: UI_FONT,
+      fontSize: `${options.fontSize ?? 14}px`,
+      color: variant.text,
+      fontStyle: options.bold ? "bold" : "normal"
+    });
+    text.setOrigin(0.5);
+    text.setDepth(2000);
+    const btn = {
+      x,
+      y,
+      w,
+      h,
+      shadow,
+      bg,
+      text,
+      enabled: true,
+      setLabel: (v) => text.setText(v),
+      setEnabled: (enabled) => {
+        btn.enabled = enabled;
+        bg.setFillStyle(enabled ? variant.fill : 0x323943, enabled ? 0.94 : 0.7);
+        bg.setStrokeStyle(1, enabled ? variant.edge : 0x5b6572, 0.85);
+        text.setColor(enabled ? variant.text : "#8d98a6");
+        shadow.setVisible(enabled);
+      },
+      setVisible: (visible) => {
+        shadow.setVisible(visible && btn.enabled);
+        bg.setVisible(visible);
+        text.setVisible(visible);
+      }
+    };
+
+    bg.setInteractive({ useHandCursor: true });
+    bg.on("pointerover", () => {
+      if (btn.enabled) bg.setFillStyle(variant.hover, 0.96);
+    });
+    bg.on("pointerout", () => {
+      if (btn.enabled) bg.setFillStyle(variant.fill, 0.94);
+    });
+    bg.on("pointerdown", () => {
+      if (!btn.enabled) return;
+      onClick();
+    });
+
+    return btn;
+  }
+
+  createPlayerCellZones() {
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < PLAYER_COLS; col += 1) {
+        const tile = this.tileLookup.get(gridKey(row, col));
+        const zone = this.add.zone(tile.center.x, tile.center.y, TILE_W - 10, TILE_H - 10);
+        zone.setRectangleDropZone(TILE_W - 10, TILE_H - 10);
+        zone.setInteractive({ useHandCursor: true });
+        zone.on("pointerdown", () => this.onPlayerCellClick(row, col));
+        zone.setDepth(1500);
+        this.playerCellZones.push(zone);
+      }
+    }
+  }
+  createBenchSlots() {
+    const maxSlots = 12;
+    const startX = 40;
+    const y = 705;
+    const slotW = 96;
+    const slotH = 90;
+    for (let i = 0; i < maxSlots; i += 1) {
+      const x = startX + i * (slotW + 6);
+      const bg = this.add.rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, 0x1f2734, 0.92);
+      bg.setStrokeStyle(2, 0x4f607c, 1);
+      bg.setDepth(1500);
+      const label = this.add.text(x + 8, y + 8, "", {
+        fontFamily: "Consolas",
+        fontSize: "12px",
+        color: "#d9e6ff",
+        wordWrap: { width: slotW - 14 }
+      });
+      label.setDepth(1501);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on("pointerdown", () => this.onBenchClick(i));
+      this.benchSlots.push({ x, y, slotW, slotH, bg, label });
+    }
+
+    this.shopTitle = this.add.text(40, 660, "Shop", {
+      fontFamily: "Consolas",
+      fontSize: "18px",
+      color: "#ffe3a3"
+    });
+    this.shopTitle.setDepth(2000);
+
+    this.benchTitle = this.add.text(40, 680, "Bench", {
+      fontFamily: "Consolas",
+      fontSize: "18px",
+      color: "#ffe3a3"
+    });
+    this.benchTitle.setDepth(2000);
   }
 
   onPlayerCellClick(row, col) {
-    if (this.settingsVisible) return;
-    if (!this.canInteractFormation()) {
-      if (this.phase === PHASE.AUGMENT) this.addLog("Hãy chọn pháp ấn trước khi chỉnh đội hình.");
-      return;
-    }
+    if (this.phase !== PHASE.PLANNING) return;
     if (this.overlaySprites.length) return;
 
     const occupant = this.player.board[row][col];
@@ -1810,7 +1125,7 @@ export class PlanningScene extends Phaser.Scene {
     if (selected) {
       if (!occupant) {
         if (this.getDeployCount() >= this.getDeployCap()) {
-          this.addLog("Đã đạt giới hạn triển khai.");
+          this.addLog("Deploy cap da day.");
           return;
         }
         this.player.board[row][col] = selected;
@@ -1818,7 +1133,6 @@ export class PlanningScene extends Phaser.Scene {
         this.selectedBenchIndex = null;
         this.tryAutoMerge();
         this.refreshPlanningUi();
-        this.persistProgress();
         return;
       }
 
@@ -1827,29 +1141,22 @@ export class PlanningScene extends Phaser.Scene {
       this.selectedBenchIndex = null;
       this.tryAutoMerge();
       this.refreshPlanningUi();
-      this.persistProgress();
       return;
     }
 
     if (occupant) {
       if (this.player.bench.length >= this.getBenchCap()) {
-        this.addLog("Hàng dự bị đã đầy.");
+        this.addLog("Bench da day.");
         return;
       }
       this.player.board[row][col] = null;
       this.player.bench.push(occupant);
       this.refreshPlanningUi();
-      this.persistProgress();
     }
   }
 
   onBenchClick(index) {
-    if (this.settingsVisible) return;
-    if (!this.canInteractFormation()) {
-      if (this.phase === PHASE.AUGMENT) this.addLog("Hãy chọn pháp ấn trước khi chỉnh đội hình.");
-      return;
-    }
-    if (this.overlaySprites.length) return;
+    if (this.phase !== PHASE.PLANNING) return;
     if (index >= this.getBenchCap()) return;
     if (index >= this.player.bench.length) {
       this.selectedBenchIndex = null;
@@ -1880,31 +1187,27 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   rollShop() {
-    if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const cost = Math.max(1, 2 + this.player.rollCostDelta);
     if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để đổi cửa hàng.");
+      this.addLog("Khong du gold de roll.");
       return;
     }
     this.player.gold -= cost;
     this.refreshShop(true);
     this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   buyXp() {
-    if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const cost = 4;
     if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để mua XP.");
+      this.addLog("Khong du gold de mua XP.");
       return;
     }
     this.player.gold -= cost;
     this.gainXp(4);
     this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   gainXp(value) {
@@ -1915,7 +1218,7 @@ export class PlanningScene extends Phaser.Scene {
         amount -= need;
         this.player.level += 1;
         this.player.xp = 0;
-        this.addLog(`Lên cấp ${this.player.level}.`);
+        this.addLog(`Len level ${this.player.level}.`);
       } else {
         this.player.xp += amount;
         amount = 0;
@@ -1924,11 +1227,9 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   toggleLock() {
-    if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     this.player.shopLocked = !this.player.shopLocked;
     this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   refreshShop(forceRoll = false) {
@@ -1945,34 +1246,24 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   buyFromShop(index) {
-    if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const offer = this.player.shop[index];
     if (!offer) return;
     const base = UNIT_BY_ID[offer.baseId];
-    if (!base) {
-      this.player.shop[index] = null;
-      this.addLog("Dữ liệu thú trong shop không hợp lệ, đã bỏ qua.");
-      this.refreshPlanningUi();
-      this.persistProgress();
-      return;
-    }
     const cost = base.tier;
     if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để mua linh thú.");
+      this.addLog("Khong du gold de mua tuong.");
       return;
     }
     if (this.player.bench.length >= this.getBenchCap()) {
-      this.addLog("Hàng dự bị đã đầy.");
+      this.addLog("Bench da day.");
       return;
     }
     this.player.gold -= cost;
-    const owned = this.createOwnedUnit(base.id, 1);
-    if (owned) this.player.bench.push(owned);
+    this.player.bench.push(this.createOwnedUnit(base.id, 1));
     this.player.shop[index] = null;
     this.tryAutoMerge();
     this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   tryAutoMerge() {
@@ -1994,9 +1285,8 @@ export class PlanningScene extends Phaser.Scene {
         const baseId = picked[0].unit.baseId;
         picked.forEach((ref) => this.removeOwnedUnitRef(ref));
         const upgraded = this.createOwnedUnit(baseId, Math.min(3, star + 1));
-        if (!upgraded) continue;
         this.placeMergedUnit(upgraded, picked[0]);
-        this.addLog(`Nâng sao: ${UNIT_BY_ID[baseId].name} -> ${upgraded.star}★`);
+        this.addLog(`Merge: ${UNIT_BY_ID[baseId].name} -> ${upgraded.star}*`);
         merged = true;
         break;
       }
@@ -2047,7 +1337,6 @@ export class PlanningScene extends Phaser.Scene {
 
   enterPlanning(grantIncome) {
     this.phase = PHASE.PLANNING;
-    this.toggleSettingsOverlay(false);
     this.clearCombatSprites();
     this.turnQueue = [];
     this.turnIndex = 0;
@@ -2058,7 +1347,6 @@ export class PlanningScene extends Phaser.Scene {
     this.highlightLayer.clear();
 
     if (grantIncome) this.grantRoundIncome();
-    this.prepareEnemyPreview();
     this.refreshShop(false);
     this.refreshPlanningUi();
 
@@ -2076,115 +1364,7 @@ export class PlanningScene extends Phaser.Scene {
     const streak = Math.max(winStreakBonus, loseStreakBonus);
     const gain = base + interest + streak;
     this.player.gold += gain;
-    this.addLog(`Vòng ${this.player.round}: +${gain} vàng (cơ bản ${base} + lãi ${interest} + chuỗi ${streak}).`);
-    if (this.player.round % 2 === 0) this.grantRoundItemDrop();
-    this.persistProgress();
-  }
-
-  grantRoundItemDrop() {
-    const item = randomItem(BASE_ITEMS);
-    this.player.itemBag.push(item.id);
-    this.addLog(`Nhặt được vật phẩm: ${item.icon} ${item.name}.`);
-  }
-
-  prepareEnemyPreview(force = false) {
-    if (!force && this.player.enemyPreviewRound === this.player.round && this.player.enemyPreview.length) return;
-    const plan = this.generateEnemyPreviewPlan();
-    this.player.enemyPreview = plan.units;
-    this.player.enemyPreviewRound = this.player.round;
-    this.player.enemyBudget = plan.budget;
-    this.addLog(`Trinh sát địch: ${plan.units.length} linh thú, ngân sách ${plan.budget}.`);
-    this.persistProgress();
-  }
-
-  generateEnemyPreviewPlan() {
-    const sandbox = this.player.gameMode === "PVE_SANDBOX";
-    const modeFactor = this.aiMode === "EASY" ? 0.92 : this.aiMode === "HARD" ? 1.15 : 1;
-    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (this.aiMode === "HARD" ? 1 : 0), 1, 9);
-    const teamSize = clamp(
-      getDeployCapByLevel(estLevel) + (this.aiMode === "EASY" ? -1 : this.aiMode === "HARD" ? 1 : 0) - (sandbox ? 1 : 0),
-      2,
-      12
-    );
-    const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
-    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (this.aiMode === "HARD" ? 1 : 0), 1, 5);
-    const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
-
-    const picks = [];
-    let coins = budget;
-    let frontCount = 0;
-    let guard = 0;
-    while (picks.length < teamSize && guard < 260) {
-      guard += 1;
-      let candidates = pool.filter((u) => u.tier <= Math.max(1, coins));
-      if (!candidates.length) candidates = pool.filter((u) => u.tier === 1);
-      if (!candidates.length) break;
-
-      let pick = null;
-      if (frontCount < Math.ceil(teamSize * 0.33)) {
-        const frontPool = candidates.filter((u) => u.classType === "TANKER" || u.classType === "FIGHTER");
-        if (frontPool.length) pick = randomItem(frontPool);
-      }
-      if (!pick) pick = randomItem(candidates);
-
-      let star = 1;
-      const starRoll = Math.random();
-      if (this.player.round >= 10 && starRoll < 0.08 + (this.aiMode === "HARD" ? 0.04 : 0)) star = 3;
-      else if (this.player.round >= 5 && starRoll < 0.24 + (this.aiMode === "HARD" ? 0.06 : 0)) star = 2;
-
-      picks.push({ baseId: pick.id, classType: pick.classType, tier: pick.tier, star });
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
-      coins -= Math.max(1, pick.tier - (star - 1));
-      if (coins <= 0 && picks.length >= Math.ceil(teamSize * 0.7)) break;
-    }
-
-    if (!picks.length) {
-      const fallback = randomItem(UNIT_CATALOG.filter((u) => u.tier === 1));
-      picks.push({ baseId: fallback.id, classType: fallback.classType, tier: fallback.tier, star: 1 });
-    }
-
-    const frontSlots = [
-      { row: 2, col: 5 }, { row: 1, col: 5 }, { row: 3, col: 5 }, { row: 2, col: 6 }, { row: 0, col: 5 }, { row: 4, col: 5 },
-      { row: 1, col: 6 }, { row: 3, col: 6 }, { row: 2, col: 7 }, { row: 0, col: 6 }, { row: 4, col: 6 }, { row: 1, col: 7 }
-    ];
-    const backSlots = [
-      { row: 2, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 2, col: 8 }, { row: 0, col: 9 }, { row: 4, col: 9 },
-      { row: 1, col: 8 }, { row: 3, col: 8 }, { row: 0, col: 8 }, { row: 4, col: 8 }, { row: 2, col: 7 }, { row: 1, col: 7 }
-    ];
-    const assassinSlots = [
-      { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 0, col: 8 }, { row: 4, col: 8 }
-    ];
-    const used = new Set();
-    const takeSlot = (list) => {
-      for (let i = 0; i < list.length; i += 1) {
-        const key = `${list[i].row}:${list[i].col}`;
-        if (used.has(key)) continue;
-        used.add(key);
-        return list[i];
-      }
-      return null;
-    };
-
-    const units = [];
-    const ordered = [
-      ...picks.filter((p) => p.classType === "TANKER" || p.classType === "FIGHTER"),
-      ...picks.filter((p) => p.classType === "SUPPORT" || p.classType === "MAGE" || p.classType === "ARCHER"),
-      ...picks.filter((p) => p.classType === "ASSASSIN")
-    ];
-    ordered.forEach((pick) => {
-      let slot = null;
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") {
-        slot = takeSlot(frontSlots) ?? takeSlot(backSlots);
-      } else if (pick.classType === "ASSASSIN") {
-        slot = takeSlot(assassinSlots) ?? takeSlot(backSlots) ?? takeSlot(frontSlots);
-      } else {
-        slot = takeSlot(backSlots) ?? takeSlot(frontSlots);
-      }
-      if (!slot) return;
-      units.push({ baseId: pick.baseId, star: pick.star, row: slot.row, col: slot.col });
-    });
-
-    return { budget, units };
+    this.addLog(`Round ${this.player.round}: +${gain} gold (base ${base} + interest ${interest} + streak ${streak}).`);
   }
 
   showAugmentChoices() {
@@ -2198,8 +1378,8 @@ export class PlanningScene extends Phaser.Scene {
     shade.setDepth(3000);
     this.overlaySprites.push(shade);
 
-    const title = this.add.text(this.scale.width / 2 - 180, 180, "Chọn 1 Pháp Ấn Rừng", {
-      fontFamily: UI_FONT,
+    const title = this.add.text(this.scale.width / 2 - 170, 180, "Chon 1 Forest Augment", {
+      fontFamily: "Trebuchet MS",
       fontSize: "30px",
       color: "#fff0ad",
       fontStyle: "bold"
@@ -2210,19 +1390,18 @@ export class PlanningScene extends Phaser.Scene {
     choices.forEach((choice, idx) => {
       const x = 220 + idx * 360;
       const y = 250;
-      const card = this.add.rectangle(x, y, 320, 260, 0x1a2a3e, 0.98);
-      card.setStrokeStyle(1, UI_COLORS.panelEdge, 0.9);
+      const card = this.add.rectangle(x, y, 320, 260, 0x1f2b3d, 0.98);
+      card.setStrokeStyle(3, 0x8cc8ff, 1);
       card.setDepth(3001);
       card.setInteractive({ useHandCursor: true });
-      this.tooltip.attach(card, () => this.getAugmentTooltip(choice));
       card.on("pointerdown", () => this.chooseAugment(choice));
       card.on("pointerover", () => card.setFillStyle(0x2b3d57, 0.98));
       card.on("pointerout", () => card.setFillStyle(0x1f2b3d, 0.98));
 
       const text = this.add.text(x - 146, y - 106, `${choice.name}\n\n[${choice.group}]\n${choice.description}`, {
-        fontFamily: UI_FONT,
+        fontFamily: "Consolas",
         fontSize: "18px",
-        color: UI_COLORS.textPrimary,
+        color: "#e8f3ff",
         wordWrap: { width: 290 },
         lineSpacing: 6
       });
@@ -2241,11 +1420,10 @@ export class PlanningScene extends Phaser.Scene {
     this.applyAugment(augment);
     this.player.augments.push(augment.id);
     this.player.augmentRoundsTaken.push(this.player.round);
-    this.addLog(`Đã chọn pháp ấn: ${augment.name}`);
+    this.addLog(`Augment: ${augment.name}`);
     this.clearOverlay();
     this.phase = PHASE.PLANNING;
     this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   applyAugment(augment) {
@@ -2301,18 +1479,33 @@ export class PlanningScene extends Phaser.Scene {
     }
   }
   beginCombat() {
-    if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     if (this.getDeployCount() <= 0) {
-      this.addLog("Cần triển khai ít nhất 1 linh thú.");
+      this.addLog("Can deploy it nhat 1 tuong.");
       return;
     }
-    this.prepareEnemyPreview();
-    this.audioFx.play("skill");
-    this.persistProgress();
-    this.scene.start("CombatScene", {
-      runState: this.exportRunState()
-    });
+
+    this.phase = PHASE.COMBAT;
+    this.selectedBenchIndex = null;
+    this.clearPlanningSprites();
+    this.clearOverlay();
+    this.combatUnits = [];
+    this.turnQueue = [];
+    this.turnIndex = 0;
+    this.actionCount = 0;
+    this.globalDamageMult = 1;
+    this.isActing = false;
+    this.highlightLayer.clear();
+
+    this.spawnPlayerCombatUnits();
+    this.spawnEnemyCombatUnits();
+    this.applySynergyBonuses("LEFT");
+    this.applySynergyBonuses("RIGHT");
+    this.buildTurnQueue();
+    this.refreshHeader();
+    this.refreshSynergyPreview();
+    this.refreshQueuePreview();
+    this.addLog(`Bắt đầu giao tranh vòng ${this.player.round}.`);
   }
 
   spawnPlayerCombatUnits() {
@@ -2327,6 +1520,18 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   spawnEnemyCombatUnits() {
+    const preview = Array.isArray(this.player.enemyPreview) ? this.player.enemyPreview : [];
+    if (preview.length) {
+      preview.forEach((ref) => {
+        const base = UNIT_BY_ID[ref.baseId];
+        if (!base) return;
+        const owned = this.createOwnedUnit(base.id, ref.star ?? 1);
+        const unit = this.createCombatUnit(owned, "RIGHT", ref.row, ref.col);
+        if (unit) this.combatUnits.push(unit);
+      });
+      return;
+    }
+
     const ai = this.getAI();
     const estimateLevel = clamp(1 + Math.floor(this.player.round / 2), 1, 9);
     const count = clamp(getDeployCapByLevel(estimateLevel) + ai.teamSizeBonus, 2, 12);
@@ -2355,15 +1560,16 @@ export class PlanningScene extends Phaser.Scene {
       else if (roll < twoStarChance) star = 2;
 
       const owned = this.createOwnedUnit(base.id, star);
-      if (!owned) return;
       const unit = this.createCombatUnit(owned, "RIGHT", pos.row, pos.col);
       if (unit) this.combatUnits.push(unit);
     });
   }
 
   createCombatUnit(owned, side, row, col) {
-    if (!owned?.base?.stats) return null;
-    const baseStats = scaledBaseStats(owned.base.stats, owned.star);
+    const base = owned?.base ?? UNIT_BY_ID[owned?.baseId];
+    if (!owned || !base) return null;
+    const star = Math.max(1, owned.star ?? 1);
+    const baseStats = scaledBaseStats(base.stats, star);
     const ai = this.getAI();
     const hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
     const atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
@@ -2374,56 +1580,90 @@ export class PlanningScene extends Phaser.Scene {
     const matkWithAug = side === "LEFT" ? Math.round(matkBase * (1 + this.player.teamMatkPct)) : matkBase;
 
     const point = this.gridToScreen(col, row);
-    const roleTheme = this.getRoleTheme(owned.base.classType);
+    const roleTheme = this.getRoleTheme(base.classType);
+    const visual = getUnitVisual(owned.baseId, base.classType);
     const sprite = this.add.circle(point.x, point.y - 10, 24, roleTheme.fill, 0.98);
     sprite.setStrokeStyle(3, roleTheme.stroke, 1);
     sprite.setDepth(point.y + 10);
     sprite.setInteractive({ useHandCursor: true });
 
-    const tag = this.add.text(point.x - 46, point.y - 58, `${owned.base.name}\n${owned.star}*`, {
-      fontFamily: "Consolas",
+    const icon = this.add.text(point.x, point.y - 10, visual.icon, {
+      fontFamily: "Segoe UI Emoji",
+      fontSize: "32px",
+      color: "#ffffff"
+    }).setOrigin(0.5);
+    icon.setDepth(point.y + 12);
+
+    const tag = this.add.text(point.x - 58, point.y - 60, `${visual.nameVi}\n${owned.star}★`, {
+      fontFamily: UI_FONT,
       fontSize: "10px",
       color: "#ffffff",
       lineSpacing: 2
     });
     tag.setDepth(point.y + 11);
 
-    const hpLabel = this.add.text(point.x - 46, point.y - 18, "", {
-      fontFamily: "Consolas",
+    const barW = 64;
+    const hpBarBg = this.add.rectangle(point.x, point.y + 12, barW, 7, 0x0a1320, 0.92);
+    hpBarBg.setStrokeStyle(1, 0x30475f, 0.9);
+    hpBarBg.setDepth(point.y + 11);
+    const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, barW - 2, 5, 0x79df7b, 0.98).setOrigin(0, 0.5);
+    hpBarFill.setDepth(point.y + 12);
+    const shieldBar = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, 0, 5, 0x7bd5ff, 0.94).setOrigin(0, 0.5);
+    shieldBar.setDepth(point.y + 13);
+
+    const hpText = this.add.text(point.x, point.y + 4, "", {
+      fontFamily: UI_FONT,
       fontSize: "10px",
       color: "#d3ffd6"
-    });
-    hpLabel.setDepth(point.y + 11);
+    }).setOrigin(0.5);
+    hpText.setDepth(point.y + 14);
 
-    const rageLabel = this.add.text(point.x - 46, point.y + 20, "", {
-      fontFamily: "Consolas",
+    const rageBarBg = this.add.rectangle(point.x, point.y + 23, barW, 6, 0x0a1320, 0.9);
+    rageBarBg.setStrokeStyle(1, 0x2f4865, 0.85);
+    rageBarBg.setDepth(point.y + 11);
+    const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 23, 0, 4, 0x7aa9ff, 0.96).setOrigin(0, 0.5);
+    rageBarFill.setDepth(point.y + 12);
+    const rageText = this.add.text(point.x, point.y + 18, "", {
+      fontFamily: UI_FONT,
       fontSize: "10px",
       color: "#dde8ff"
-    });
-    rageLabel.setDepth(point.y + 11);
+    }).setOrigin(0.5);
+    rageText.setDepth(point.y + 14);
 
-    const statusLabel = this.add.text(point.x - 46, point.y + 34, "", {
-      fontFamily: "Consolas",
+    const statusLabel = this.add.text(point.x - 48, point.y + 30, "", {
+      fontFamily: UI_FONT,
       fontSize: "9px",
       color: "#ffe9aa"
     });
     statusLabel.setDepth(point.y + 11);
 
-    this.combatSprites.push(sprite, tag, hpLabel, rageLabel, statusLabel);
+    this.combatSprites.push(
+      sprite,
+      icon,
+      tag,
+      hpBarBg,
+      hpBarFill,
+      shieldBar,
+      hpText,
+      rageBarBg,
+      rageBarFill,
+      rageText,
+      statusLabel
+    );
 
     const unit = {
       uid: owned.uid,
       baseId: owned.baseId,
-      name: owned.base.name,
-      star: owned.star,
+      name: visual.nameVi,
+      star,
       side,
       row,
       col,
       homeRow: row,
       homeCol: col,
-      classType: owned.base.classType,
-      tribe: owned.base.tribe,
-      skillId: owned.base.skillId,
+      classType: base.classType,
+      tribe: base.tribe,
+      skillId: base.skillId,
       maxHp: hpWithAug,
       hp: hpWithAug,
       atk: atkWithAug,
@@ -2436,9 +1676,15 @@ export class PlanningScene extends Phaser.Scene {
       shield: side === "LEFT" ? this.player.startingShield : 0,
       alive: true,
       sprite,
+      icon,
       tag,
-      hpLabel,
-      rageLabel,
+      hpBarBg,
+      hpBarFill,
+      shieldBar,
+      hpText,
+      rageBarBg,
+      rageBarFill,
+      rageText,
       statusLabel,
       mods: {
         atkPct: 0,
@@ -2476,7 +1722,7 @@ export class PlanningScene extends Phaser.Scene {
       }
     };
 
-    this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star));
+    this.tooltip.attach(sprite, () => this.getCombatUnitTooltip(unit));
     sprite.on("pointerover", () => this.showAttackPreviewForUnit(unit));
     sprite.on("pointerout", () => this.clearAttackPreview(unit));
     this.syncCombatLabels(unit);
@@ -2501,11 +1747,12 @@ export class PlanningScene extends Phaser.Scene {
     return Boolean(
       unit &&
         unit.alive &&
-        (this.phase === PHASE.COMBAT || this.phase === PHASE.PLANNING) &&
+        this.phase === PHASE.COMBAT &&
         !this.settingsVisible &&
         !this.isActing &&
-        (this.phase !== PHASE.COMBAT ||
-          (unit.statuses?.freeze <= 0 && unit.statuses?.stun <= 0 && unit.statuses?.sleep <= 0))
+        unit.statuses?.freeze <= 0 &&
+        unit.statuses?.stun <= 0 &&
+        unit.statuses?.sleep <= 0
     );
   }
 
@@ -2514,10 +1761,7 @@ export class PlanningScene extends Phaser.Scene {
       this.clearAttackPreview();
       return;
     }
-    const target =
-      this.phase === PHASE.COMBAT
-        ? this.selectTarget(unit, { deterministic: true })
-        : this.selectPlanningTarget(unit);
+    const target = this.selectTarget(unit, { deterministic: true });
     if (!target) {
       this.clearAttackPreview();
       return;
@@ -2595,8 +1839,8 @@ export class PlanningScene extends Phaser.Scene {
 
   getPreviewImpact(attacker, target) {
     const enemySide = attacker.side === "LEFT" ? "RIGHT" : "LEFT";
-    const allies = this.phase === PHASE.COMBAT ? this.getCombatUnits(attacker.side) : this.collectPlanningPreviewUnits(attacker.side);
-    const enemies = this.phase === PHASE.COMBAT ? this.getCombatUnits(enemySide) : this.collectPlanningPreviewUnits(enemySide);
+    const allies = this.getCombatUnits(attacker.side);
+    const enemies = this.getCombatUnits(enemySide);
     const skill = SKILL_LIBRARY[attacker.skillId];
     const impactCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
     const hasTarget = impactCells.some((cell) => cell.row === target.row && cell.col === target.col);
@@ -2692,52 +1936,6 @@ export class PlanningScene extends Phaser.Scene {
     return [...map.values()];
   }
 
-  buildPlanningPreviewActor(side, row, col, classType, star = 1, skillId = null, range = 1) {
-    const hpBase = star >= 3 ? 460 : star === 2 ? 360 : 280;
-    return {
-      uid: `plan_${side}_${row}_${col}_${classType}_${star}`,
-      side,
-      row,
-      col,
-      classType,
-      skillId,
-      range,
-      hp: hpBase,
-      maxHp: hpBase,
-      alive: true,
-      statuses: { tauntTargetId: null }
-    };
-  }
-
-  collectPlanningPreviewUnits(side) {
-    const out = [];
-    if (side === "LEFT") {
-      for (let row = 0; row < ROWS; row += 1) {
-        for (let col = 0; col < PLAYER_COLS; col += 1) {
-          const u = this.player?.board?.[row]?.[col];
-          if (!u) continue;
-          out.push(this.buildPlanningPreviewActor("LEFT", row, col, u.base.classType, u.star, u.base.skillId, u.base.stats.range));
-        }
-      }
-      return out;
-    }
-    const enemyPreview = Array.isArray(this.player?.enemyPreview) ? this.player.enemyPreview : [];
-    enemyPreview.forEach((p) => {
-      const base = UNIT_BY_ID[p.baseId];
-      if (!base) return;
-      out.push(this.buildPlanningPreviewActor("RIGHT", p.row, p.col, base.classType, p.star ?? 1, base.skillId, base.stats.range));
-    });
-    return out;
-  }
-
-  selectPlanningTarget(attacker) {
-    const enemySide = attacker.side === "LEFT" ? "RIGHT" : "LEFT";
-    const enemies = this.collectPlanningPreviewUnits(enemySide);
-    if (!enemies.length) return null;
-    const sorted = [...enemies].sort((a, b) => this.compareTargets(attacker, a, b));
-    return sorted[0] ?? null;
-  }
-
   refreshPlanningUi() {
     this.refreshRoundBackground();
     this.refreshHeader();
@@ -2747,7 +1945,6 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshBoardUi();
     this.refreshSynergyPreview();
     this.refreshQueuePreview();
-    this.refreshStorageUi();
   }
 
   refreshHeader() {
@@ -2755,21 +1952,11 @@ export class PlanningScene extends Phaser.Scene {
     const xpText = xpNeed === Number.POSITIVE_INFINITY ? "TỐI ĐA" : `${this.player.xp}/${xpNeed}`;
     const deployText = `${this.getDeployCount()}/${this.getDeployCap()}`;
     const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Hành trình";
-    this.setHeaderStatValue("round", `${this.player.round}`);
-    this.setHeaderStatValue("hp", `${this.player.hp}`);
-    this.setHeaderStatValue("gold", `${this.player.gold}`);
-    this.setHeaderStatValue("level", `${this.player.level}`);
-    this.setHeaderStatValue("xp", xpText);
-    this.setHeaderStatValue("deploy", deployText);
-    this.headerMetaText?.setText(`Pha ${this.getPhaseLabel(this.phase)} • AI ${AI_SETTINGS[this.aiMode].label} • ${modeLabel}`);
-    this.phaseText.setText(this.getPhaseLabel(this.phase));
+    this.headerText.setText(
+      `Vòng ${this.player.round}  •  Máu ${this.player.hp}  •  Vàng ${this.player.gold}  •  Cấp ${this.player.level}  •  XP ${xpText}  •  Triển khai ${deployText}  •  AI ${AI_SETTINGS[this.aiMode].label}  •  ${modeLabel}`
+    );
+    this.phaseText.setText(`${this.getPhaseLabel(this.phase)}`);
     this.updateLogText();
-  }
-
-  setHeaderStatValue(key, value) {
-    const chip = this.headerStatChips?.[key];
-    if (!chip?.value) return;
-    chip.value.setText(String(value ?? "-"));
   }
 
   getPhaseLabel(phase) {
@@ -2781,6 +1968,13 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   refreshButtons() {
+    if (!this.buttons.roll || !this.buttons.xp || !this.buttons.lock || !this.buttons.start) {
+      this.buttons.settings?.setLabel("Cài đặt");
+      this.buttons.settings?.setEnabled(true);
+      this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
+      this.buttons.history?.setEnabled(true);
+      return;
+    }
     const planning = this.phase === PHASE.PLANNING;
     const lock = this.player.shopLocked ? "Bật" : "Tắt";
     const rollCost = Math.max(1, 2 + this.player.rollCostDelta);
@@ -2789,177 +1983,93 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.xp.setLabel("Mua XP (4)");
     this.buttons.lock.setLabel(`Khóa: ${lock}`);
     this.buttons.start.setLabel("BẮT ĐẦU GIAO TRANH");
-    this.buttons.settings.setLabel("Cài đặt");
+    this.buttons.settings?.setLabel("Cài đặt");
     this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
 
     this.buttons.roll.setEnabled(planning);
     this.buttons.xp.setEnabled(planning);
     this.buttons.lock.setEnabled(planning);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);
-    this.buttons.reset.setEnabled(true);
-    this.buttons.settings.setEnabled(true);
+    this.buttons.reset?.setEnabled(true);
+    this.buttons.easy?.setEnabled(true);
+    this.buttons.medium?.setEnabled(true);
+    this.buttons.hard?.setEnabled(true);
     this.buttons.history?.setEnabled(true);
-    this.buttons.craft1.setEnabled(planning);
-    this.buttons.craft2.setEnabled(planning);
-    this.buttons.craft3.setEnabled(planning);
+
+    this.buttons.easy?.setLabel(LEVEL_LABEL.EASY);
+    this.buttons.medium?.setLabel(LEVEL_LABEL.MEDIUM);
+    this.buttons.hard?.setLabel(LEVEL_LABEL.HARD);
   }
 
   refreshShopUi() {
     this.shopCards.forEach((card) => {
-      if (card.shadow) card.shadow.destroy();
-      card.bg?.destroy();
-      if (card.status) card.status.destroy();
-      if (card.badges) card.badges.forEach((b) => b?.destroy());
-      if (Array.isArray(card.text)) card.text.forEach((t) => t?.destroy());
-      else card.text?.destroy();
-      if (Array.isArray(card.icon)) card.icon.forEach((i) => i?.destroy());
-      else card.icon?.destroy();
+      card.bg.destroy();
+      card.text.destroy();
     });
     this.shopCards = [];
 
-    const l = this.layout;
-    const y = l.shopY;
-    const cardW = l.shopCardW;
-    const cardH = l.shopCardH;
-    const totalShopW = cardW * 5 + l.shopGap * 4;
-    const startX = l.shopRegionX + Math.max(0, l.shopRegionW - totalShopW);
+    const startX = 40;
+    const y = 450;
+    const cardW = 132;
+    const cardH = 140;
     for (let i = 0; i < 5; i += 1) {
-      const x = startX + i * (cardW + l.shopGap);
+      const x = startX + i * (cardW + 8);
       const offer = this.player.shop[i];
       const base = offer ? UNIT_BY_ID[offer.baseId] : null;
-      const visual = base ? getUnitVisual(offer.baseId, base.classType) : null;
-      const sold = !offer;
       const roleTheme = base ? this.getRoleTheme(base.classType) : null;
-      const cardFill = sold ? 0x111826 : roleTheme?.card ?? 0x16283c;
-      const cardStroke = sold ? UI_COLORS.panelEdgeSoft : roleTheme?.stroke ?? UI_COLORS.panelEdge;
-      const cardHover = roleTheme?.cardHover ?? 0x213c58;
-      const innerW = Math.max(20, cardW - 20);
-      const shadow = this.add.rectangle(x + cardW / 2, y + cardH / 2 + 2, cardW, cardH, 0x000000, 0.2);
-      shadow.setDepth(1498);
+      const cardFill = base ? roleTheme.card : 0x1f2a3a;
+      const cardStroke = base ? roleTheme.stroke : 0x6fb0ff;
+      const cardHover = base ? roleTheme.cardHover : 0x2b3f5d;
+      const bg = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, cardFill, 0.95);
+      bg.setStrokeStyle(2, cardStroke, 1);
+      bg.setDepth(1500);
 
-      const bg = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, cardFill, 0.92);
-      bg.setStrokeStyle(1, cardStroke, 0.9);
-      bg.setDepth(1499);
-
-      let txt = "Ô này đã được mua ở lượt này.";
-      let iconText = "❔";
-      if (base) {
-        iconText = visual.icon;
-        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNộ ${base.stats.rageMax} • Tầm ${base.stats.range}`;
+      let txt = "SOLD";
+      if (offer) {
+        txt = `${base.name}\nTier ${base.tier} (${base.tier}g)\n${base.tribe}/${base.classType}\nR:${base.stats.rageMax}`;
       }
 
-      const status = this.add.text(x + 10, y + 8, sold ? "ĐÃ MUA" : "SẴN SÀNG", {
-        fontFamily: UI_FONT,
-        fontSize: "11px",
-        color: sold ? UI_COLORS.textMuted : "#9fe9ff",
-        fontStyle: "bold"
-      });
-      status.setDepth(1502);
-
-      const badges = [];
-      const addBadge = (bx, by, bw, label, fill) => {
-        const badgeBg = this.add.rectangle(bx + bw / 2, by + 8, bw, 16, fill, 0.95);
-        badgeBg.setStrokeStyle(1, 0x8cb9d8, 0.3);
-        badgeBg.setDepth(1501);
-        const badgeText = this.add.text(bx + bw / 2, by + 8, label, {
-          fontFamily: UI_FONT,
-          fontSize: "10px",
-          color: "#f0f9ff"
-        }).setOrigin(0.5);
-        badgeText.setDepth(1502);
-        badges.push(badgeBg, badgeText);
-      };
-
-      if (base) {
-        const badgeGap = 6;
-        const tierW = Math.max(40, Math.floor((innerW - badgeGap) * 0.45));
-        const costW = Math.max(40, innerW - tierW - badgeGap);
-        addBadge(x + 10, y + 30, tierW, `Bậc ${base.tier}`, UI_COLORS.badgeTier);
-        addBadge(x + 10 + tierW + badgeGap, y + 30, costW, `${base.tier} vàng`, UI_COLORS.badgeCost);
-      } else {
-        addBadge(x + 10, y + 30, innerW, "Trống", 0x303844);
-      }
-
-      const portraitBg = this.add.circle(
-        x + cardW / 2,
-        y + 72,
-        23,
-        sold ? 0x2d3a4b : roleTheme?.fill ?? 0x365675,
-        sold ? 0.42 : 0.26
-      );
-      portraitBg.setStrokeStyle(1, sold ? 0x5f6772 : roleTheme?.stroke ?? UI_COLORS.panelEdge, 0.9);
-      portraitBg.setDepth(1500);
-      badges.push(portraitBg);
-
-      const text = this.add.text(x + 10, y + 98, txt, {
-        fontFamily: UI_FONT,
-        fontSize: sold ? "11px" : "12px",
-        color: UI_COLORS.textPrimary,
-        wordWrap: { width: innerW },
+      const text = this.add.text(x + 8, y + 8, txt, {
+        fontFamily: "Consolas",
+        fontSize: "12px",
+        color: "#e8f3ff",
+        wordWrap: { width: cardW - 14 },
         lineSpacing: 3
       });
       text.setDepth(1501);
-      const icon = this.add.text(x + cardW / 2, y + 72, iconText, {
-        fontFamily: "Segoe UI Emoji",
-        fontSize: "30px",
-        color: "#ffffff"
-      }).setOrigin(0.5);
-      icon.setDepth(1502);
-      this.shopCards.push({ shadow, bg, status, badges, text, icon });
+      this.shopCards.push({ bg, text });
 
       bg.setInteractive({ useHandCursor: true });
       bg.on("pointerdown", () => this.buyFromShop(i));
-      this.tooltip.attach(bg, () => {
-        if (!offer) return { title: "Đã mua", body: "Ô này đã được mua ở lượt hiện tại." };
-        return this.getUnitTooltip(offer.baseId, 1);
-      });
       bg.on("pointerover", () => {
-        if (this.phase === PHASE.PLANNING && !sold) {
-          bg.setFillStyle(cardHover, 0.95);
-          status.setText("ĐANG CHỌN");
-          status.setColor("#d7f9ff");
-        }
+        if (this.phase === PHASE.PLANNING) bg.setFillStyle(cardHover, 0.95);
       });
-      bg.on("pointerout", () => {
-        bg.setFillStyle(cardFill, 0.92);
-        status.setText(sold ? "ĐÃ MUA" : "SẴN SÀNG");
-        status.setColor(sold ? UI_COLORS.textMuted : "#9fe9ff");
-      });
+      bg.on("pointerout", () => bg.setFillStyle(cardFill, 0.95));
     }
   }
 
   refreshBenchUi() {
     const cap = this.getBenchCap();
     this.benchSlots.forEach((slot, index) => {
-      this.ensureBenchSlotTextObjects(slot);
       if (index >= cap) {
         slot.bg.setVisible(false);
         slot.label.setVisible(false);
-        slot.icon.setVisible(false);
         return;
       }
       slot.bg.setVisible(true);
       slot.label.setVisible(true);
-      slot.icon.setVisible(true);
       const unit = this.player.bench[index];
       const selected = this.selectedBenchIndex === index;
 
       if (!unit) {
-        slot.bg.setStrokeStyle(1, selected ? UI_COLORS.accent : UI_COLORS.panelEdgeSoft, 0.95);
-        slot.bg.setFillStyle(selected ? 0x223951 : 0x141f2d, selected ? 0.94 : 0.9);
-        this.safeUpdateBenchSlotText(slot, `[${index + 1}] Trống`, UI_COLORS.textMuted, "");
+        slot.bg.setStrokeStyle(2, selected ? 0xffef9a : 0x4f607c, 1);
+        slot.bg.setFillStyle(selected ? 0x36466a : 0x1f2734, 0.92);
+        slot.label.setText(`[${index + 1}] Empty`);
       } else {
         const roleTheme = this.getRoleTheme(unit.base.classType);
-        slot.bg.setStrokeStyle(1, selected ? UI_COLORS.accent : roleTheme.stroke, 0.95);
-        slot.bg.setFillStyle(selected ? roleTheme.cardHover : roleTheme.bench, selected ? 0.95 : 0.9);
-        const visual = getUnitVisual(unit.baseId, unit.base.classType);
-        const nameShort = visual.nameVi.length > 13 ? `${visual.nameVi.slice(0, 12)}…` : visual.nameVi;
-        this.safeUpdateBenchSlotText(
-          slot,
-          `${nameShort}\n${unit.star}★ • ${getClassLabelVi(unit.base.classType)}`,
-          UI_COLORS.textPrimary,
-          visual.icon
-        );
+        slot.bg.setStrokeStyle(2, selected ? 0xffef9a : roleTheme.stroke, 1);
+        slot.bg.setFillStyle(selected ? roleTheme.cardHover : roleTheme.bench, 0.92);
+        slot.label.setText(`${unit.base.name}\n${unit.star}* T${unit.base.tier}\n${unit.base.tribe}/${unit.base.classType}`);
       }
     });
   }
@@ -2968,47 +2078,6 @@ export class PlanningScene extends Phaser.Scene {
     this.clearPlanningSprites();
     if (this.phase !== PHASE.PLANNING && this.phase !== PHASE.AUGMENT) return;
 
-    const enemyPreview = Array.isArray(this.player.enemyPreview) ? this.player.enemyPreview : [];
-    enemyPreview.forEach((preview) => {
-      const base = UNIT_BY_ID[preview.baseId];
-      if (!base) return;
-      const point = this.gridToScreen(preview.col, preview.row);
-      const visual = getUnitVisual(preview.baseId, base.classType);
-      const roleTheme = this.getRoleTheme(base.classType);
-      const actor = this.buildPlanningPreviewActor(
-        "RIGHT",
-        preview.row,
-        preview.col,
-        base.classType,
-        preview.star ?? 1,
-        base.skillId,
-        base.stats.range
-      );
-      const glow = this.add.circle(point.x, point.y - 10, 30, roleTheme.glow, 0.2);
-      glow.setDepth(point.y + 10);
-      const sprite = this.add.circle(point.x, point.y - 10, 22, roleTheme.fill, 0.95);
-      sprite.setStrokeStyle(2, roleTheme.stroke, 1);
-      sprite.setDepth(point.y + 12);
-      sprite.setInteractive({ useHandCursor: true });
-      this.tooltip.attach(sprite, () => this.getUnitTooltip(preview.baseId, preview.star));
-      sprite.on("pointerover", () => this.showAttackPreviewForUnit(actor));
-      sprite.on("pointerout", () => this.clearAttackPreview(actor));
-      const icon = this.add.text(point.x, point.y - 10, visual.icon, {
-        fontFamily: "Segoe UI Emoji",
-        fontSize: "32px",
-        color: "#ffffff"
-      }).setOrigin(0.5);
-      icon.setDepth(point.y + 14);
-      const label = this.add.text(point.x + 15, point.y - 35, `${preview.star}★`, {
-        fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: "#ffe8e1",
-        fontStyle: "bold"
-      });
-      label.setDepth(point.y + 13);
-      this.planningSprites.push(glow, sprite, icon, label);
-    });
-
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const unit = this.player.board[row][col];
@@ -3016,29 +2085,11 @@ export class PlanningScene extends Phaser.Scene {
         const point = this.gridToScreen(col, row);
         const roleTheme = this.getRoleTheme(unit.base.classType);
         const visual = getUnitVisual(unit.baseId, unit.base.classType);
-        const actor = this.buildPlanningPreviewActor(
-          "LEFT",
-          row,
-          col,
-          unit.base.classType,
-          unit.star,
-          unit.base.skillId,
-          unit.base.stats.range
-        );
         const glow = this.add.circle(point.x, point.y - 10, 30, roleTheme.glow, 0.22);
         glow.setDepth(point.y + 13);
         const sprite = this.add.circle(point.x, point.y - 10, 22, roleTheme.fill, 1);
         sprite.setStrokeStyle(2, roleTheme.stroke, 1);
         sprite.setDepth(point.y + 15);
-        sprite.setInteractive({ useHandCursor: true });
-        this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star));
-        sprite.on("pointerup", (pointer) => {
-          if (this.boardDragConsumed) return;
-          if (this.isPanPointer(pointer)) return;
-          this.onPlayerCellClick(row, col);
-        });
-        sprite.on("pointerover", () => this.showAttackPreviewForUnit(actor));
-        sprite.on("pointerout", () => this.clearAttackPreview(actor));
         const icon = this.add.text(point.x, point.y - 10, visual.icon, {
           fontFamily: "Segoe UI Emoji",
           fontSize: "32px",
@@ -3052,19 +2103,25 @@ export class PlanningScene extends Phaser.Scene {
           fontStyle: "bold"
         });
         label.setDepth(point.y + 16);
-        this.planningSprites.push(glow, sprite, label, icon);
+        this.planningSprites.push(glow, sprite, icon, label);
       }
     }
   }
 
   refreshSynergyPreview() {
-    const deployed = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
-        if (unit) deployed.push(unit);
-      }
-    }
+    const deployed =
+      this.phase === PHASE.COMBAT && Array.isArray(this.combatUnits) && this.combatUnits.length
+        ? this.getCombatUnits("LEFT")
+        : (() => {
+            const items = [];
+            for (let row = 0; row < ROWS; row += 1) {
+              for (let col = 0; col < PLAYER_COLS; col += 1) {
+                const unit = this.player.board[row][col];
+                if (unit) items.push(unit);
+              }
+            }
+            return items;
+          })();
     const summary = this.computeSynergyCounts(deployed, "LEFT");
     const classLines = Object.keys(summary.classCounts)
       .sort((a, b) => summary.classCounts[b] - summary.classCounts[a])
@@ -3073,36 +2130,17 @@ export class PlanningScene extends Phaser.Scene {
       .sort((a, b) => summary.tribeCounts[b] - summary.tribeCounts[a])
       .map((key) => `${getTribeLabelVi(key)}: ${summary.tribeCounts[key]}`);
     const aug = this.player.augments.length ? this.player.augments.join(", ") : null;
-
-    const classPreview = classLines.slice(0, 3);
-    const tribePreview = tribeLines.slice(0, 3);
-    const augPreview = aug ? aug.split(", ").slice(0, 2) : [];
-    const classText = classPreview.length ? classPreview.map((line) => `• ${line}`).join("\n") : "• Chưa kích nghề";
-    const tribeText = tribePreview.length ? tribePreview.map((line) => `• ${line}`).join("\n") : "• Chưa kích tộc";
-    const augText = augPreview.length
-      ? `${augPreview.map((line) => `• ${line}`).join("\n")}${this.player.augments.length > 2 ? `\n• +${this.player.augments.length - 2} khác` : ""}`
-      : "• Chưa có pháp ấn";
-    this.synergyText.setText(`Nghề\n${classText}\n\nTộc\n${tribeText}\n\nPháp ấn\n${augText}`);
-    this.refreshRightPanelScrollMetrics();
+    const classText = classLines.length ? classLines.map((line) => `• ${line}`).join("\n") : "• Chưa kích nghề";
+    const tribeText = tribeLines.length ? tribeLines.map((line) => `• ${line}`).join("\n") : "• Chưa kích tộc";
+    const augText = aug ? aug.split(", ").map((line) => `• ${line}`).join("\n") : "• Chưa có pháp ấn";
+    this.synergyText.setText(
+      `Nghề\n${classText}\n\nTộc\n${tribeText}\n\nPháp ấn\n${augText}`
+    );
   }
 
   refreshQueuePreview() {
-    this.enemyToggleText?.setText(this.enemyInfoExpanded ? "Thu gọn ▾" : "Chi tiết ▸");
-    const queueH = this.enemyInfoExpanded ? 92 : 56;
-    this.queueText.setFixedSize(this.rightPanelContentWidth ?? this.queueText.width, queueH);
     if (this.phase !== PHASE.COMBAT) {
-      if (!this.enemyInfoExpanded) {
-        this.queueText.setText(
-          `• Vòng ${this.player.round} • ${this.player.enemyPreview?.length ?? 0} linh thú • Ngân sách ${this.player.enemyBudget ?? 0}`
-        );
-      } else {
-        this.queueText.setText(
-          `• Đội hình địch vòng ${this.player.round}\n• Ngân sách AI: ${this.player.enemyBudget ?? 0}\n• Số linh thú: ${
-            this.player.enemyPreview?.length ?? 0
-          }`
-        );
-      }
-      this.refreshRightPanelScrollMetrics();
+      this.queueText.setText(`• Đang chuẩn bị giao tranh\n• Vòng ${this.player?.round ?? 1}\n• Linh thú địch: ${this.getCombatUnits("RIGHT").length}`);
       return;
     }
     const next = [];
@@ -3113,98 +2151,18 @@ export class PlanningScene extends Phaser.Scene {
       if (!unit || !unit.alive) continue;
       next.push(`${i + 1}. ${unit.name} (${unit.side === "LEFT" ? "Ta" : "Địch"})`);
     }
-    if (!this.enemyInfoExpanded) {
-      this.queueText.setText(`• Còn ${next.length || 0} hành động sắp tới.`);
-    } else {
-      this.queueText.setText(`• Thứ tự lượt tiếp theo\n${next.join("\n") || "Đã hết lượt."}`);
-    }
-    this.refreshRightPanelScrollMetrics();
-  }
-
-  refreshStorageUi() {
-    if (!this.storageSummaryText) return;
-
-    const bagCounts = {};
-    this.player.itemBag.forEach((id) => {
-      bagCounts[id] = (bagCounts[id] ?? 0) + 1;
-    });
-
-    const craftedText = this.player.craftedItems
-      .slice(-3)
-      .map((id) => {
-        const recipe = RECIPE_BY_ID[id];
-        return `${recipe?.icon ?? "✨"} ${recipe?.name ?? id}`;
-      })
-      .join(", ");
-
-    this.storageSummaryText.setText(`• Kho thú: ${this.player.bench.length}/${this.getBenchCap()}\n• Ô vật phẩm: ${this.player.itemBag.length}`);
-    this.storageCraftText?.setText(`• Đồ ghép gần đây: ${craftedText || "Chưa có"}`);
-
-    const bagEntries = Object.entries(bagCounts).sort((a, b) => b[1] - a[1]);
-    this.inventoryCells.forEach((cell, idx) => {
-      const pair = bagEntries[idx];
-      if (!pair) {
-        cell.itemId = null;
-        cell.amount = 0;
-        cell.bg.setFillStyle(0x162639, 0.95);
-        cell.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
-        cell.icon.setText("＋");
-        cell.icon.setColor(UI_COLORS.textMuted);
-        cell.count.setText("");
-        return;
-      }
-      const [itemId, amount] = pair;
-      const item = ITEM_BY_ID[itemId];
-      cell.itemId = itemId;
-      cell.amount = amount;
-      cell.bg.setFillStyle(0x203450, 0.96);
-      cell.bg.setStrokeStyle(1, UI_COLORS.panelEdge, 0.85);
-      cell.icon.setText(item?.icon ?? "❔");
-      cell.icon.setColor("#ffffff");
-      cell.count.setText(`x${amount}`);
-    });
-
-    this.refreshRightPanelScrollMetrics();
-  }
-
-  craftItem(recipeId) {
-    if (this.settingsVisible || this.phase !== PHASE.PLANNING) return;
-    const recipe = RECIPE_BY_ID[recipeId];
-    if (!recipe) return;
-
-    const bagCopy = [...this.player.itemBag];
-    for (let i = 0; i < recipe.requires.length; i += 1) {
-      const idx = bagCopy.indexOf(recipe.requires[i]);
-      if (idx < 0) {
-        this.addLog(`Thiếu vật phẩm để ghép ${recipe.name}.`);
-        return;
-      }
-      bagCopy.splice(idx, 1);
-    }
-
-    this.player.itemBag = bagCopy;
-    this.player.craftedItems.push(recipe.id);
-    this.applyCraftBonus(recipe);
-    this.audioFx.play("buy");
-    this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}.`);
-    this.refreshStorageUi();
-    this.persistProgress();
-  }
-
-  applyCraftBonus(recipe) {
-    const bonus = recipe.bonus ?? {};
-    if (bonus.teamAtkPct) this.player.teamAtkPct += bonus.teamAtkPct;
-    if (bonus.teamHpPct) this.player.teamHpPct += bonus.teamHpPct;
-    if (bonus.teamMatkPct) this.player.teamMatkPct += bonus.teamMatkPct;
+    this.queueText.setText(`• Thứ tự lượt tiếp theo\n${next.join("\n") || "Đã hết lượt."}`);
   }
 
   inferLogCategory(message) {
     const text = String(message ?? "").toLowerCase();
     if (
       text.includes("giao tranh") ||
-      text.includes("thắng") ||
+      text.includes("thang") ||
       text.includes("thua") ||
-      text.includes("đòn") ||
+      text.includes("danh") ||
+      text.includes("dung ky nang") ||
+      text.includes("tu chien") ||
       text.includes("combat")
     ) {
       return "COMBAT";
@@ -3214,11 +2172,11 @@ export class PlanningScene extends Phaser.Scene {
       text.includes("shop") ||
       text.includes("roll") ||
       text.includes("xp") ||
-      text.includes("khóa")
+      text.includes("khoa")
     ) {
       return "SHOP";
     }
-    if (text.includes("ghép") || text.includes("vật phẩm") || text.includes("craft")) {
+    if (text.includes("ghep") || text.includes("vat pham") || text.includes("craft")) {
       return "CRAFT";
     }
     return "EVENT";
@@ -3235,88 +2193,74 @@ export class PlanningScene extends Phaser.Scene {
     };
     this.logHistory.push(entry);
     while (this.logHistory.length > 300) this.logHistory.shift();
+
     this.logs.push(safeMessage);
     while (this.logs.length > 6) this.logs.shift();
+
     this.updateLogText();
     if (this.historyModalVisible) this.refreshHistoryModal();
   }
 
   updateLogText() {
     const latest = this.logs.length ? this.logs[this.logs.length - 1] : null;
-    this.logText.setText(latest ? `• ${latest}` : "• Chưa có sự kiện.");
+    this.logText.setText(latest ? `- ${latest}` : "- Chưa có sự kiện.");
     this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
-    this.refreshRightPanelScrollMetrics();
   }
 
-  getUnitTooltip(baseId, star = 1) {
-    const base = UNIT_BY_ID[baseId];
-    if (!base) return { title: "Không rõ", body: "Không có dữ liệu linh thú." };
-    const visual = getUnitVisual(baseId, base.classType);
-    const skill = SKILL_LIBRARY[base.skillId];
-    const classDef = CLASS_SYNERGY[base.classType];
-    const tribeDef = TRIBE_SYNERGY[base.tribe];
-    const classMarks = classDef ? classDef.thresholds.join("/") : "-";
-    const tribeMarks = tribeDef ? tribeDef.thresholds.join("/") : "-";
-    const skillDesc = this.describeSkill(skill);
+  getCombatUnitTooltip(unit) {
+    if (!unit) return { title: "Không rõ", body: "Không có dữ liệu giao tranh." };
+    const visual = getUnitVisual(unit.baseId, unit.classType);
+    const skill = SKILL_LIBRARY[unit.skillId];
+    const classDef = CLASS_SYNERGY[unit.classType];
+    const tribeDef = TRIBE_SYNERGY[unit.tribe];
     return {
-      title: `${visual.icon} ${visual.nameVi} (${star}★)`,
+      title: `${visual.icon} ${visual.nameVi} ${unit.star}★ [${unit.side === "LEFT" ? "Ta" : "Địch"}]`,
       body: [
-        `Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
-        `HP:${Math.round(base.stats.hp * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}  ATK:${Math.round(base.stats.atk * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}`,
-        `DEF:${base.stats.def}  MATK:${Math.round(base.stats.matk * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}  Tầm:${base.stats.range}`,
-        `Nộ tối đa:${base.stats.rageMax}`,
+        `${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | Táº§m ${unit.range}`,
+        `HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`,
+        `ATK ${this.getEffectiveAtk(unit)} | DEF ${this.getEffectiveDef(unit)} | MATK ${this.getEffectiveMatk(unit)} | MDEF ${this.getEffectiveMdef(unit)}`,
+        `Nộ ${unit.rage}/${unit.rageMax}`,
         `Kỹ năng: ${skill?.name ?? "Đánh thường"}`,
-        skillDesc,
-        `Mốc nghề: ${classMarks}`,
-        `Mốc tộc: ${tribeMarks}`
+        this.describeSkill(skill),
+        `Mốc nghề: ${classDef?.thresholds?.join("/") ?? "-"}`,
+        `Mốc tộc: ${tribeDef?.thresholds?.join("/") ?? "-"}`
       ].join("\n")
     };
   }
 
-  getAugmentTooltip(augment) {
-    return {
-      title: `${augment.name} [${augment.group}]`,
-      body: `${augment.description}\n\nHiệu ứng: ${this.translateAugmentEffect(augment.effect.type)}${augment.effect.value != null ? ` (${augment.effect.value})` : ""}`
-    };
-  }
-
   getSynergyTooltip() {
-    const deployed = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player?.board?.[row]?.[col];
-        if (unit) deployed.push(unit);
-      }
-    }
-
-    const summary = this.computeSynergyCounts(deployed, "LEFT");
+    const leftTeam = this.getCombatUnits("LEFT");
+    const rightTeam = this.getCombatUnits("RIGHT");
+    const leftSummary = this.computeSynergyCounts(leftTeam, "LEFT");
+    const rightSummary = this.computeSynergyCounts(rightTeam, "RIGHT");
     const lines = [];
 
-    Object.entries(summary.classCounts)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([key, count]) => {
-        const def = CLASS_SYNERGY[key];
-        if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
-        lines.push(`Nghề ${getClassLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
-      });
+    const pushSide = (title, summary) => {
+      lines.push(title);
+      Object.entries(summary.classCounts)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([key, count]) => {
+          const def = CLASS_SYNERGY[key];
+          if (!def) return;
+          const tier = this.getSynergyTier(count, def.thresholds);
+          lines.push(`Nghề ${getClassLabelVi(key)}: ${count} -> ${tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích"}`);
+        });
+      Object.entries(summary.tribeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([key, count]) => {
+          const def = TRIBE_SYNERGY[key];
+          if (!def) return;
+          const tier = this.getSynergyTier(count, def.thresholds);
+          lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} -> ${tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích"}`);
+        });
+      lines.push("");
+    };
 
-    Object.entries(summary.tribeCounts)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([key, count]) => {
-        const def = TRIBE_SYNERGY[key];
-        if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
-        lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
-      });
-
-    if (!lines.length) lines.push("Chua co synergy nao dang kich hoat.");
+    pushSide("Đội Ta:", leftSummary);
+    pushSide("Đội Địch:", rightSummary);
 
     if (this.player?.augments?.length) {
-      lines.push("");
-      lines.push("Pháp ấn đã chọn:");
+      lines.push("Pháp ấn:");
       this.player.augments.forEach((id) => {
         const aug = AUGMENT_LIBRARY.find((x) => x.id === id);
         if (!aug) return;
@@ -3325,8 +2269,8 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     return {
-      title: "Chi tiết synergy / pháp ấn",
-      body: lines.join("\n")
+      title: "Chi tiết synergy giao tranh",
+      body: lines.filter(Boolean).join("\n")
     };
   }
 
@@ -3394,27 +2338,6 @@ export class PlanningScene extends Phaser.Scene {
       true_single: "Sát thương chuẩn đơn mục tiêu"
     };
     return map[effect] ?? effect;
-  }
-
-  translateAugmentEffect(effectType) {
-    const map = {
-      gold_flat: "Vàng cộng thẳng",
-      interest_cap: "Tăng trần lãi",
-      roll_cost_delta: "Giảm giá đổi tướng",
-      deploy_cap_bonus: "Tăng giới hạn triển khai",
-      bench_bonus: "Tăng ô dự bị",
-      starting_rage: "Tăng nộ đầu trận",
-      team_atk_pct: "Tăng công toàn đội",
-      team_hp_pct: "Tăng máu toàn đội",
-      starting_shield: "Tăng khiên đầu trận",
-      team_matk_pct: "Tăng công phép toàn đội",
-      extra_class_count: "Cộng mốc nghề",
-      extra_tribe_count: "Cộng mốc tộc",
-      lifesteal_pct: "Hút máu vật lý",
-      hp_loss_reduce: "Giảm máu mất khi thua",
-      xp_flat: "XP cộng thẳng"
-    };
-    return map[effectType] ?? effectType;
   }
 
   getAI() {
@@ -3559,14 +2482,14 @@ export class PlanningScene extends Phaser.Scene {
     this.actionCount += 1;
     if (this.actionCount > 100 && this.actionCount % 5 === 0) {
       this.globalDamageMult += 0.2;
-      this.addLog(`Sudden death x${this.globalDamageMult.toFixed(1)} damage.`);
+      this.addLog(`Tử chiến x${this.globalDamageMult.toFixed(1)} sát thương.`);
     }
 
     this.isActing = true;
     this.highlightUnit(actor, 0xffef9f);
     const skipped = this.processStartTurn(actor);
     if (skipped) {
-      this.addLog(`${actor.name} bo luot (${skipped}).`);
+      this.addLog(`${actor.name} bỏ lượt (${skipped}).`);
     } else {
       const target = this.selectTarget(actor);
       if (target) {
@@ -3711,9 +2634,11 @@ export class PlanningScene extends Phaser.Scene {
     const pattern = attacker.range >= 2 ? "RANGED_STATIC" : attacker.classType === "ASSASSIN" ? "ASSASSIN_BACK" : "MELEE_FRONT";
     await this.runActionPattern(attacker, target, pattern, async () => {
       const raw = this.getEffectiveAtk(attacker) + Phaser.Math.Between(-5, 6);
+      this.audioFx.play("hit");
+      this.vfx?.slash(attacker.sprite.x, attacker.sprite.y, target.sprite.x, target.sprite.y, 0xff9f8c);
       this.resolveDamage(attacker, target, raw, "physical", "BASIC");
     });
-    this.addLog(`${attacker.name} danh ${target.name}.`);
+    this.addLog(`${attacker.name} đánh ${target.name}.`);
   }
 
   async castSkill(attacker, target) {
@@ -3723,14 +2648,19 @@ export class PlanningScene extends Phaser.Scene {
       return;
     }
 
+    this.audioFx.play("skill");
     await this.runActionPattern(attacker, target, skill.actionPattern, async () => {
+      this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 8, 0xb6dbff, 16, 220);
       await this.applySkillEffect(attacker, target, skill);
     });
-    this.addLog(`${attacker.name} dung skill ${skill.name}.`);
+    this.addLog(`${attacker.name} dùng kỹ năng ${skill.name}.`);
   }
 
   async runActionPattern(attacker, target, pattern, impactFn) {
     if (pattern === "SELF" || pattern === "RANGED_STATIC") {
+      if (pattern === "RANGED_STATIC") {
+        this.vfx?.slash(attacker.sprite.x, attacker.sprite.y, target.sprite.x, target.sprite.y, 0xbad6ff, 140);
+      }
       await impactFn();
       return;
     }
@@ -4024,6 +2954,7 @@ export class PlanningScene extends Phaser.Scene {
 
     if (attacker && !options.forceHit) {
       if (Math.random() < defender.mods.evadePct) {
+        this.audioFx.play("click");
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
         return 0;
       }
@@ -4052,11 +2983,14 @@ export class PlanningScene extends Phaser.Scene {
       const absorbed = Math.min(defender.shield, damageLeft);
       defender.shield -= absorbed;
       damageLeft -= absorbed;
+      this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0x8ce9ff, 14, 180);
       this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `ABS ${absorbed}`, "#86e8ff");
     }
 
     if (damageLeft > 0) {
       defender.hp = Math.max(0, defender.hp - damageLeft);
+      this.audioFx.play("hit");
+      this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xff8f8f, 14, 180);
       this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `-${damageLeft}`, "#ff9b9b");
     }
 
@@ -4094,9 +3028,14 @@ export class PlanningScene extends Phaser.Scene {
       defender.shield = 0;
       defender.sprite.setFillStyle(0x3a3a3a, 0.92);
       defender.tag.setColor("#9a9a9a");
-      defender.hpLabel.setColor("#9a9a9a");
-      defender.rageLabel.setColor("#9a9a9a");
+      defender.hpBarFill.setFillStyle(0x676f77, 0.9);
+      defender.rageBarFill.setFillStyle(0x676f77, 0.85);
+      defender.shieldBar.setFillStyle(0x676f77, 0.8);
+      defender.hpText.setColor("#9a9a9a");
+      defender.rageText.setColor("#9a9a9a");
       defender.statusLabel.setColor("#9a9a9a");
+      this.audioFx.play("ko", 0.12);
+      this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xffffff, 20, 320);
       this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "KO", "#ffffff");
     }
 
@@ -4109,6 +3048,7 @@ export class PlanningScene extends Phaser.Scene {
   addShield(target, amount) {
     const val = Math.max(1, Math.round(amount));
     target.shield += val;
+    this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 10, 0x8ce9ff, 18, 220);
     this.showFloatingText(target.sprite.x, target.sprite.y - 45, `SHIELD ${val}`, "#8ce9ff");
     this.updateCombatUnitUi(target);
   }
@@ -4121,6 +3061,8 @@ export class PlanningScene extends Phaser.Scene {
     target.hp = Math.min(target.maxHp, target.hp + healRaw);
     const applied = target.hp - before;
     if (applied <= 0) return 0;
+    this.audioFx.play("heal");
+    this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 10, 0x9dffba, 14, 180);
     this.showFloatingText(target.sprite.x, target.sprite.y - 45, `+${applied}`, "#9dffba");
     if (caster && reason) this.showFloatingText(caster.sprite.x, caster.sprite.y - 37, reason, "#c9ffde");
     this.updateCombatUnitUi(target);
@@ -4128,8 +3070,20 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   updateCombatUnitUi(unit) {
-    unit.hpLabel.setText(`HP:${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`);
-    unit.rageLabel.setText(`R:${unit.rage}/${unit.rageMax}`);
+    const hpRatio = clamp(unit.maxHp > 0 ? unit.hp / unit.maxHp : 0, 0, 1);
+    const rageRatio = clamp(unit.rageMax > 0 ? unit.rage / unit.rageMax : 0, 0, 1);
+    const hpInnerW = Math.max(1, unit.hpBarBg.width - 2);
+    const rageInnerW = Math.max(1, unit.rageBarBg.width - 2);
+    const shieldRatio = clamp(unit.maxHp > 0 ? unit.shield / unit.maxHp : 0, 0, 1);
+
+    unit.hpBarFill.width = Math.max(1, hpInnerW * hpRatio);
+    unit.hpBarFill.setFillStyle(unit.alive ? 0x79df7b : 0x676f77, unit.alive ? 0.98 : 0.9);
+    unit.shieldBar.width = Math.max(0, hpInnerW * shieldRatio);
+    unit.rageBarFill.width = Math.max(1, rageInnerW * rageRatio);
+    unit.rageBarFill.setFillStyle(unit.alive ? 0x7aa9ff : 0x676f77, unit.alive ? 0.96 : 0.85);
+    unit.hpText.setText(`HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +${unit.shield}` : ""}`);
+    unit.rageText.setText(`Nộ ${unit.rage}/${unit.rageMax}`);
+
     const s = [];
     if (unit.statuses.freeze > 0) s.push(`FRZ${unit.statuses.freeze}`);
     if (unit.statuses.stun > 0) s.push(`STN${unit.statuses.stun}`);
@@ -4174,18 +3128,36 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   syncCombatLabels(unit) {
-    unit.tag.x = unit.sprite.x - 46;
+    unit.icon.x = unit.sprite.x;
+    unit.icon.y = unit.sprite.y - 10;
+    unit.tag.x = unit.sprite.x - 58;
     unit.tag.y = unit.sprite.y - 48;
-    unit.hpLabel.x = unit.sprite.x - 46;
-    unit.hpLabel.y = unit.sprite.y - 18;
-    unit.rageLabel.x = unit.sprite.x - 46;
-    unit.rageLabel.y = unit.sprite.y + 20;
-    unit.statusLabel.x = unit.sprite.x - 46;
-    unit.statusLabel.y = unit.sprite.y + 34;
+    unit.hpBarBg.x = unit.sprite.x;
+    unit.hpBarBg.y = unit.sprite.y + 12;
+    unit.hpBarFill.x = unit.sprite.x - unit.hpBarBg.width / 2 + 1;
+    unit.hpBarFill.y = unit.sprite.y + 12;
+    unit.shieldBar.x = unit.sprite.x - unit.hpBarBg.width / 2 + 1;
+    unit.shieldBar.y = unit.sprite.y + 12;
+    unit.hpText.x = unit.sprite.x;
+    unit.hpText.y = unit.sprite.y + 4;
+    unit.rageBarBg.x = unit.sprite.x;
+    unit.rageBarBg.y = unit.sprite.y + 23;
+    unit.rageBarFill.x = unit.sprite.x - unit.rageBarBg.width / 2 + 1;
+    unit.rageBarFill.y = unit.sprite.y + 23;
+    unit.rageText.x = unit.sprite.x;
+    unit.rageText.y = unit.sprite.y + 18;
+    unit.statusLabel.x = unit.sprite.x - 48;
+    unit.statusLabel.y = unit.sprite.y + 30;
     unit.sprite.setDepth(unit.sprite.y + 10);
+    unit.icon.setDepth(unit.sprite.y + 12);
     unit.tag.setDepth(unit.sprite.y + 11);
-    unit.hpLabel.setDepth(unit.sprite.y + 11);
-    unit.rageLabel.setDepth(unit.sprite.y + 11);
+    unit.hpBarBg.setDepth(unit.sprite.y + 11);
+    unit.hpBarFill.setDepth(unit.sprite.y + 12);
+    unit.shieldBar.setDepth(unit.sprite.y + 13);
+    unit.hpText.setDepth(unit.sprite.y + 14);
+    unit.rageBarBg.setDepth(unit.sprite.y + 11);
+    unit.rageBarFill.setDepth(unit.sprite.y + 12);
+    unit.rageText.setDepth(unit.sprite.y + 14);
     unit.statusLabel.setDepth(unit.sprite.y + 11);
   }
 
@@ -4195,39 +3167,11 @@ export class PlanningScene extends Phaser.Scene {
     });
   }
 
-  showRoundResultBanner(text, isWin = true, holdMs = 1100, onDone = null) {
-    const cx = this.layout.boardPanelX + this.layout.boardPanelW * 0.5;
-    const cy = this.layout.boardPanelY + 54;
-    const fill = isWin ? 0x21482a : 0x4b1f29;
-    const edge = isWin ? 0x9df7b3 : 0xffb3bf;
-    const fg = isWin ? "#d7ffe0" : "#ffe0e6";
-    const width = Math.max(300, Math.min(520, this.layout.boardPanelW * 0.45));
-    const bg = this.add.rectangle(cx, cy, width, 54, fill, 0.94);
-    bg.setStrokeStyle(2, edge, 0.98);
-    bg.setDepth(4600);
-    const label = this.add.text(cx, cy, text, {
-      fontFamily: UI_FONT,
-      fontSize: "24px",
-      color: fg,
-      fontStyle: "bold"
-    }).setOrigin(0.5);
-    label.setDepth(4601);
-
-    this.tweens.add({
-      targets: [bg, label],
-      alpha: 0,
-      delay: holdMs,
-      duration: 280,
-      ease: "Cubic.easeIn",
-      onComplete: () => {
-        bg.destroy();
-        label.destroy();
-        onDone?.();
-      }
-    });
-  }
-
   showFloatingText(x, y, text, color = "#ffffff") {
+    if (this.vfx) {
+      this.vfx.textPop(x, y, text, color);
+      return;
+    }
     const label = this.add.text(x - 10, y, text, {
       fontFamily: "Consolas",
       fontSize: "13px",
@@ -4247,39 +3191,37 @@ export class PlanningScene extends Phaser.Scene {
 
   resolveCombat(winnerSide) {
     if (this.phase !== PHASE.COMBAT) return;
+    this.toggleSettingsOverlay(false);
     this.phase = PHASE.PLANNING;
     const rightSurvivors = this.getCombatUnits("RIGHT").length;
+    const result = {
+      winnerSide,
+      round: this.player.round,
+      rightSurvivors,
+      goldDelta: 0,
+      hpLoss: 0
+    };
 
     if (winnerSide === "LEFT") {
-      this.player.winStreak += 1;
-      this.player.loseStreak = 0;
-      const bonus = 1 + (this.player.winStreak >= 3 ? 1 : 0);
-      this.player.gold += bonus;
-      this.addLog(`Thang round ${this.player.round}. +${bonus} gold.`);
+      const nextWinStreak = this.player.winStreak + 1;
+      result.goldDelta = 1 + (nextWinStreak >= 3 ? 1 : 0);
+      this.addLog(`Thắng vòng ${this.player.round}. +${result.goldDelta} vàng.`);
     } else {
-      this.player.loseStreak += 1;
-      this.player.winStreak = 0;
-      const damage = Math.max(1, rightSurvivors + Math.floor(this.player.round / 2) - this.player.hpLossReduce);
-      this.player.hp -= damage;
-      this.addLog(`Thua round ${this.player.round}. -${damage} HP.`);
+      result.hpLoss = Math.max(1, rightSurvivors + Math.floor(this.player.round / 2) - this.player.hpLossReduce);
+      this.addLog(`Thua vòng ${this.player.round}. -${result.hpLoss} máu.`);
     }
 
-    if (this.player.hp <= 0) {
-      this.clearCombatSprites();
-      this.handleTotalDefeat();
-      return;
-    }
-
-    this.player.round += 1;
     this.clearCombatSprites();
-    this.enterPlanning(true);
+    this.scene.start("PlanningScene", {
+      restoredState: this.runStatePayload,
+      combatResult: result
+    });
   }
 
   gridToScreen(col, row) {
     const visualCol = this.toVisualCol(col);
-    const { tileW, tileH } = this.getTileSize();
-    const x = this.originX + this.boardPanX + (visualCol + row) * (tileW / 2);
-    const y = this.originY + this.boardPanY + (row - visualCol) * (tileH / 2);
+    const x = this.originX + (visualCol + row) * (TILE_W / 2);
+    const y = this.originY + (row - visualCol) * (TILE_H / 2);
     return { x, y };
   }
 }
