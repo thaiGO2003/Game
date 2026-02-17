@@ -1594,60 +1594,58 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5);
     icon.setDepth(point.y + 12);
 
-    const tag = this.add.text(point.x - 58, point.y - 60, `${visual.nameVi}\n${owned.star}★`, {
-      fontFamily: UI_FONT,
-      fontSize: "10px",
-      color: "#ffffff",
-      lineSpacing: 2
-    });
-    tag.setDepth(point.y + 11);
-
-    const barW = 64;
-    const hpBarBg = this.add.rectangle(point.x, point.y + 12, barW, 7, 0x0a1320, 0.92);
-    hpBarBg.setStrokeStyle(1, 0x30475f, 0.9);
-    hpBarBg.setDepth(point.y + 11);
-    const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, barW - 2, 5, 0x79df7b, 0.98).setOrigin(0, 0.5);
-    hpBarFill.setDepth(point.y + 12);
-    const shieldBar = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, 0, 5, 0x7bd5ff, 0.94).setOrigin(0, 0.5);
-    shieldBar.setDepth(point.y + 13);
-
-    const hpText = this.add.text(point.x, point.y + 4, "", {
-      fontFamily: UI_FONT,
-      fontSize: "10px",
-      color: "#d3ffd6"
-    }).setOrigin(0.5);
-    hpText.setDepth(point.y + 14);
-
-    const rageBarBg = this.add.rectangle(point.x, point.y + 23, barW, 6, 0x0a1320, 0.9);
-    rageBarBg.setStrokeStyle(1, 0x2f4865, 0.85);
-    rageBarBg.setDepth(point.y + 11);
-    const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 23, 0, 4, 0x7aa9ff, 0.96).setOrigin(0, 0.5);
-    rageBarFill.setDepth(point.y + 12);
-    const rageText = this.add.text(point.x, point.y + 18, "", {
-      fontFamily: UI_FONT,
-      fontSize: "10px",
-      color: "#dde8ff"
-    }).setOrigin(0.5);
-    rageText.setDepth(point.y + 14);
-
-    const statusLabel = this.add.text(point.x - 48, point.y + 30, "", {
+    const shortName = visual.nameVi.length > 8 ? `${visual.nameVi.slice(0, 8)}…` : visual.nameVi;
+    const tagBg = this.add.rectangle(point.x, point.y - 47, 64, 13, 0x05070c, 0.76);
+    tagBg.setStrokeStyle(1, 0x2c3f54, 0.8);
+    tagBg.setDepth(point.y + 11);
+    const tag = this.add.text(point.x, point.y - 47, shortName, {
       fontFamily: UI_FONT,
       fontSize: "9px",
-      color: "#ffe9aa"
+      color: "#e7f3ff",
+      fontStyle: "bold"
+    }).setOrigin(0.5);
+    tag.setDepth(point.y + 11);
+    const starLabel = this.add.text(point.x + 20, point.y - 31, `${owned.star}★`, {
+      fontFamily: UI_FONT,
+      fontSize: "9px",
+      color: "#fff8d7",
+      fontStyle: "bold"
     });
+    starLabel.setDepth(point.y + 13);
+
+    const barW = 56;
+    const hpBarBg = this.add.rectangle(point.x, point.y + 11, barW, 5, 0x0a1320, 0.92);
+    hpBarBg.setStrokeStyle(1, 0x30475f, 0.86);
+    hpBarBg.setDepth(point.y + 11);
+    const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 11, barW - 2, 3, 0x79df7b, 0.98).setOrigin(0, 0.5);
+    hpBarFill.setDepth(point.y + 12);
+    const shieldBar = this.add.rectangle(point.x - barW / 2 + 1, point.y + 11, 0, 3, 0x7bd5ff, 0.94).setOrigin(0, 0.5);
+    shieldBar.setDepth(point.y + 13);
+
+    const rageBarBg = this.add.rectangle(point.x, point.y + 18, barW, 4, 0x0a1320, 0.9);
+    rageBarBg.setStrokeStyle(1, 0x4a4127, 0.82);
+    rageBarBg.setDepth(point.y + 11);
+    const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 18, 0, 2, 0xf3d66b, 0.96).setOrigin(0, 0.5);
+    rageBarFill.setDepth(point.y + 12);
+
+    const statusLabel = this.add.text(point.x, point.y + 24, "", {
+      fontFamily: UI_FONT,
+      fontSize: "8px",
+      color: "#ffe9aa"
+    }).setOrigin(0.5, 0);
     statusLabel.setDepth(point.y + 11);
 
     this.combatSprites.push(
       sprite,
       icon,
+      tagBg,
       tag,
+      starLabel,
       hpBarBg,
       hpBarFill,
       shieldBar,
-      hpText,
       rageBarBg,
       rageBarFill,
-      rageText,
       statusLabel
     );
 
@@ -1677,14 +1675,14 @@ export class CombatScene extends Phaser.Scene {
       alive: true,
       sprite,
       icon,
+      tagBg,
       tag,
+      starLabel,
       hpBarBg,
       hpBarFill,
       shieldBar,
-      hpText,
       rageBarBg,
       rageBarFill,
-      rageText,
       statusLabel,
       mods: {
         atkPct: 0,
@@ -3028,11 +3026,11 @@ export class CombatScene extends Phaser.Scene {
       defender.shield = 0;
       defender.sprite.setFillStyle(0x3a3a3a, 0.92);
       defender.tag.setColor("#9a9a9a");
+      defender.tagBg.setFillStyle(0x101620, 0.78);
+      defender.starLabel.setColor("#9a9a9a");
       defender.hpBarFill.setFillStyle(0x676f77, 0.9);
       defender.rageBarFill.setFillStyle(0x676f77, 0.85);
       defender.shieldBar.setFillStyle(0x676f77, 0.8);
-      defender.hpText.setColor("#9a9a9a");
-      defender.rageText.setColor("#9a9a9a");
       defender.statusLabel.setColor("#9a9a9a");
       this.audioFx.play("ko", 0.12);
       this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xffffff, 20, 320);
@@ -3080,19 +3078,19 @@ export class CombatScene extends Phaser.Scene {
     unit.hpBarFill.setFillStyle(unit.alive ? 0x79df7b : 0x676f77, unit.alive ? 0.98 : 0.9);
     unit.shieldBar.width = Math.max(0, hpInnerW * shieldRatio);
     unit.rageBarFill.width = Math.max(1, rageInnerW * rageRatio);
-    unit.rageBarFill.setFillStyle(unit.alive ? 0x7aa9ff : 0x676f77, unit.alive ? 0.96 : 0.85);
-    unit.hpText.setText(`HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +${unit.shield}` : ""}`);
-    unit.rageText.setText(`Nộ ${unit.rage}/${unit.rageMax}`);
+    unit.rageBarFill.setFillStyle(unit.alive ? 0xf3d66b : 0x676f77, unit.alive ? 0.96 : 0.85);
 
     const s = [];
-    if (unit.statuses.freeze > 0) s.push(`FRZ${unit.statuses.freeze}`);
-    if (unit.statuses.stun > 0) s.push(`STN${unit.statuses.stun}`);
-    if (unit.statuses.sleep > 0) s.push(`SLP${unit.statuses.sleep}`);
-    if (unit.statuses.silence > 0) s.push(`SIL${unit.statuses.silence}`);
-    if (unit.statuses.burnTurns > 0) s.push(`BRN${unit.statuses.burnTurns}`);
-    if (unit.statuses.poisonTurns > 0) s.push(`PSN${unit.statuses.poisonTurns}`);
-    if (unit.statuses.tauntTurns > 0 && unit.statuses.tauntTargetId) s.push("TAUNT");
-    unit.statusLabel.setText(s.join(" "));
+    if (unit.statuses.freeze > 0) s.push("❄");
+    if (unit.statuses.stun > 0) s.push("💫");
+    if (unit.statuses.sleep > 0) s.push("😴");
+    if (unit.statuses.silence > 0) s.push("🔇");
+    if (unit.statuses.burnTurns > 0) s.push("🔥");
+    if (unit.statuses.poisonTurns > 0) s.push("☠");
+    if (unit.statuses.tauntTurns > 0 && unit.statuses.tauntTargetId) s.push("🎯");
+    const statusText = s.slice(0, 3).join(" ");
+    unit.statusLabel.setText(statusText);
+    unit.statusLabel.setVisible(Boolean(statusText));
   }
 
   highlightUnit(unit, color) {
@@ -3130,34 +3128,34 @@ export class CombatScene extends Phaser.Scene {
   syncCombatLabels(unit) {
     unit.icon.x = unit.sprite.x;
     unit.icon.y = unit.sprite.y - 10;
-    unit.tag.x = unit.sprite.x - 58;
-    unit.tag.y = unit.sprite.y - 48;
+    unit.tagBg.x = unit.sprite.x;
+    unit.tagBg.y = unit.sprite.y - 47;
+    unit.tag.x = unit.sprite.x;
+    unit.tag.y = unit.sprite.y - 47;
+    unit.starLabel.x = unit.sprite.x + 20;
+    unit.starLabel.y = unit.sprite.y - 31;
     unit.hpBarBg.x = unit.sprite.x;
-    unit.hpBarBg.y = unit.sprite.y + 12;
+    unit.hpBarBg.y = unit.sprite.y + 11;
     unit.hpBarFill.x = unit.sprite.x - unit.hpBarBg.width / 2 + 1;
-    unit.hpBarFill.y = unit.sprite.y + 12;
+    unit.hpBarFill.y = unit.sprite.y + 11;
     unit.shieldBar.x = unit.sprite.x - unit.hpBarBg.width / 2 + 1;
-    unit.shieldBar.y = unit.sprite.y + 12;
-    unit.hpText.x = unit.sprite.x;
-    unit.hpText.y = unit.sprite.y + 4;
+    unit.shieldBar.y = unit.sprite.y + 11;
     unit.rageBarBg.x = unit.sprite.x;
-    unit.rageBarBg.y = unit.sprite.y + 23;
+    unit.rageBarBg.y = unit.sprite.y + 18;
     unit.rageBarFill.x = unit.sprite.x - unit.rageBarBg.width / 2 + 1;
-    unit.rageBarFill.y = unit.sprite.y + 23;
-    unit.rageText.x = unit.sprite.x;
-    unit.rageText.y = unit.sprite.y + 18;
-    unit.statusLabel.x = unit.sprite.x - 48;
-    unit.statusLabel.y = unit.sprite.y + 30;
+    unit.rageBarFill.y = unit.sprite.y + 18;
+    unit.statusLabel.x = unit.sprite.x;
+    unit.statusLabel.y = unit.sprite.y + 24;
     unit.sprite.setDepth(unit.sprite.y + 10);
     unit.icon.setDepth(unit.sprite.y + 12);
+    unit.tagBg.setDepth(unit.sprite.y + 11);
     unit.tag.setDepth(unit.sprite.y + 11);
+    unit.starLabel.setDepth(unit.sprite.y + 13);
     unit.hpBarBg.setDepth(unit.sprite.y + 11);
     unit.hpBarFill.setDepth(unit.sprite.y + 12);
     unit.shieldBar.setDepth(unit.sprite.y + 13);
-    unit.hpText.setDepth(unit.sprite.y + 14);
     unit.rageBarBg.setDepth(unit.sprite.y + 11);
     unit.rageBarFill.setDepth(unit.sprite.y + 12);
-    unit.rageText.setDepth(unit.sprite.y + 14);
     unit.statusLabel.setDepth(unit.sprite.y + 11);
   }
 
