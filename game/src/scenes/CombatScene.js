@@ -46,6 +46,8 @@ const RIGHT_COL_START = 5;
 const RIGHT_COL_END = 9;
 const BOARD_GAP_COLS = 1;
 const BOARD_FILES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const RIVER_LAYER_DEPTH = 1;
+const COMBAT_SLOW_MULTIPLIER = 3;
 
 const PHASE = {
   PLANNING: "PLANNING",
@@ -226,6 +228,12 @@ export class CombatScene extends Phaser.Scene {
     this.combatLootDrops = [];
   }
 
+  scaleCombatDuration(ms) {
+    const value = Number(ms);
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    return Math.max(1, Math.round(value * COMBAT_SLOW_MULTIPLIER));
+  }
+
   resetTransientSceneState() {
     this.phase = PHASE.PLANNING;
     this.aiMode = "MEDIUM";
@@ -325,7 +333,7 @@ export class CombatScene extends Phaser.Scene {
     this.setupInput();
 
     this.combatTickEvent = this.time.addEvent({
-      delay: 420,
+      delay: this.scaleCombatDuration(420),
       loop: true,
       callback: () => {
         if (!this.settingsVisible && this.phase === PHASE.COMBAT) this.stepCombat();
@@ -868,7 +876,7 @@ export class CombatScene extends Phaser.Scene {
       const my = (a.y + b.y) * 0.5;
       const token = this.add.graphics();
       this.paintRiverTile(token, mx, my - 2, row);
-      token.setDepth(my + 2);
+      token.setDepth(RIVER_LAYER_DEPTH);
       this.gapMarkers.push(token);
     }
 
@@ -1832,10 +1840,10 @@ export class CombatScene extends Phaser.Scene {
     const shieldBar = this.add.rectangle(point.x - barW / 2 + 1, point.y + 11, 0, 3, 0x9dffba, 0.94).setOrigin(0, 0.5);
     shieldBar.setDepth(point.y + 13);
 
-    const rageBarBg = this.add.rectangle(point.x, point.y + 18, barW, 4, 0x0a1320, 0.9);
-    rageBarBg.setStrokeStyle(1, 0x4a4127, 0.82);
+    const rageBarBg = this.add.rectangle(point.x, point.y + 18, barW, 5, 0x0b1b32, 0.94);
+    rageBarBg.setStrokeStyle(2, 0x5fb8ff, 0.95);
     rageBarBg.setDepth(point.y + 11);
-    const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 18, 0, 2, 0xf3d66b, 0.96).setOrigin(0, 0.5);
+    const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 18, 0, 3, 0xf3d66b, 0.98).setOrigin(0, 0.5);
     rageBarFill.setDepth(point.y + 12);
     const rageGrid = this.add.graphics();
     rageGrid.setDepth(point.y + 13);
@@ -3307,7 +3315,12 @@ export class CombatScene extends Phaser.Scene {
           if (!enemies.find(u => u.row === target.row && u.col === newCol)) {
             target.col = newCol;
             const screen = this.gridToScreen(target.col, target.row);
-            this.tweens.add({ targets: target.sprite, x: screen.x, y: screen.y - 10, duration: 200 });
+            this.tweens.add({
+              targets: target.sprite,
+              x: screen.x,
+              y: screen.y - 10,
+              duration: this.scaleCombatDuration(200)
+            });
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
           }
         }
@@ -3944,7 +3957,10 @@ export class CombatScene extends Phaser.Scene {
       defender.hp = Math.max(0, defender.hp - damageLeft);
       this.audioFx.play("hit");
       this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xff8f8f, 14, 180);
-      this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `-${damageLeft}`, "#ff9b9b");
+      this.showDamageNumber(defender.sprite.x, defender.sprite.y - 45, damageLeft, {
+        damageType,
+        isCrit: isPhysicalCrit
+      });
     }
 
     if (attacker && !options.noRage) {
@@ -4053,20 +4069,20 @@ export class CombatScene extends Phaser.Scene {
     unit.hpBarFill.width = Math.max(1, hpInnerW * hpRatio);
     unit.hpBarFill.setFillStyle(unit.alive ? 0x79df7b : 0x676f77, unit.alive ? 0.98 : 0.9);
     unit.shieldBar.width = Math.max(0, hpInnerW * shieldRatio);
-    unit.rageBarFill.width = Math.max(1, rageInnerW * rageRatio);
+    unit.rageBarFill.width = Math.max(0, rageInnerW * rageRatio);
     unit.rageBarFill.setFillStyle(unit.alive ? 0xf3d66b : 0x676f77, unit.alive ? 0.96 : 0.85);
 
     // Rage segments
     unit.rageGrid.clear();
     if (unit.rageMax > 0 && unit.alive) {
-      unit.rageGrid.lineStyle(1, 0x000000, 0.3);
+      unit.rageGrid.lineStyle(2, 0x7ec4ff, 0.95);
       const step = rageInnerW / unit.rageMax;
       const startX = unit.rageBarBg.x - rageInnerW / 2;
       for (let i = 1; i < unit.rageMax; i++) {
         const x = startX + step * i;
         unit.rageGrid.beginPath();
-        unit.rageGrid.moveTo(x, unit.rageBarBg.y - 2);
-        unit.rageGrid.lineTo(x, unit.rageBarBg.y + 2);
+        unit.rageGrid.moveTo(x, unit.rageBarBg.y - 2.5);
+        unit.rageGrid.lineTo(x, unit.rageBarBg.y + 2.5);
         unit.rageGrid.strokePath();
       }
     }
@@ -4164,7 +4180,7 @@ export class CombatScene extends Phaser.Scene {
         targets: unit.sprite,
         x,
         y,
-        duration,
+        duration: this.scaleCombatDuration(duration),
         ease: "Sine.easeInOut",
         onUpdate: () => this.syncCombatLabels(unit),
         onComplete: () => resolve()
@@ -4208,7 +4224,39 @@ export class CombatScene extends Phaser.Scene {
 
   wait(ms) {
     return new Promise((resolve) => {
-      this.time.delayedCall(ms, resolve);
+      this.time.delayedCall(this.scaleCombatDuration(ms), resolve);
+    });
+  }
+
+  showDamageNumber(x, y, amount, options = {}) {
+    const value = Math.max(0, Math.round(Number(amount) || 0));
+    if (value <= 0) return;
+    const damageType = options.damageType ?? "physical";
+    const isCrit = options.isCrit === true;
+    const color = damageType === "magic" ? "#d9a6ff" : damageType === "true" ? "#f2f7ff" : "#ff9b9b";
+    const stroke = damageType === "magic" ? "#34164b" : "#20101a";
+    const fontSize = isCrit ? 26 : 18;
+    const label = this.add.text(x, y, `-${value}${isCrit ? "!" : ""}`, {
+      fontFamily: UI_FONT,
+      fontSize: `${fontSize}px`,
+      fontStyle: "bold",
+      color,
+      stroke,
+      strokeThickness: isCrit ? 5 : 4
+    }).setOrigin(0.5);
+    label.setDepth(4300);
+    if (isCrit) label.setScale(0.72);
+    this.combatSprites.push(label);
+    this.tweens.add({
+      targets: label,
+      y: y - (isCrit ? 44 : 34),
+      alpha: 0,
+      scale: isCrit ? 1.12 : 1.0,
+      duration: this.scaleCombatDuration(isCrit ? 640 : 520),
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        if (label && label.destroy) label.destroy();
+      }
     });
   }
 
@@ -4228,7 +4276,7 @@ export class CombatScene extends Phaser.Scene {
       targets: label,
       y: y - 26,
       alpha: 0,
-      duration: 540,
+      duration: this.scaleCombatDuration(540),
       ease: "Cubic.easeOut",
       onComplete: () => {
         if (label && label.destroy) label.destroy();

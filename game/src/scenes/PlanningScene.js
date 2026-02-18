@@ -43,6 +43,7 @@ const RIGHT_COL_START = 5;
 const RIGHT_COL_END = 9;
 const BOARD_GAP_COLS = 1;
 const BOARD_FILES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const RIVER_LAYER_DEPTH = 1;
 
 const PHASE = {
   PLANNING: "PLANNING",
@@ -221,6 +222,7 @@ export class PlanningScene extends Phaser.Scene {
     this.logs = [];
     this.selectedBenchIndex = null;
     this.turnQueue = [];
+    this.combatUnits = [];
     this.turnIndex = 0;
     this.actionCount = 0;
     this.globalDamageMult = 1;
@@ -300,6 +302,7 @@ export class PlanningScene extends Phaser.Scene {
     this.logs = [];
     this.selectedBenchIndex = null;
     this.turnQueue = [];
+    this.combatUnits = [];
     this.turnIndex = 0;
     this.actionCount = 0;
     this.globalDamageMult = 1;
@@ -1187,7 +1190,7 @@ export class PlanningScene extends Phaser.Scene {
       const my = (a.y + b.y) * 0.5;
       const token = this.add.graphics();
       this.paintRiverTile(token, mx, my - 2, row);
-      token.setDepth(my + 2);
+      token.setDepth(RIVER_LAYER_DEPTH);
       this.gapMarkers.push(token);
     }
 
@@ -2784,25 +2787,20 @@ export class PlanningScene extends Phaser.Scene {
         zone.setInteractive({ useHandCursor: true });
         this.tooltip.attach(zone, () => {
           const unit = this.player?.board?.[row]?.[col];
-          if (!unit) return { title: `Ô ${this.toChessCoord(row, col)}`, body: "Ô trống." };
-          return this.getUnitTooltip(unit.baseId, unit.star, unit);
+          if (unit) return null;
+          return { title: `Ô ${this.toChessCoord(row, col)}`, body: "Ô trống." };
         });
         zone.on("pointerover", () => {
           const unit = this.player?.board?.[row]?.[col];
-          if (!unit || this.phase !== PHASE.PLANNING) return;
-          const actor = this.buildPlanningPreviewActor(
-            "LEFT",
-            row,
-            col,
-            unit.base.classType,
-            unit.star,
-            unit.base.skillId,
-            unit.base.stats.range
-          );
-          this.showAttackPreviewForUnit(actor);
+          if (unit) return;
         });
-        zone.on("pointerout", () => this.clearAttackPreview());
+        zone.on("pointerout", () => {
+          const unit = this.player?.board?.[row]?.[col];
+          if (unit) return;
+          this.clearAttackPreview();
+        });
         zone.on("pointerup", (pointer) => {
+          if (this.isUnitDragging) return;
           if (this.boardDragConsumed) return;
           if (this.isPanPointer(pointer)) return;
           const occupant = this.player?.board?.[row]?.[col];
@@ -3149,7 +3147,7 @@ export class PlanningScene extends Phaser.Scene {
       if (slot && slot.icon) slot.icon.setVisible(false); // Hide bench icon
     }
 
-    this.audioFx.playSound("sfx_ui_click");
+    this.audioFx.play("click");
   }
 
   updateUnitDrag(pointer) {
@@ -3217,7 +3215,7 @@ export class PlanningScene extends Phaser.Scene {
 
       const moved = this.moveUnit(from, to, true); // true = swap
       if (moved) {
-        this.audioFx.playSound("sfx_place");
+        this.audioFx.play("click");
       }
     }
   }
@@ -3301,7 +3299,7 @@ export class PlanningScene extends Phaser.Scene {
       const my = (a.y + b.y) * 0.5;
       token.clear();
       this.paintRiverTile(token, mx, my - 2, row);
-      token.setDepth(my + 2);
+      token.setDepth(RIVER_LAYER_DEPTH);
     });
 
     if (this.previewHoverUnit) {
@@ -3316,6 +3314,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   onPlayerCellClick(row, col) {
+    if (this.isUnitDragging) return;
     if (this.settingsVisible) return;
     if (!this.canInteractFormation()) {
       if (this.phase === PHASE.AUGMENT) this.addLog("Hãy chọn pháp ấn trước khi chỉnh đội hình.");
@@ -4939,7 +4938,7 @@ export class PlanningScene extends Phaser.Scene {
           }
           if (freeSlot !== -1) {
             this.moveUnit({ region: "BOARD", row: r_or_idx, col: c }, { region: "BENCH", index: freeSlot });
-            this.audioFx.playSound("sfx_ping");
+            this.audioFx.play("click");
           } else {
             this.addLog("Hàng chờ đầy!");
           }
@@ -5306,10 +5305,50 @@ export class PlanningScene extends Phaser.Scene {
     if (this.phase !== PHASE.PLANNING && this.phase !== PHASE.AUGMENT) return;
     if (!this.player?.board) return;
 
+    const buildPlanningUnitBars = (point, stats, rageValue = 0, shieldValue = 0) => {
+      const barW = 56;
+      const hpBarBg = this.add.rectangle(point.x, point.y + 11, barW, 5, 0x0a1320, 0.92);
+      hpBarBg.setStrokeStyle(1, 0x30475f, 0.86);
+      hpBarBg.setDepth(2001 + point.y);
+      const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 11, barW - 2, 3, 0x79df7b, 0.98).setOrigin(0, 0.5);
+      hpBarFill.setDepth(2002 + point.y);
+
+      const hpInnerW = Math.max(1, barW - 2);
+      const shieldRatio = clamp((stats?.hp ?? 0) > 0 ? shieldValue / stats.hp : 0, 0, 1);
+      const shieldBar = this.add.rectangle(point.x - barW / 2 + 1, point.y + 11, hpInnerW * shieldRatio, 3, 0x9dffba, 0.94).setOrigin(0, 0.5);
+      shieldBar.setDepth(2003 + point.y);
+
+      const rageMax = Math.max(1, stats?.rageMax || 100);
+      const rageRatio = clamp(rageValue / rageMax, 0, 1);
+      const rageBarBg = this.add.rectangle(point.x, point.y + 18, barW, 5, 0x0b1b32, 0.94);
+      rageBarBg.setStrokeStyle(2, 0x5fb8ff, 0.95);
+      rageBarBg.setDepth(2001 + point.y);
+      const rageBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 18, hpInnerW * rageRatio, 3, 0xf3d66b, 0.98).setOrigin(0, 0.5);
+      rageBarFill.setDepth(2002 + point.y);
+
+      const rageGrid = this.add.graphics();
+      rageGrid.setDepth(2003 + point.y);
+      if (rageMax > 1) {
+        rageGrid.lineStyle(2, 0x7ec4ff, 0.95);
+        const step = hpInnerW / rageMax;
+        const startX = point.x - hpInnerW / 2;
+        for (let i = 1; i < rageMax; i += 1) {
+          const x = startX + step * i;
+          rageGrid.beginPath();
+          rageGrid.moveTo(x, point.y + 15.5);
+          rageGrid.lineTo(x, point.y + 20.5);
+          rageGrid.strokePath();
+        }
+      }
+
+      return { barW, hpBarBg, hpBarFill, shieldBar, rageBarBg, rageBarFill, rageGrid };
+    };
+
     const enemyPreview = Array.isArray(this.player.enemyPreview) ? this.player.enemyPreview : [];
     enemyPreview.forEach((preview) => {
       const base = UNIT_BY_ID[preview.baseId];
       if (!base) return;
+      const star = Math.max(1, preview.star ?? 1);
       const point = this.gridToScreen(preview.col, preview.row);
       const visual = getUnitVisual(preview.baseId, base.classType);
       const roleTheme = this.getRoleTheme(base.classType);
@@ -5318,7 +5357,7 @@ export class PlanningScene extends Phaser.Scene {
         preview.row,
         preview.col,
         base.classType,
-        preview.star ?? 1,
+        star,
         base.skillId,
         base.stats.range
       );
@@ -5328,7 +5367,7 @@ export class PlanningScene extends Phaser.Scene {
       sprite.setStrokeStyle(2, roleTheme.stroke, 1);
       sprite.setDepth(2000 + point.y);
       sprite.setInteractive({ useHandCursor: true });
-      this.tooltip.attach(sprite, () => this.getUnitTooltip(preview.baseId, preview.star));
+      this.tooltip.attach(sprite, () => this.getUnitTooltip(preview.baseId, star));
       sprite.on("pointerover", () => this.showAttackPreviewForUnit(actor));
       sprite.on("pointerout", () => this.clearAttackPreview(actor));
       const icon = this.add.text(point.x, point.y - 10, visual.icon, {
@@ -5337,16 +5376,45 @@ export class PlanningScene extends Phaser.Scene {
         color: "#ffffff"
       }).setOrigin(0.5);
       icon.setDepth(2002 + point.y);
-      const label = this.add.text(point.x + 15, point.y - 35, `${preview.star}★`, {
+      const enemyName = visual.nameVi.length > 8 ? `${visual.nameVi.slice(0, 8)}…` : visual.nameVi;
+      const enemyTagBg = this.add.rectangle(point.x, point.y - 47, 64, 13, 0x05070c, 0.72);
+      enemyTagBg.setStrokeStyle(1, 0x2c3f54, 0.76);
+      enemyTagBg.setDepth(2001 + point.y);
+      const enemyTag = this.add.text(point.x, point.y - 47, enemyName, {
         fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: "#ffe8e1",
+        fontSize: "9px",
+        color: "#e7f3ff",
+        fontStyle: "bold"
+      }).setOrigin(0.5);
+      enemyTag.setDepth(2002 + point.y);
+      const label = this.add.text(point.x + 20, point.y - 31, `${star}★`, {
+        fontFamily: UI_FONT,
+        fontSize: "9px",
+        color: "#fff8d7",
         fontStyle: "bold"
       });
       label.setDepth(2003 + point.y);
-      this.planningSprites.push(glow, sprite, icon, label);
+
+      const baseStats = scaledBaseStats(base.stats, star, base.classType);
+      const enemyBars = buildPlanningUnitBars(point, baseStats, 0, 0);
+      this.planningSprites.push(
+        glow,
+        sprite,
+        icon,
+        enemyTagBg,
+        enemyTag,
+        label,
+        enemyBars.hpBarBg,
+        enemyBars.hpBarFill,
+        enemyBars.shieldBar,
+        enemyBars.rageBarBg,
+        enemyBars.rageBarFill,
+        enemyBars.rageGrid
+      );
     });
 
+    const startingRage = Number.isFinite(this.player?.startingRage) ? this.player.startingRage : 0;
+    const startingShield = Number.isFinite(this.player?.startingShield) ? this.player.startingShield : 0;
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const unit = this.player.board[row][col];
@@ -5374,53 +5442,59 @@ export class PlanningScene extends Phaser.Scene {
           color: "#ffffff"
         }).setOrigin(0.5);
         icon.setDepth(2002 + point.y);
-        const label = this.add.text(point.x + 15, point.y - 35, `${unit.star}★`, {
+        const shortName = visual.nameVi.length > 8 ? `${visual.nameVi.slice(0, 8)}…` : visual.nameVi;
+        const tagBg = this.add.rectangle(point.x, point.y - 47, 64, 13, 0x05070c, 0.76);
+        tagBg.setStrokeStyle(1, 0x2c3f54, 0.8);
+        tagBg.setDepth(2001 + point.y);
+        const tag = this.add.text(point.x, point.y - 47, shortName, {
           fontFamily: UI_FONT,
-          fontSize: "12px",
-          color: "#ffffff",
+          fontSize: "9px",
+          color: "#e7f3ff",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+        tag.setDepth(2002 + point.y);
+        const label = this.add.text(point.x + 20, point.y - 31, `${unit.star}★`, {
+          fontFamily: UI_FONT,
+          fontSize: "9px",
+          color: "#fff8d7",
           fontStyle: "bold"
         });
         label.setDepth(2003 + point.y);
 
         const baseStats = scaledBaseStats(unit.base.stats, unit.star, unit.base.classType);
-        const barW = 52;
-        const hpBarBg = this.add.rectangle(point.x, point.y + 12, barW, 5, 0x0a1320, 0.9);
-        hpBarBg.setStrokeStyle(1, 0x30475f, 0.82);
-        hpBarBg.setDepth(2001 + point.y);
-        const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, barW - 2, 3, 0x79df7b, 0.96).setOrigin(0, 0.5);
-        hpBarFill.setDepth(2002 + point.y);
+        const unitBars = buildPlanningUnitBars(point, baseStats, startingRage, startingShield);
 
-        const rageMax = Math.max(1, baseStats.rageMax || 100);
-        const rageRatio = clamp((this.player?.startingRage ?? 0) / rageMax, 0, 1);
-        const rageBarBg = this.add.rectangle(point.x, point.y + 19, barW, 4, 0x0a1320, 0.88);
-        rageBarBg.setStrokeStyle(1, 0x4a4127, 0.76);
-        rageBarBg.setDepth(2001 + point.y);
-        const rageBarFill = this.add
-          .rectangle(point.x - barW / 2 + 1, point.y + 19, Math.max(1, (barW - 2) * rageRatio), 2, 0xf3d66b, 0.95)
-          .setOrigin(0, 0.5);
-        rageBarFill.setDepth(2002 + point.y);
+        // Single hover zone prevents pointerover/out conflicts between stacked sprite/icon/bars.
+        const hoverZoneW = Math.max(60, unitBars.barW + 16);
+        const hoverZoneH = 64;
+        const hoverZone = this.add.zone(point.x, point.y - 2, hoverZoneW, hoverZoneH);
+        hoverZone.setInteractive({ useHandCursor: true });
+        hoverZone.setDepth(2005 + point.y);
+        this.tooltip.attach(hoverZone, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
+        hoverZone.on("pointerover", () => this.showAttackPreviewForUnit(actor));
+        hoverZone.on("pointerout", () => this.clearAttackPreview(actor));
+        hoverZone.on("pointerup", (pointer) => {
+          if (this.isUnitDragging) return;
+          if (this.boardDragConsumed) return;
+          if (this.isPanPointer(pointer)) return;
+          this.onPlayerCellClick(row, col);
+        });
 
-        const bindHoverAndClick = (obj, withTooltip = false) => {
-          if (!obj) return;
-          obj.setInteractive({ useHandCursor: true });
-          if (withTooltip) this.tooltip.attach(obj, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
-          obj.on("pointerover", () => this.showAttackPreviewForUnit(actor));
-          obj.on("pointerout", () => this.clearAttackPreview(actor));
-          obj.on("pointerup", (pointer) => {
-            if (this.boardDragConsumed) return;
-            if (this.isPanPointer(pointer)) return;
-            this.onPlayerCellClick(row, col);
-          });
-        };
-
-        bindHoverAndClick(sprite, true);
-        bindHoverAndClick(icon, true);
-        bindHoverAndClick(label, false);
-        bindHoverAndClick(hpBarBg, false);
-        bindHoverAndClick(hpBarFill, false);
-        bindHoverAndClick(rageBarBg, false);
-        bindHoverAndClick(rageBarFill, false);
-        this.planningSprites.push(glow, sprite, icon, label, hpBarBg, hpBarFill, rageBarBg, rageBarFill);
+        this.planningSprites.push(
+          glow,
+          sprite,
+          icon,
+          tagBg,
+          tag,
+          label,
+          unitBars.hpBarBg,
+          unitBars.hpBarFill,
+          unitBars.shieldBar,
+          unitBars.rageBarBg,
+          unitBars.rageBarFill,
+          unitBars.rageGrid,
+          hoverZone
+        );
       }
     }
   }
@@ -6919,24 +6993,43 @@ export class PlanningScene extends Phaser.Scene {
       statName === "atk" ? this.getEffectiveAtk(attacker) : statName === "matk" ? this.getEffectiveMatk(attacker) : attacker[statName] ?? 0;
     return skill.base + sourceStat * skill.scale;
   }
+
+  getUnitStatFallback(unit, statKey, defaultValue = 0) {
+    if (!unit || typeof unit !== "object") return defaultValue;
+    const direct = unit[statKey];
+    if (Number.isFinite(direct)) return direct;
+    const baseStat = unit.base?.stats?.[statKey];
+    if (!Number.isFinite(baseStat)) return defaultValue;
+    const star = Number.isFinite(unit.star) ? Math.max(1, Math.min(3, Math.floor(unit.star))) : 1;
+    const scale = star >= 3 ? 2.5 : star === 2 ? 1.6 : 1;
+    return Math.round(baseStat * scale);
+  }
+
   getEffectiveAtk(unit) {
-    const buff = unit.statuses.atkBuffTurns > 0 ? unit.statuses.atkBuffValue : 0;
-    const debuff = unit.statuses.atkDebuffTurns > 0 ? unit.statuses.atkDebuffValue : 0;
-    return Math.max(1, unit.atk + buff - debuff);
+    const statuses = unit?.statuses ?? {};
+    const atkBase = this.getUnitStatFallback(unit, "atk", 1);
+    const buff = (statuses.atkBuffTurns ?? 0) > 0 ? (statuses.atkBuffValue ?? 0) : 0;
+    const debuff = (statuses.atkDebuffTurns ?? 0) > 0 ? (statuses.atkDebuffValue ?? 0) : 0;
+    return Math.max(1, atkBase + buff - debuff);
   }
 
   getEffectiveDef(unit) {
-    const buff = unit.statuses.defBuffTurns > 0 ? unit.statuses.defBuffValue : 0;
-    return Math.max(0, unit.def + buff);
+    const statuses = unit?.statuses ?? {};
+    const defBase = this.getUnitStatFallback(unit, "def", 0);
+    const buff = (statuses.defBuffTurns ?? 0) > 0 ? (statuses.defBuffValue ?? 0) : 0;
+    return Math.max(0, defBase + buff);
   }
 
   getEffectiveMatk(unit) {
-    return Math.max(1, unit.matk);
+    const matkBase = this.getUnitStatFallback(unit, "matk", 1);
+    return Math.max(1, matkBase);
   }
 
   getEffectiveMdef(unit) {
-    const buff = unit.statuses.mdefBuffTurns > 0 ? unit.statuses.mdefBuffValue : 0;
-    return Math.max(0, unit.mdef + buff);
+    const statuses = unit?.statuses ?? {};
+    const mdefBase = this.getUnitStatFallback(unit, "mdef", 0);
+    const buff = (statuses.mdefBuffTurns ?? 0) > 0 ? (statuses.mdefBuffValue ?? 0) : 0;
+    return Math.max(0, mdefBase + buff);
   }
 
   resolveDamage(attacker, defender, rawDamage, damageType, reason, options = {}) {
@@ -7010,7 +7103,10 @@ export class PlanningScene extends Phaser.Scene {
 
     if (damageLeft > 0) {
       defender.hp = Math.max(0, defender.hp - damageLeft);
-      this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `-${damageLeft}`, "#ff9b9b");
+      this.showDamageNumber(defender.sprite.x, defender.sprite.y - 45, damageLeft, {
+        damageType,
+        isCrit: isPhysicalCrit
+      });
     }
 
     if (attacker && !options.noRage) {
@@ -7136,11 +7232,12 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   clearHighlights() {
-    this.highlightLayer.clear();
-    this.combatUnits.forEach((u) => {
+    this.highlightLayer?.clear();
+    const combatUnits = Array.isArray(this.combatUnits) ? this.combatUnits : [];
+    combatUnits.forEach((u) => {
       if (!u.alive) return;
       const roleTheme = this.getRoleTheme(u.classType);
-      u.sprite.setStrokeStyle(3, roleTheme.stroke, 1);
+      u.sprite?.setStrokeStyle?.(3, roleTheme.stroke, 1);
     });
   }
 
@@ -7225,6 +7322,36 @@ export class PlanningScene extends Phaser.Scene {
       y: y - 26,
       alpha: 0,
       duration: 540,
+      ease: "Cubic.easeOut",
+      onComplete: () => label.destroy()
+    });
+  }
+
+  showDamageNumber(x, y, amount, options = {}) {
+    const value = Math.max(0, Math.round(Number(amount) || 0));
+    if (value <= 0) return;
+    const damageType = options.damageType ?? "physical";
+    const isCrit = options.isCrit === true;
+    const color = damageType === "magic" ? "#d9a6ff" : damageType === "true" ? "#f2f7ff" : "#ff9b9b";
+    const stroke = damageType === "magic" ? "#34164b" : "#20101a";
+    const fontSize = isCrit ? 24 : 17;
+    const label = this.add.text(x, y, `-${value}${isCrit ? "!" : ""}`, {
+      fontFamily: UI_FONT,
+      fontSize: `${fontSize}px`,
+      fontStyle: "bold",
+      color,
+      stroke,
+      strokeThickness: isCrit ? 5 : 4
+    }).setOrigin(0.5);
+    label.setDepth(4050);
+    if (isCrit) label.setScale(0.74);
+    this.combatSprites.push(label);
+    this.tweens.add({
+      targets: label,
+      y: y - (isCrit ? 42 : 32),
+      alpha: 0,
+      scale: isCrit ? 1.1 : 1.0,
+      duration: isCrit ? 620 : 500,
       ease: "Cubic.easeOut",
       onComplete: () => label.destroy()
     });
