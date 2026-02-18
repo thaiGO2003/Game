@@ -5,11 +5,19 @@ import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY, TRIBE_COUNTER, CLASS_COUNTER, COUNTER_BONUS } from "../data/synergies.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
-import { EQUIPMENT_ITEMS } from "../data/items.js";
+import { EQUIPMENT_ITEMS, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { VfxController } from "../core/vfx.js";
-import { loadUiSettings, saveUiSettings } from "../core/uiSettings.js";
+import {
+  RESOLUTION_PRESETS,
+  guiScaleToZoom,
+  loadUiSettings,
+  normalizeGuiScale,
+  normalizeResolutionKey,
+  resolveResolution,
+  saveUiSettings
+} from "../core/uiSettings.js";
 import { getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
 import { hydrateRunState } from "../core/runState.js";
 import {
@@ -25,8 +33,7 @@ import {
   scaledBaseStats,
   starEffectChanceMultiplier,
   starTargetBonus,
-  starAreaBonus,
-  getBaseEvasion
+  starAreaBonus
 } from "../core/gameUtils.js";
 
 
@@ -183,6 +190,7 @@ export class CombatScene extends Phaser.Scene {
     this.selectedBenchIndex = null;
     this.turnQueue = [];
     this.turnIndex = 0;
+    this.combatRound = 0;
     this.actionCount = 0;
     this.globalDamageMult = 1;
     this.isActing = false;
@@ -232,6 +240,7 @@ export class CombatScene extends Phaser.Scene {
     this.selectedBenchIndex = null;
     this.turnQueue = [];
     this.turnIndex = 0;
+    this.combatRound = 0;
     this.actionCount = 0;
     this.globalDamageMult = 1;
     this.isActing = false;
@@ -280,10 +289,11 @@ export class CombatScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#10141b");
     this.input.keyboard?.removeAllListeners();
     this.input.removeAllListeners();
+    const uiSettings = loadUiSettings();
+    this.applyDisplaySettings(uiSettings);
     this.layout = this.computeLayout();
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
-    const uiSettings = loadUiSettings();
     this.audioFx.setVolumeLevel(uiSettings.volumeLevel ?? 10);
     this.vfx = new VfxController(this);
     this.drawBoard();
@@ -321,6 +331,15 @@ export class CombatScene extends Phaser.Scene {
     });
 
     this.startFromPayload();
+  }
+
+  applyDisplaySettings(settings) {
+    const resolution = resolveResolution(settings?.resolutionKey);
+    if (resolution) {
+      this.scale.resize(resolution.width, resolution.height);
+    }
+    const zoom = guiScaleToZoom(normalizeGuiScale(settings?.guiScale));
+    this.cameras.main.setZoom(zoom);
   }
 
   setupInput() {
@@ -370,7 +389,7 @@ export class CombatScene extends Phaser.Scene {
     shade.setInteractive();
     this.settingsOverlay.push(shade);
 
-    const panel = this.add.rectangle(cx, cy, 520, 372, 0x102035, 0.98);
+    const panel = this.add.rectangle(cx, cy, 520, 460, 0x102035, 0.98);
     panel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.9);
     panel.setDepth(5001);
     panel.setVisible(false);
@@ -397,11 +416,13 @@ export class CombatScene extends Phaser.Scene {
     };
 
     this.modalButtons = {};
-    this.modalButtons.audio = makeModalBtn(0, -66, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.volume = makeModalBtn(0, -14, 230, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
-    this.modalButtons.exit = makeModalBtn(0, 38, 230, 44, "Thoát về chuẩn bị", () => this.exitToPlanning());
-    this.modalButtons.menu = makeModalBtn(-126, 120, 220, 44, "Trang chủ", () => this.scene.start("MainMenuScene"), "secondary");
-    this.modalButtons.close = makeModalBtn(126, 120, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
+    this.modalButtons.audio = makeModalBtn(0, -98, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
+    this.modalButtons.volume = makeModalBtn(0, -46, 230, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
+    this.modalButtons.resolution = makeModalBtn(0, 6, 230, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
+    this.modalButtons.guiScale = makeModalBtn(0, 58, 230, 44, "Kích thước GUI: 3/5", () => this.changeGuiScale());
+    this.modalButtons.exit = makeModalBtn(0, 110, 230, 44, "Thoát về chuẩn bị", () => this.exitToPlanning());
+    this.modalButtons.menu = makeModalBtn(-126, 172, 220, 44, "Trang chủ", () => this.scene.start("MainMenuScene"), "secondary");
+    this.modalButtons.close = makeModalBtn(126, 172, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
   toggleSettingsOverlay(force = null) {
@@ -410,6 +431,15 @@ export class CombatScene extends Phaser.Scene {
     this.settingsVisible = next;
     this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
     this.modalButtons?.volume?.setLabel(`Âm lượng: ${this.audioFx.getVolumeLevel()}/10`);
+    if (this.modalButtons?.resolution) {
+      const resolution = resolveResolution(loadUiSettings().resolutionKey);
+      const label = resolution?.label ?? `${resolution.width}x${resolution.height}`;
+      this.modalButtons.resolution.setLabel(`Độ phân giải: ${label}`);
+    }
+    if (this.modalButtons?.guiScale) {
+      const level = normalizeGuiScale(loadUiSettings().guiScale);
+      this.modalButtons.guiScale.setLabel(`Kích thước GUI: ${level}/5`);
+    }
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
 
@@ -586,7 +616,9 @@ export class CombatScene extends Phaser.Scene {
   toggleAudio() {
     this.audioFx.setEnabled(!this.audioFx.enabled);
     this.runStatePayload.audioEnabled = this.audioFx.enabled;
+    const currentSettings = loadUiSettings();
     saveUiSettings({
+      ...currentSettings,
       aiMode: this.runStatePayload.aiMode ?? "MEDIUM",
       audioEnabled: this.audioFx.enabled,
       loseCondition: this.loseCondition,
@@ -600,13 +632,34 @@ export class CombatScene extends Phaser.Scene {
     const current = this.audioFx.getVolumeLevel();
     const next = current + step > 10 ? 1 : current + step;
     this.audioFx.setVolumeLevel(next);
+    const currentSettings = loadUiSettings();
     saveUiSettings({
+      ...currentSettings,
       aiMode: this.runStatePayload?.aiMode ?? "MEDIUM",
       audioEnabled: this.audioFx.enabled,
       loseCondition: this.loseCondition,
       volumeLevel: next
     });
     this.modalButtons?.volume?.setLabel(`Âm lượng: ${next}/10`);
+  }
+
+  changeResolution() {
+    const currentSettings = loadUiSettings();
+    const currentKey = normalizeResolutionKey(currentSettings.resolutionKey);
+    const idx = RESOLUTION_PRESETS.findIndex((preset) => preset.key === currentKey);
+    const next = RESOLUTION_PRESETS[(idx + 1) % RESOLUTION_PRESETS.length];
+    saveUiSettings({ ...currentSettings, resolutionKey: next.key });
+    this.modalButtons?.resolution?.setLabel(`Độ phân giải: ${next.label ?? `${next.width}x${next.height}`}`);
+    this.scene.start("CombatScene", { runState: this.runStatePayload });
+  }
+
+  changeGuiScale() {
+    const currentSettings = loadUiSettings();
+    const current = normalizeGuiScale(currentSettings.guiScale);
+    const next = current >= 5 ? 1 : current + 1;
+    saveUiSettings({ ...currentSettings, guiScale: next });
+    this.modalButtons?.guiScale?.setLabel(`Kích thước GUI: ${next}/5`);
+    this.cameras.main.setZoom(guiScaleToZoom(next));
   }
 
   exitToPlanning() {
@@ -683,13 +736,14 @@ export class CombatScene extends Phaser.Scene {
     return Array.from({ length: ROWS }, () => Array.from({ length: PLAYER_COLS }, () => null));
   }
 
-  createOwnedUnit(baseId, star = 1) {
+  createOwnedUnit(baseId, star = 1, equips = []) {
     const base = UNIT_BY_ID[baseId];
     return {
       uid: createUnitUid(),
       baseId,
       star,
-      base
+      base,
+      equips: Array.isArray(equips) ? equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
     };
   }
 
@@ -903,8 +957,8 @@ export class CombatScene extends Phaser.Scene {
   }
 
   paintRiverTile(graphics, x, y, row) {
-    const w = TILE_W * 0.42;
-    const h = TILE_H * 0.42;
+    const w = TILE_W;
+    const h = TILE_H;
     const even = row % 2 === 0;
     const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
     const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
@@ -1531,6 +1585,7 @@ export class CombatScene extends Phaser.Scene {
     this.overlaySprites.push(title);
 
     choices.forEach((choice, idx) => {
+      const icon = this.getAugmentIcon(choice);
       const x = 220 + idx * 360;
       const y = 250;
       const card = this.add.rectangle(x, y, 320, 260, 0x1f2b3d, 0.98);
@@ -1541,7 +1596,7 @@ export class CombatScene extends Phaser.Scene {
       card.on("pointerover", () => card.setFillStyle(0x2b3d57, 0.98));
       card.on("pointerout", () => card.setFillStyle(0x1f2b3d, 0.98));
 
-      const text = this.add.text(x - 146, y - 106, `${choice.name}\n\n[${this.translateAugmentGroup(choice.group)}]\n${choice.description}`, {
+      const text = this.add.text(x - 146, y - 106, `${icon} ${choice.name}\n\n[${this.translateAugmentGroup(choice.group)}]\n${choice.description}`, {
         fontFamily: "Consolas",
         fontSize: "18px",
         color: "#e8f3ff",
@@ -1645,6 +1700,7 @@ export class CombatScene extends Phaser.Scene {
     this.applySynergyBonuses("LEFT");
     this.applySynergyBonuses("RIGHT");
     this.buildTurnQueue();
+    this.combatRound = this.turnQueue.length ? 1 : 0;
     this.refreshHeader();
     this.refreshSynergyPreview();
     this.refreshQueuePreview();
@@ -1707,25 +1763,12 @@ export class CombatScene extends Phaser.Scene {
       if (ai.difficulty === "HARD" && EQUIPMENT_ITEMS.length > 0) {
         const equipChance = clamp(0.15 + (this.player.round - 5) * 0.04, 0, 0.65);
         if (Math.random() < equipChance) {
-          owned.equipment = randomItem(EQUIPMENT_ITEMS);
+          const eq = randomItem(EQUIPMENT_ITEMS);
+          owned.equips = eq?.id ? [eq.id] : [];
         }
       }
       const unit = this.createCombatUnit(owned, "RIGHT", pos.row, pos.col);
-      if (unit) {
-        // Áp dụng bonus từ equipment nếu có
-        if (owned.equipment) {
-          const eq = owned.equipment;
-          if (eq.bonus) {
-            unit.atk += eq.bonus.atk ?? 0;
-            unit.def += eq.bonus.def ?? 0;
-            unit.matk += eq.bonus.matk ?? 0;
-            unit.mdef += eq.bonus.mdef ?? 0;
-            unit.maxHp += eq.bonus.hp ?? 0;
-            unit.hp += eq.bonus.hp ?? 0;
-          }
-        }
-        this.combatUnits.push(unit);
-      }
+      if (unit) this.combatUnits.push(unit);
     });
   }
 
@@ -1837,7 +1880,7 @@ export class CombatScene extends Phaser.Scene {
       classType: base.classType,
       tribe: base.tribe,
       skillId: base.skillId,
-      equipment: owned.equipment ?? null,
+      equips: Array.isArray(owned.equips) ? [...owned.equips] : [],
       maxHp: hpWithAug,
       hp: hpWithAug,
       atk: atkWithAug,
@@ -1891,6 +1934,18 @@ export class CombatScene extends Phaser.Scene {
 
         reflectTurns: 0,
         reflectPct: 0,
+        disarmTurns: 0,
+        slowTurns: 0,
+        immuneTurns: 0,
+        physReflectTurns: 0,
+        counterTurns: 0,
+        isProtecting: 0,
+        bleedTurns: 0,
+        bleedDamage: 0,
+        diseaseTurns: 0,
+        diseaseDamage: 0,
+        atkDebuffTurns: 0,
+        atkDebuffValue: 0,
         atkBuffTurns: 0,
         atkBuffValue: 0,
         defBuffTurns: 0,
@@ -1900,6 +1955,7 @@ export class CombatScene extends Phaser.Scene {
       }
     };
 
+    this.applyOwnedEquipmentBonuses(unit, owned);
     this.tooltip.attach(sprite, () => this.getCombatUnitTooltip(unit));
     sprite.on("pointerover", () => this.showAttackPreviewForUnit(unit));
     sprite.on("pointerout", () => this.clearAttackPreview(unit));
@@ -2457,29 +2513,27 @@ export class CombatScene extends Phaser.Scene {
       ...this.describeSkillLines(skill).map((line) => `• ${line}`)
     ];
 
-    if (unit.equipment) {
+    const equippedItems = Array.isArray(unit.equips)
+      ? unit.equips.map((id) => ITEM_BY_ID[id]).filter((x) => x?.kind === "equipment")
+      : [];
+    if (equippedItems.length) {
       rightLines.push("");
-      rightLines.push(`🛡️ Trang bị: ${unit.equipment.name}`);
-      if (unit.equipment.bonus) {
-        const b = unit.equipment.bonus;
-        const parts = [];
-        if (b.atk) parts.push(`+${b.atk} ATK`);
-        if (b.matk) parts.push(`+${b.matk} MATK`);
-        if (b.def) parts.push(`+${b.def} DEF`);
-        if (b.mdef) parts.push(`+${b.mdef} MDEF`);
-        if (b.hp) parts.push(`+${b.hp} HP`);
-        if (parts.length) rightLines.push(`• Chỉ số: ${parts.join(", ")}`);
-      }
+      rightLines.push("🛡️ Trang bị đang mặc");
+      equippedItems.forEach((item) => {
+        const recipe = RECIPE_BY_ID[item.fromRecipe];
+        const desc = recipe?.description ? ` (${recipe.description})` : "";
+        rightLines.push(`• ${item.icon} ${item.name}${desc}`);
+      });
     }
 
     const bodyLines = [
-      `${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | Tầm ${unit.range}`,
-      `HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`,
-      `ATK ${this.getEffectiveAtk(unit)} | MATK ${this.getEffectiveMatk(unit)}`,
-      `DEF ${this.getEffectiveDef(unit)} | MDEF ${this.getEffectiveMdef(unit)}`,
-      `Né tránh: ${(unit.mods.evadePct * 100).toFixed(0)}% | Nộ ${unit.rage}/${unit.rageMax}`,
-      `Mốc nghề: ${classDef?.thresholds?.join("/") ?? "-"}`,
-      `Mốc tộc: ${tribeDef?.thresholds?.join("/") ?? "-"}`
+      `🏷️ ${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${unit.range}`,
+      `❤️ HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`,
+      `⚔️ ATK ${this.getEffectiveAtk(unit)} | ✨ MATK ${this.getEffectiveMatk(unit)}`,
+      `🛡️ DEF ${this.getEffectiveDef(unit)} | 🔮 MDEF ${this.getEffectiveMdef(unit)}`,
+      `💨 Né tránh: ${(unit.mods.evadePct * 100).toFixed(0)}% | 🔥 Nộ ${unit.rage}/${unit.rageMax}`,
+      `🎯 Mốc nghề: ${classDef?.thresholds?.join("/") ?? "-"}`,
+      `🌿 Mốc tộc: ${tribeDef?.thresholds?.join("/") ?? "-"}`
     ];
 
     const effects = [];
@@ -2497,7 +2551,7 @@ export class CombatScene extends Phaser.Scene {
     if (unit.statuses.tauntTurns > 0) effects.push(`Khiêu khích (${unit.statuses.tauntTurns})`);
 
     if (effects.length > 0) {
-      bodyLines.push(`Hiệu ứng: ${effects.join(", ")}`);
+      bodyLines.push(`🧪 Hiệu ứng: ${effects.join(", ")}`);
     }
 
     return {
@@ -2542,7 +2596,7 @@ export class CombatScene extends Phaser.Scene {
       this.player.augments.forEach((id) => {
         const aug = AUGMENT_LIBRARY.find((x) => x.id === id);
         if (!aug) return;
-        lines.push(`- ${aug.name}: ${aug.description}`);
+        lines.push(`- ${this.getAugmentIcon(aug)} ${aug.name}: ${aug.description}`);
       });
     }
 
@@ -2686,6 +2740,17 @@ export class CombatScene extends Phaser.Scene {
     return map[group] ?? group;
   }
 
+  getAugmentIcon(augment) {
+    if (augment?.icon) return augment.icon;
+    const map = {
+      ECONOMY: "💰",
+      FORMATION: "🧩",
+      COMBAT: "⚔️",
+      SYNERGY: "✨"
+    };
+    return map[augment?.group] ?? "🌲";
+  }
+
   translateSkillEffect(effect) {
     const map = {
       damage_shield_taunt: "Gây sát thương + khiên + khiêu khích",
@@ -2787,21 +2852,44 @@ export class CombatScene extends Phaser.Scene {
 
   applyBonusToUnit(unit, bonus) {
     if (!bonus) return;
+    const hpPct = bonus.hpPct ?? bonus.teamHpPct ?? 0;
+    const atkPct = bonus.atkPct ?? bonus.teamAtkPct ?? 0;
+    const matkPct = bonus.matkPct ?? bonus.teamMatkPct ?? 0;
     if (bonus.defFlat) unit.def += bonus.defFlat;
     if (bonus.mdefFlat) unit.mdef += bonus.mdefFlat;
-    if (bonus.hpPct) {
-      const add = Math.round(unit.maxHp * bonus.hpPct);
+    if (hpPct) {
+      const add = Math.round(unit.maxHp * hpPct);
       unit.maxHp += add;
       unit.hp += add;
     }
-    if (bonus.atkPct) unit.atk = Math.round(unit.atk * (1 + bonus.atkPct));
-    if (bonus.matkPct) unit.matk = Math.round(unit.matk * (1 + bonus.matkPct));
+    if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
+    if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
     if (bonus.healPct) unit.mods.healPct += bonus.healPct;
     if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
     if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
     if (bonus.critPct) unit.mods.critPct += bonus.critPct;
     if (bonus.burnOnHit) unit.mods.burnOnHit += bonus.burnOnHit;
     if (bonus.poisonOnHit) unit.mods.poisonOnHit += bonus.poisonOnHit;
+  }
+
+  applyOwnedEquipmentBonuses(unit, owned) {
+    const equips = Array.isArray(owned?.equips) ? owned.equips : [];
+    const seen = new Set();
+    const equipItems = [];
+
+    equips.forEach((itemId) => {
+      const item = ITEM_BY_ID[itemId];
+      if (!item || item.kind !== "equipment" || seen.has(item.id)) return;
+      seen.add(item.id);
+      equipItems.push(item);
+    });
+
+    if (owned?.equipment?.kind === "equipment" && owned.equipment.id && !seen.has(owned.equipment.id)) {
+      equipItems.push(owned.equipment);
+    }
+
+    unit.equips = equipItems.map((item) => item.id).filter((id) => typeof id === "string");
+    equipItems.forEach((item) => this.applyBonusToUnit(unit, item.bonus));
   }
 
   buildTurnQueue() {
@@ -2855,7 +2943,12 @@ export class CombatScene extends Phaser.Scene {
     }
 
     if (this.turnQueue.length === 0 || this.turnIndex >= this.turnQueue.length) {
+      if (this.combatRound >= 20) {
+        this.resolveCombat("DRAW");
+        return;
+      }
       this.buildTurnQueue();
+      this.combatRound = Math.max(1, this.combatRound + 1);
       if (!this.turnQueue.length) {
         this.resolveCombat("RIGHT");
         return;
@@ -2888,7 +2981,7 @@ export class CombatScene extends Phaser.Scene {
           this.updateCombatUnitUi(actor);
           await this.castSkill(actor, target);
         } else {
-          if (actor.statuses.disarmTurns <= 0) {
+          if ((actor.statuses.disarmTurns ?? 0) <= 0) {
             await this.basicAttack(actor, target);
           } else {
             this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
@@ -2906,10 +2999,6 @@ export class CombatScene extends Phaser.Scene {
     const rightNow = this.getCombatUnits("RIGHT").length;
     if (!leftNow || !rightNow) {
       this.resolveCombat(leftNow > 0 ? "LEFT" : "RIGHT");
-    } else if (this.actionCount >= 240) {
-      const leftHp = this.getCombatUnits("LEFT").reduce((s, u) => s + u.hp, 0);
-      const rightHp = this.getCombatUnits("RIGHT").reduce((s, u) => s + u.hp, 0);
-      this.resolveCombat(leftHp >= rightHp ? "LEFT" : "RIGHT");
     }
   }
 
@@ -2983,7 +3072,9 @@ export class CombatScene extends Phaser.Scene {
   }
 
   tickTimedStatus(unit, key) {
-    if (unit.statuses[key] > 0) unit.statuses[key] -= 1;
+    if (!unit?.statuses) return;
+    const current = Number.isFinite(unit.statuses[key]) ? unit.statuses[key] : 0;
+    unit.statuses[key] = current > 0 ? current - 1 : 0;
     if (key === "tauntTurns" && unit.statuses.tauntTurns <= 0) {
       unit.statuses.tauntTargetId = null;
       unit.statuses.tauntTurns = 0;
@@ -3710,7 +3801,8 @@ export class CombatScene extends Phaser.Scene {
     }
 
     if (attacker && !options.forceHit && !options.isSkill) {
-      if (Math.random() < defender.mods.evadePct) {
+      const evadePct = Phaser.Math.Clamp(Number(defender.mods.evadePct ?? 0), 0, 0.6);
+      if (Math.random() < evadePct) {
         this.audioFx.play("click");
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "TRƯỢT", "#d3f2ff");
         return 0;
@@ -3718,8 +3810,10 @@ export class CombatScene extends Phaser.Scene {
     }
 
     let raw = Math.max(1, rawDamage);
+    let isPhysicalCrit = false;
     if (attacker && damageType === "physical") {
       if (Math.random() < attacker.mods.critPct) {
+        isPhysicalCrit = true;
         raw *= 1.5;
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẠO KÍCH", "#ffd785");
       }
@@ -3727,11 +3821,16 @@ export class CombatScene extends Phaser.Scene {
 
     let final = raw;
     if (damageType === "physical") {
-      const armorBreak = defender.statuses.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
-      const pen = options.armorPen || 0;
-      const effectiveDef = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
-      const def = effectiveDef * (1 - pen);
-      final = raw * (100 / (100 + def));
+      if (isPhysicalCrit) {
+        // Bạo kích xuyên giáp: giữ đúng 150% raw và bỏ qua giảm sát thương bởi DEF.
+        final = raw;
+      } else {
+        const armorBreak = defender.statuses.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
+        const pen = options.armorPen || 0;
+        const effectiveDef = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
+        const def = effectiveDef * (1 - pen);
+        final = raw * (100 / (100 + def));
+      }
     } else if (damageType === "magic") {
       final = raw * (100 / (100 + this.getEffectiveMdef(defender)));
     }
@@ -4074,6 +4173,9 @@ export class CombatScene extends Phaser.Scene {
       const nextWinStreak = this.player.winStreak + 1;
       result.goldDelta = 1 + (nextWinStreak >= 3 ? 1 : 0);
       this.addLog(`Thắng vòng ${this.player.round}. +${result.goldDelta} vàng.`);
+    } else if (winnerSide === "DRAW") {
+      result.damage = 0;
+      this.addLog(`Hòa vòng ${this.player.round}. Hai bên vẫn còn quân.`);
     } else {
       this.addLog(`Thua vòng ${this.player.round}. Toàn đội đã bị hạ gục.`);
     }

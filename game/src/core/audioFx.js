@@ -80,6 +80,47 @@ export class AudioFx {
     game.__forestBgm = null;
   }
 
+  playPlaylist(keys, volume = 0.2, shuffle = true) {
+    if (!keys || keys.length === 0) return;
+
+    const game = this.scene?.game;
+    // If already playing this playlist, do nothing?
+    // Simplified: Just stop current and start new playlist
+    this.stopBgm();
+
+    let playlist = [...keys];
+    if (shuffle) {
+      // Fisher-Yates shuffle
+      for (let i = playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [playlist[i], playlist[j]] = [playlist[j], playlist[i]];
+      }
+    }
+
+    const playTrack = (index) => {
+      if (!this.scene?.game) return; // Scene destroyed
+      const key = playlist[index];
+      if (!this.scene.cache.audio.exists(key)) {
+        // Skip missing track
+        const nextIndex = (index + 1) % playlist.length;
+        if (playlist.length > 1) playTrack(nextIndex);
+        return;
+      }
+
+      const sound = this.scene.sound.add(key, { volume: volume * this.getMasterVolume(), mute: !this.enabled });
+      sound.play();
+
+      sound.once('complete', () => {
+        const nextIndex = (index + 1) % playlist.length;
+        playTrack(nextIndex);
+      });
+
+      game.__forestBgm = { key: "playlist", sound, baseVolume: volume, playlist, currentIndex: index };
+    };
+
+    playTrack(0);
+  }
+
   play(type, duration = 0.08) {
     if (!this.enabled) return;
     const master = this.getMasterVolume();

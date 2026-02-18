@@ -9,7 +9,15 @@ import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVis
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
-import { loadUiSettings, saveUiSettings } from "../core/uiSettings.js";
+import {
+  RESOLUTION_PRESETS,
+  guiScaleToZoom,
+  loadUiSettings,
+  normalizeGuiScale,
+  normalizeResolutionKey,
+  resolveResolution,
+  saveUiSettings
+} from "../core/uiSettings.js";
 import { DEFAULT_LOSE_CONDITION, getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
 import { createDefaultRunState, hydrateRunState, serializeRunState } from "../core/runState.js";
 import {
@@ -22,7 +30,8 @@ import {
   randomItem,
   rollTierForLevel,
   sampleWithoutReplacement,
-  scaledBaseStats
+  scaledBaseStats,
+  getBaseEvasion
 } from "../core/gameUtils.js";
 
 const TILE_W = 98;
@@ -204,6 +213,7 @@ export class PlanningScene extends Phaser.Scene {
     this.playerCellZones = [];
     this.buttons = {};
     this.benchSlots = [];
+    this.benchUpgradeLevel = 0;
     this.shopCards = [];
     this.planningSprites = [];
     this.combatSprites = [];
@@ -251,6 +261,10 @@ export class PlanningScene extends Phaser.Scene {
     this.inventoryCells = [];
     this.storageSummaryText = null;
     this.storageCraftText = null;
+    this.craftInputSlots = [];
+    this.craftOutputSlot = null;
+    this.craftGridItems = [null, null, null, null];
+    this.craftHintText = null;
     this.rightPanelContentWidth = 0;
     this.rightPanelArea = null;
     this.rightPanelMask = null;
@@ -296,6 +310,10 @@ export class PlanningScene extends Phaser.Scene {
     this.lastDragPoint = null;
     this.boardPointerDown = null;
     this.boardDragConsumed = false;
+    this.isUnitDragging = false;
+    this.dragUnit = null;
+    this.dragClone = null;
+    this.dragOrigin = null;
     this.gapMarkers = [];
     this.boardEdgeLabels = [];
     this.roundBackgroundImage = null;
@@ -320,6 +338,10 @@ export class PlanningScene extends Phaser.Scene {
     this.inventoryCells = [];
     this.storageSummaryText = null;
     this.storageCraftText = null;
+    this.craftInputSlots = [];
+    this.craftOutputSlot = null;
+    this.craftGridItems = [null, null, null, null];
+    this.craftHintText = null;
     this.rightPanelContentWidth = 0;
     this.rightPanelArea = null;
     this.rightPanelMask = null;
@@ -346,6 +368,9 @@ export class PlanningScene extends Phaser.Scene {
     this.wikiSearchQuery = "";
     this.wikiScrollY = 0;
     this.wikiMaxScroll = 0;
+    this._wikiTab = "units";
+    this._wikiDetailUnit = null;
+    this._wikiCraftRecipes = null;
   }
 
   resetBoardViewTransform(refresh = false) {
@@ -371,14 +396,16 @@ export class PlanningScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu();
     this.input.keyboard?.removeAllListeners();
     this.input.removeAllListeners();
-    this.layout = this.computeLayout();
     this.runtimeSettings = this.incomingData?.settings ?? loadUiSettings();
+    this.applyDisplaySettings(this.runtimeSettings, false);
+    this.layout = this.computeLayout();
     this.gameMode = this.incomingData?.mode ?? this.gameMode;
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
     this.audioFx.setVolumeLevel(this.runtimeSettings.volumeLevel ?? 10);
-    this.audioFx.startBgm("bgm_planning", 0.2);
+    const playlist = ["bgm_planning", "bgm_nature_1", "bgm_nature_2", "bgm_nature_3", "bgm_nature_4", "bgm_nature_5"];
+    this.audioFx.playPlaylist(playlist, 0.2, true);
     this.drawBoard();
     this.createHud();
     this.createButtons();
@@ -422,8 +449,23 @@ export class PlanningScene extends Phaser.Scene {
     if (this.player) this.player.loseCondition = loseCondition;
     if (typeof settings.audioEnabled === "boolean") this.audioFx.setEnabled(settings.audioEnabled);
     if (settings.volumeLevel != null) this.audioFx.setVolumeLevel(settings.volumeLevel);
-    this.audioFx.startBgm("bgm_planning", 0.2);
+    const playlist = ["bgm_planning", "bgm_nature_1", "bgm_nature_2", "bgm_nature_3", "bgm_nature_4", "bgm_nature_5"];
+    this.audioFx.playPlaylist(playlist, 0.2, true);
     this.refreshPlanningUi();
+  }
+
+  applyDisplaySettings(settings, refresh = false) {
+    const resolution = resolveResolution(settings?.resolutionKey);
+    if (resolution) {
+      this.scale.resize(resolution.width, resolution.height);
+    }
+    const zoom = guiScaleToZoom(normalizeGuiScale(settings?.guiScale));
+    this.cameras.main.setZoom(zoom);
+    if (refresh) {
+      this.layout = this.computeLayout();
+      this.refreshPlanningUi();
+      this.refreshBoardGeometry();
+    }
   }
 
   setupInput() {
@@ -449,6 +491,14 @@ export class PlanningScene extends Phaser.Scene {
       }
       this.toggleSettingsOverlay();
     });
+
+    this.input.on("pointerdown", (pointer) => {
+      if (pointer.rightButtonDown()) {
+        this.handleRightClick(pointer);
+      }
+    });
+
+    this.input.mouse?.disableContextMenu();
   }
 
   setupGamepadInput() {
@@ -503,6 +553,11 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   update(_time, _delta) {
+    const pointer = this.input?.activePointer;
+    if (this.isUnitDragging && pointer && !pointer.isDown) {
+      this.endUnitDrag(pointer);
+    }
+
     const pad = this.getActivePad();
     this.gamepadActive = !!pad;
     if (!pad) {
@@ -815,6 +870,17 @@ export class PlanningScene extends Phaser.Scene {
   applyCombatResult(result) {
     if (!result) return;
     const won = result.winnerSide === "LEFT";
+    if (result.winnerSide === "DRAW") {
+      this.player.winStreak = 0;
+      this.player.loseStreak = 0;
+      this.addLog(`Hòa vòng ${result.round}. Hai bên vẫn còn quân.`);
+      this.player.round = (result.round ?? this.player.round) + 1;
+      this.resetBoardViewTransform(true);
+      this.enterPlanning(true);
+      this.showRoundResultBanner("HÒA", true);
+      this.persistProgress();
+      return;
+    }
     if (result.winnerSide === "LEFT") {
       this.player.winStreak += 1;
       this.player.loseStreak = 0;
@@ -889,41 +955,53 @@ export class PlanningScene extends Phaser.Scene {
     const colGap = UI_SPACING.SM;
     const gridW = w - margin * 2;
     const colW = Math.floor((gridW - colGap * (gridCols - 1)) / gridCols);
-    const boardCols = 10;
-    const sideCols = 2;
-    const contentW = boardCols * colW + (boardCols - 1) * colGap;
-    const sidePanelW = sideCols * colW + (sideCols - 1) * colGap;
-    const topPanelY = margin;
-    const topPanelH = 126;
-    const boardPanelX = margin;
-    const rightPanelX = boardPanelX + contentW + colGap;
-    const boardPanelY = topPanelY + topPanelH + UI_SPACING.LG;
-    const sidePanelY = boardPanelY;
-    const sidePanelH = h - sidePanelY - margin;
 
-    const actionsH = 52;
-    const controlsH = 22;
+    const boardCols = gridCols;
+    const contentW = boardCols * colW + (boardCols - 1) * colGap;
+
+    const topPanelY = margin;
+    const topPanelH = 120;
+    const boardPanelX = margin;
+    const boardPanelY = topPanelY + topPanelH + UI_SPACING.SM;
+
+    // Synergy Panel - Floating on the right, higher up
+    const sidePanelW = colW * 2.5;
+    const sidePanelX = w - margin - sidePanelW - 10;
+    const sidePanelY = boardPanelY + 10;
+    const sidePanelH = 160;
+
+    const actionsH = 50;
+    const controlsH = 20;
     const lowerSplitGap = UI_SPACING.LG;
-    const benchRegionW = clamp(Math.floor(contentW * 0.42), 360, Math.floor(contentW * 0.55));
-    const shopRegionW = Math.max(320, contentW - benchRegionW - lowerSplitGap);
+
+    // Bottom layout
+    const benchRegionW = Math.floor(contentW * 0.35);
+    const shopRegionW = contentW - benchRegionW - lowerSplitGap;
     const benchRegionX = boardPanelX;
     const shopRegionX = benchRegionX + benchRegionW + lowerSplitGap;
 
     const shopCardH = 154;
-    const benchCols = benchRegionW >= 450 ? 6 : 5;
-    const benchRows = benchCols === 6 ? 2 : 3;
-    const benchSlotH = benchCols === 6 ? 78 : 68;
+    const benchCols = this.benchUpgradeLevel > 0 ? 7 : 4;
+    const benchRows = 2;
+    const benchSlotH = 76;
     const benchRowGap = UI_SPACING.XS;
-    const lowerPanelH = Math.max(shopCardH, benchRows * benchSlotH + benchRowGap * Math.max(0, benchRows - 1));
+
+    const lowerPanelH = 210; // Fixed height for bottom section
     const lowerTopY = h - margin - lowerPanelH;
-    const benchY = lowerTopY;
-    const shopY = lowerTopY + Math.floor((lowerPanelH - shopCardH) * 0.5);
-    const controlsY = lowerTopY - UI_SPACING.SM - controlsH;
-    const actionsY = controlsY - UI_SPACING.SM - actionsH;
-    const boardPanelH = Math.max(250, actionsY - UI_SPACING.LG - boardPanelY);
+
+    // Inventory Y - Move it up from bench
+    const invCellSize = 42;
+    const invY = lowerTopY + 10;
+
+    const benchY = invY + invCellSize + 28; // Increased gap to avoid label overlap
+    const shopY = lowerTopY + 45;
+
+    const controlsY = lowerTopY - 12;
+    const actionsY = controlsY - actionsH - 6;
+    const boardPanelH = Math.max(250, actionsY - UI_SPACING.SM - boardPanelY);
 
     const shopGap = UI_SPACING.SM;
-    const shopCardW = clamp(Math.floor((shopRegionW - shopGap * 4) / 5), 104, 186);
+    const shopCardW = Math.floor((shopRegionW - shopGap * 4) / 5);
     const benchGap = UI_SPACING.XS;
     const benchSlotW = Math.max(68, Math.floor((benchRegionW - benchGap * (benchCols - 1)) / benchCols));
 
@@ -934,18 +1012,18 @@ export class PlanningScene extends Phaser.Scene {
       colW,
       colGap,
       gridCols,
-      sidePanelW,
       contentW,
-      rightPanelX,
       topPanelY,
       topPanelH,
-      boardOriginX: boardPanelX + Math.floor(contentW * 0.28),
-      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.78),
+      boardOriginX: boardPanelX + Math.floor(contentW * 0.35),
+      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.75),
       boardPanelX,
       boardPanelY,
       boardPanelW: contentW,
       boardPanelH,
+      sidePanelX,
       sidePanelY,
+      sidePanelW,
       sidePanelH,
       benchRegionX,
       benchRegionW,
@@ -963,7 +1041,9 @@ export class PlanningScene extends Phaser.Scene {
       shopGap,
       benchSlotW,
       benchSlotH,
-      benchGap
+      benchGap,
+      invY,
+      invCellSize
     };
   }
 
@@ -1158,8 +1238,8 @@ export class PlanningScene extends Phaser.Scene {
 
   paintRiverTile(graphics, x, y, row) {
     const { tileW, tileH } = this.getTileSize();
-    const w = tileW * 0.95;
-    const h = tileH * 0.95;
+    const w = tileW;
+    const h = tileH;
     const even = row % 2 === 0;
     const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
     const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
@@ -1225,34 +1305,6 @@ export class PlanningScene extends Phaser.Scene {
     boardPanel.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.75);
     boardPanel.setDepth(-12);
 
-    const rightPanel = this.add.rectangle(
-      l.rightPanelX + l.sidePanelW / 2,
-      l.sidePanelY + l.sidePanelH / 2,
-      l.sidePanelW,
-      l.sidePanelH,
-      UI_COLORS.panelSoft,
-      0.9
-    );
-    rightPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.72);
-    rightPanel.setDepth(1800);
-    rightPanel.setInteractive();
-    this.rightPanelArea = {
-      x: l.rightPanelX + 2,
-      y: l.sidePanelY + 2,
-      w: l.sidePanelW - 4,
-      h: l.sidePanelH - 52
-    };
-    this.rightPanelMaskShape = this.add.graphics();
-    this.rightPanelMaskShape.fillStyle(0xffffff, 1);
-    this.rightPanelMaskShape.fillRect(
-      this.rightPanelArea.x,
-      this.rightPanelArea.y,
-      this.rightPanelArea.w,
-      this.rightPanelArea.h
-    );
-    this.rightPanelMaskShape.setVisible(false);
-    this.rightPanelMask = this.rightPanelMaskShape.createGeometryMask();
-
     this.titleText = this.add
       .text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM - 4, "FOREST THRONE • BÁ CHỦ KHU RỪNG", {
         fontFamily: UI_FONT,
@@ -1271,7 +1323,7 @@ export class PlanningScene extends Phaser.Scene {
       .setDepth(2000);
 
     this.headerMetaText = this.add
-      .text(l.boardPanelX + l.boardPanelW - UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 6, "", {
+      .text(l.boardPanelX + l.boardPanelW - UI_SPACING.SM - 120, l.topPanelY + UI_SPACING.SM + 6, "", {
         fontFamily: UI_FONT,
         fontSize: "13px",
         color: UI_COLORS.textSecondary,
@@ -1280,19 +1332,21 @@ export class PlanningScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setDepth(2000);
 
+    // Stat Chips
     const statDefs = [
       { key: "round", icon: "🧭", label: "Vòng" },
-      { key: "gold", icon: "🪙", label: "Vàng" },
+      { key: "gold", icon: "🪙", label: "Vàng", hasBar: true, barColor: 0xd4a017 },
       { key: "level", icon: "⬆", label: "Cấp" },
-      { key: "xp", icon: "✦", label: "XP" },
-      { key: "deploy", icon: "⚔", label: "Triển khai" }
+      { key: "xp", icon: "✦", label: "XP", hasBar: true, barColor: 0x3a8fd4 },
+      { key: "deploy", icon: "⚔", label: "Triển khai", hasBar: true, barColor: 0x4caf50 }
     ];
     const chipGap = 10;
     const chipY = l.topPanelY + 58;
     const totalChipW = l.boardPanelW - UI_SPACING.SM * 2;
-    const chipW = clamp(Math.floor((totalChipW - chipGap * (statDefs.length - 1)) / statDefs.length), 108, 200);
+    const chipW = clamp(Math.floor((totalChipW - chipGap * (statDefs.length - 1)) / statDefs.length), 108, 190);
     const chipsRowW = chipW * statDefs.length + chipGap * (statDefs.length - 1);
-    const chipStartX = l.boardPanelX + UI_SPACING.SM + Math.max(0, Math.floor((totalChipW - chipsRowW) * 0.5));
+    // Align left instead of center
+    const chipStartX = l.boardPanelX + UI_SPACING.SM;
     this.headerStatChips = {};
 
     statDefs.forEach((def, idx) => {
@@ -1328,134 +1382,99 @@ export class PlanningScene extends Phaser.Scene {
         .setOrigin(1, 0.5)
         .setDepth(2001);
 
-      this.headerStatChips[def.key] = { bg, icon, label, value };
+      // Progress bar (thin strip at bottom of chip)
+      let bar = null;
+      let barBg = null;
+      if (def.hasBar) {
+        barBg = this.add.rectangle(x + chipW / 2, chipY + 38, chipW - 4, 3, 0x0a1520, 0.9);
+        barBg.setDepth(2001);
+        bar = this.add.graphics();
+        bar.setDepth(2002);
+        bar._chipX = x;
+        bar._chipW = chipW;
+        bar._chipY = chipY;
+        bar._barColor = def.barColor;
+      }
+
+      this.headerStatChips[def.key] = { bg, icon, label, value, bar, barBg, chipX: x, chipW };
     });
 
-    const rightX = l.rightPanelX + UI_SPACING.SM;
-    const rightW = l.sidePanelW - UI_SPACING.SM * 2;
-    this.rightPanelContentWidth = rightW;
-    let y = l.sidePanelY + UI_SPACING.SM;
+    // Sub-panels (Synergy / Enemy) - Floating on the right over the board
+    // Synergy Panel - Floating on the right
+    const sideW = l.sidePanelW;
+    const sideH = l.sidePanelH;
+    const sideX = l.sidePanelX;
+    const sideY = l.sidePanelY;
 
-    this.phaseTitleText = this.add.text(rightX, y, "◉ PHA", {
+    const synergyBg = this.add.rectangle(sideX + sideW / 2, sideY + sideH / 2, sideW, sideH, 0x0e1828, 0.85);
+    synergyBg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.6);
+    synergyBg.setDepth(1800);
+
+    this.synergyTitleText = this.add.text(sideX + 12, sideY + 10, "◎ HỆ KÍCH HOẠT", {
       fontFamily: UI_FONT,
-      fontSize: "14px",
+      fontSize: "12px",
       color: UI_COLORS.textSecondary,
       fontStyle: "bold"
     }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.phaseTitleText);
-    this.phaseText = this.add.text(rightX, y + 20, "", {
+    this.synergyText = this.add.text(sideX + 12, sideY + 34, "", {
       fontFamily: UI_FONT,
-      fontSize: "16px",
-      color: UI_COLORS.textPrimary
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.phaseText);
-    y += 62;
-
-    this.synergyTitleText = this.add.text(rightX, y, "◎ HỆ KÍCH HOẠT", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.synergyTitleText);
-    this.synergyText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
+      fontSize: "12px",
       color: UI_COLORS.textPrimary,
-      lineSpacing: 6,
-      wordWrap: { width: rightW }
+      lineSpacing: 4,
+      wordWrap: { width: sideW - 24 }
     }).setDepth(2000);
-    this.synergyText.setFixedSize(rightW, 160);
+    this.synergyText.setFixedSize(sideW - 24, sideH - 44);
     this.synergyText.setInteractive({ useHandCursor: true });
     this.tooltip.attach(this.synergyText, () => this.getSynergyTooltip());
-    this.registerRightPanelScrollItem(this.synergyText);
-    y += 192;
 
-    this.enemyTitleText = this.add.text(rightX, y, "◈ THÔNG TIN ĐỊCH", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.enemyTitleText);
 
-    this.enemyToggleText = this.add
-      .text(rightX + rightW, y, "Chi tiết ▸", {
-        fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: "#8de8ff",
-        fontStyle: "bold"
-      })
-      .setOrigin(1, 0)
-      .setDepth(2000);
-    this.enemyToggleText.setInteractive({ useHandCursor: true });
-    this.enemyToggleText.on("pointerdown", () => {
-      this.enemyInfoExpanded = !this.enemyInfoExpanded;
-      this.audioFx.play("click");
-      this.refreshQueuePreview();
-    });
-    this.registerRightPanelScrollItem(this.enemyToggleText);
-
-    this.queueText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 5,
-      wordWrap: { width: rightW }
-    }).setDepth(2000);
-    this.queueText.setFixedSize(rightW, 90);
-    this.registerRightPanelScrollItem(this.queueText);
-    y += 122;
-
-    this.storageTitleText = this.add.text(rightX, y, "◆ KHO ĐỒ", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
-    }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.storageTitleText);
-
-    this.storageSummaryText = this.add.text(rightX, y + 20, "", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 4
-    }).setDepth(2000);
-    this.storageSummaryText.setFixedSize(rightW, 56);
-    this.registerRightPanelScrollItem(this.storageSummaryText);
-    y += 78;
-
-    const invCols = 2;
-    const invRows = 4;
+    // Inventory + Craft - Above Bench
+    const invX = l.benchRegionX;
+    const invY = l.invY;
+    const invCell = l.invCellSize;
     const invGap = UI_SPACING.XS;
-    const invCell = clamp(Math.floor((rightW - invGap * (invCols - 1)) / invCols), 48, 72);
-    const invTotalW = invCols * invCell + invGap * (invCols - 1);
-    const invStartX = rightX + Math.max(0, Math.floor((rightW - invTotalW) * 0.5));
+    const craftGridW = invCell * 2 + invGap;
+    const craftGridH = invCell * 2 + invGap;
+    const craftArrowGap = 30;
+    const craftPanelW = craftGridW + craftArrowGap + invCell;
+    const craftMinX = invX + invCell * 4;
+    const craftMaxX = l.boardPanelX + l.boardPanelW - craftPanelW - 8;
+    const craftX = clamp(invX + l.benchRegionW - craftPanelW - 8, craftMinX, craftMaxX);
+    const invAreaW = Math.max(invCell * 4, craftX - invX - 12);
+    const invCols = clamp(Math.floor((invAreaW + invGap) / (invCell + invGap)), 4, 10);
+
+    this.storageTitleText = this.add.text(invX, invY - 20, "◆ KHO ĐỒ", {
+      fontFamily: UI_FONT,
+      fontSize: "13px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+
+    this.storageSummaryText = this.add.text(invX + 92, invY - 20, "", {
+      fontFamily: UI_FONT,
+      fontSize: "11px",
+      color: UI_COLORS.textPrimary
+    }).setDepth(2000);
+    this.storageSummaryText.setFixedSize(Math.max(180, invAreaW - 96), 14);
+
     this.inventoryCells = [];
-    for (let i = 0; i < invCols * invRows; i += 1) {
-      const col = i % invCols;
-      const row = Math.floor(i / invCols);
-      const x = invStartX + col * (invCell + invGap);
-      const yy = y + row * (invCell + invGap);
+    for (let i = 0; i < invCols; i += 1) {
+      const x = invX + i * (invCell + invGap);
+      const yy = invY;
       const bg = this.add.rectangle(x + invCell / 2, yy + invCell / 2, invCell, invCell, 0x162639, 0.95);
       bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
       bg.setDepth(2000);
       bg.setInteractive({ useHandCursor: true });
-      const icon = this.add
-        .text(x + 8, yy + 6, "＋", {
-          fontFamily: "Segoe UI Emoji",
-          fontSize: "20px",
-          color: UI_COLORS.textMuted
-        })
-        .setDepth(2001);
-      const count = this.add
-        .text(x + invCell - 6, yy + invCell - 6, "", {
-          fontFamily: UI_FONT,
-          fontSize: "10px",
-          color: UI_COLORS.textSecondary
-        })
-        .setOrigin(1, 1)
-        .setDepth(2001);
+      const icon = this.add.text(x + 6, yy + 4, "＋", {
+        fontFamily: "Segoe UI Emoji",
+        fontSize: "18px",
+        color: UI_COLORS.textMuted
+      }).setDepth(2001);
+      const count = this.add.text(x + invCell - 4, yy + invCell - 4, "", {
+        fontFamily: UI_FONT,
+        fontSize: "9px",
+        color: UI_COLORS.textSecondary
+      }).setOrigin(1, 1).setDepth(2001);
 
       const cell = { bg, icon, count, itemId: null, amount: 0 };
       bg.on("pointerdown", () => this.onInventoryCellClick(cell));
@@ -1476,124 +1495,99 @@ export class PlanningScene extends Phaser.Scene {
           body: `Loại: ${itemType}\nSố lượng: ${cell.amount}${extra}`
         };
       });
-      this.registerRightPanelScrollItem(bg);
-      this.registerRightPanelScrollItem(icon);
-      this.registerRightPanelScrollItem(count);
       this.inventoryCells.push(cell);
     }
 
-    y += invRows * invCell + invGap * (invRows - 1) + 10;
-
-    this.storageCraftText = this.add.text(rightX, y, "", {
+    const craftTitle = this.add.text(craftX, invY - 20, "⚒ Chế tạo 2x2", {
       fontFamily: UI_FONT,
       fontSize: "12px",
       color: UI_COLORS.textSecondary,
-      lineSpacing: 3,
-      wordWrap: { width: rightW }
-    }).setDepth(2000);
-    this.storageCraftText.setFixedSize(rightW, 38);
-    this.registerRightPanelScrollItem(this.storageCraftText);
-    y += 54;
-
-    this.logTitleText = this.add.text(rightX, y, "• NHẬT KÝ", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
       fontStyle: "bold"
     }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.logTitleText);
 
-    this.logText = this.add.text(rightX, y + 22, "", {
+    this.craftInputSlots = [];
+    for (let idx = 0; idx < 4; idx += 1) {
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      const x = craftX + col * (invCell + invGap);
+      const y = invY + row * (invCell + invGap);
+      const bg = this.add.rectangle(x + invCell / 2, y + invCell / 2, invCell, invCell, 0x162639, 0.96);
+      bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
+      bg.setDepth(2000);
+      bg.setInteractive({ useHandCursor: true });
+      const icon = this.add.text(x + invCell / 2, y + invCell / 2, "·", {
+        fontFamily: UI_FONT,
+        fontSize: "18px",
+        color: UI_COLORS.textMuted
+      }).setOrigin(0.5).setDepth(2001);
+      const slot = { index: idx, bg, icon };
+      bg.on("pointerdown", (pointer) => {
+        if (pointer?.rightButtonDown?.() || pointer?.leftButtonDown?.()) this.clearCraftGridSlot(idx);
+      });
+      this.tooltip.attach(bg, () => {
+        const itemId = this.craftGridItems[idx];
+        if (!itemId) return { title: "Ô chế tạo", body: "Ô trống. Nhấn nguyên liệu trong kho để đưa vào." };
+        const item = ITEM_BY_ID[itemId];
+        return { title: `${item?.icon ?? "❔"} ${item?.name ?? itemId}`, body: "Nhấn vào ô để bỏ nguyên liệu khỏi khung chế tạo." };
+      });
+      this.craftInputSlots.push(slot);
+    }
+
+    const arrowX = craftX + craftGridW + 10;
+    const arrowY = invY + Math.floor(craftGridH * 0.5);
+    this.add.text(arrowX, arrowY, "→", {
+      fontFamily: UI_FONT,
+      fontSize: "22px",
+      color: "#9ec6ea",
+      fontStyle: "bold"
+    }).setOrigin(0.5).setDepth(2001);
+
+    const outX = craftX + craftGridW + craftArrowGap;
+    const outY = invY + Math.floor((craftGridH - invCell) * 0.5);
+    const outBg = this.add.rectangle(outX + invCell / 2, outY + invCell / 2, invCell, invCell, 0x1e2f42, 0.95);
+    outBg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.8);
+    outBg.setDepth(2000);
+    outBg.setInteractive({ useHandCursor: true });
+    const outIcon = this.add.text(outX + invCell / 2, outY + invCell / 2, "?", {
+      fontFamily: "Segoe UI Emoji",
+      fontSize: "20px",
+      color: UI_COLORS.textMuted
+    }).setOrigin(0.5).setDepth(2001);
+    outBg.on("pointerdown", () => this.craftFromGrid());
+    this.craftOutputSlot = { bg: outBg, icon: outIcon };
+    this.tooltip.attach(outBg, () => {
+      const recipeId = this.getCraftResultRecipeId();
+      if (!recipeId) return { title: "Đầu ra", body: "Chưa có công thức khớp. Sắp nguyên liệu theo mẫu 2x2." };
+      const recipe = RECIPE_BY_ID[recipeId];
+      return {
+        title: `${recipe?.icon ?? "✨"} ${recipe?.name ?? recipeId}`,
+        body: `${recipe?.description ?? "Trang bị chế tạo"}\n\nNhấn để chế tạo và đưa vào kho đồ.`
+      };
+    });
+    this.craftHintText = this.add.text(craftX, invY - 6, "Nhấn nguyên liệu để đưa vào ô chế tạo.", {
+      fontFamily: UI_FONT,
+      fontSize: "10px",
+      color: UI_COLORS.textMuted
+    }).setDepth(2000);
+
+    // Log & History - Small overlay at bottom left of the board
+    this.logHistoryIcon = this.add.text(l.boardPanelX + 10, l.actionsY - 24, "• NHẬT KÝ", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: UI_COLORS.textSecondary
+    }).setDepth(2000);
+
+    this.logText = this.add.text(l.boardPanelX + 80, l.actionsY - 24, "", {
       fontFamily: UI_FONT,
       fontSize: "11px",
-      color: UI_COLORS.textPrimary,
-      lineSpacing: 3,
-      wordWrap: { width: rightW - 10 }
+      color: UI_COLORS.textPrimary
     }).setDepth(2000);
-    this.logText.setFixedSize(rightW - 10, 32);
-    this.registerRightPanelScrollItem(this.logText);
-    y += 56;
-    this.historyButtonRect = {
-      x: rightX,
-      y: y,
-      w: rightW - 10,
-      h: 26
-    };
-    y += 34;
 
-    this.craftTitleText = this.add.text(rightX, y, "🛠 CÔNG THỨC CHẾ TẠO", {
+    this.storageCraftText = this.add.text(l.boardPanelX + 400, l.actionsY - 24, "", {
       fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: UI_COLORS.textSecondary,
-      fontStyle: "bold"
+      fontSize: "11px",
+      color: UI_COLORS.textSecondary
     }).setDepth(2000);
-    this.registerRightPanelScrollItem(this.craftTitleText);
-    y += 24;
-
-    const craftW = rightW;
-    const craftH = 32;
-    CRAFT_RECIPES.forEach((recipe) => {
-      const reqIcons = recipe.requires.map((id) => ITEM_BY_ID[id]?.icon ?? "?").join(" + ");
-      const labelText = `${recipe.icon} = ${reqIcons}`;
-      const btn = this.createButton(rightX, y, craftW, craftH, labelText, () => this.craftItem(recipe.id), {
-        variant: "subtle",
-        fontSize: 13,
-        align: "left"
-      });
-      this.tooltip.attach(btn.bg, () => ({
-        title: `${recipe.icon} ${recipe.name}`,
-        body: `${recipe.description}\nNguyên liệu: ${recipe.requires.map((id) => ITEM_BY_ID[id]?.name).join(" + ")}`
-      }));
-      this.registerRightPanelButton(btn);
-      y += craftH + 4;
-    });
-
-    this.refreshRightPanelScrollMetrics();
-  }
-
-  registerRightPanelScrollItem(item) {
-    if (!item) return;
-    if (this.rightPanelMask && typeof item.setMask === "function") {
-      item.setMask(this.rightPanelMask);
-    }
-    this.rightPanelScrollItems.push({ item, baseY: item.y });
-  }
-
-  registerRightPanelButton(button) {
-    if (!button) return;
-    this.registerRightPanelScrollItem(button.shadow);
-    this.registerRightPanelScrollItem(button.bg);
-    this.registerRightPanelScrollItem(button.text);
-  }
-
-  applyRightPanelScroll() {
-    this.rightPanelScrollItems.forEach((entry) => {
-      entry.item.y = entry.baseY - this.rightPanelScrollOffset;
-    });
-  }
-
-  refreshRightPanelScrollMetrics() {
-    if (!this.rightPanelArea || !this.rightPanelScrollItems.length) return;
-    const viewBottom = this.rightPanelArea.y + this.rightPanelArea.h;
-    let contentBottom = this.rightPanelArea.y;
-    this.rightPanelScrollItems.forEach((entry) => {
-      if (!entry.item.visible) return;
-      const bounds = entry.item.getBounds?.();
-      if (!bounds) return;
-      const baseBottom = bounds.bottom + this.rightPanelScrollOffset;
-      if (baseBottom > contentBottom) contentBottom = baseBottom;
-    });
-    this.rightPanelMaxScroll = Math.max(0, Math.ceil(contentBottom - viewBottom + 8));
-    this.rightPanelScrollOffset = clamp(this.rightPanelScrollOffset, 0, this.rightPanelMaxScroll);
-    this.applyRightPanelScroll();
-  }
-
-  onRightPanelWheel(deltaY) {
-    if (!this.rightPanelArea) return;
-    const next = clamp(this.rightPanelScrollOffset + (deltaY > 0 ? 34 : -34), 0, this.rightPanelMaxScroll);
-    if (next === this.rightPanelScrollOffset) return;
-    this.rightPanelScrollOffset = next;
-    this.applyRightPanelScroll();
   }
 
   createButtons() {
@@ -1604,20 +1598,25 @@ export class PlanningScene extends Phaser.Scene {
     strip.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.7);
     strip.setDepth(1888);
 
-    const smallW = 132;
-    const mediumW = 144;
+    const smallW = 120;
     const gap = UI_SPACING.SM;
-    const ctaW = 280;
+    const ctaW = 240;
 
-    this.buttons.roll = this.createButton(x, y1, smallW + 8, 44, "Đổi tướng (2v)", () => this.rollShop());
-    this.buttons.xp = this.createButton(x + smallW + gap + 8, y1, smallW + 8, 44, "Mua XP (4v)", () => this.buyXp());
-    this.buttons.lock = this.createButton(x + (smallW + gap + 8) * 2, y1, smallW + 8, 44, "Khóa: Tắt", () => this.toggleLock());
-    this.buttons.sell = this.createButton(x + (smallW + gap + 8) * 3, y1, smallW, 44, "Bán (S)", () => this.sellSelectedUnit(), {
+    this.buttons.roll = this.createButton(x, y1, smallW, 44, "Đổi tướng (2v)", () => this.rollShop());
+    this.buttons.xp = this.createButton(x + smallW + gap, y1, smallW, 44, "Mua XP (4v)", () => this.buyXp());
+    this.buttons.lock = this.createButton(x + (smallW + gap) * 2, y1, smallW, 44, "Khóa: Tắt", () => this.toggleLock());
+
+    // Nâng cấp dự bị button
+    this.buttons.upgradeBench = this.createButton(x + (smallW + gap) * 3, y1, smallW + 40, 44, "Nâng dự bị (10v)", () => this.upgradeBench());
+
+    this.buttons.sell = this.createButton(x + (smallW + gap) * 4 + 40, y1, smallW - 20, 44, "Bán (S)", () => this.sellSelectedUnit(), {
       variant: "ghost"
     });
-    this.buttons.reset = this.createButton(x + (smallW + gap + 8) * 4, y1, mediumW, 44, "Ván mới", () => this.startNewRun(), {
+
+    this.buttons.reset = this.createButton(x + (smallW + gap) * 5 + 20, y1, smallW - 20, 44, "Ván mới", () => this.startNewRun(), {
       variant: "ghost"
     });
+
     this.buttons.start = this.createButton(
       l.boardPanelX + l.boardPanelW - ctaW,
       y1 - 2,
@@ -1628,52 +1627,55 @@ export class PlanningScene extends Phaser.Scene {
       { variant: "cta", fontSize: 16, bold: true }
     );
     this.buttons.start.bg.setStrokeStyle(1.4, UI_COLORS.ctaEdge, 0.98);
-    this.buttons.start.shadow.setFillStyle(UI_COLORS.cta, 0.24);
+
+    // Cài đặt moved to top right
     this.buttons.settings = this.createButton(
-      l.rightPanelX + l.sidePanelW - 124,
-      l.topPanelY + 8,
-      108,
-      34,
-      "Cài đặt",
+      l.boardPanelX + l.boardPanelW - 118,
+      l.topPanelY + 14,
+      104,
+      32,
+      "⚙ Cài đặt",
       () => this.toggleSettingsOverlay(),
-      { variant: "ghost" }
+      { variant: "ghost", fontSize: 12 }
     );
+
     this.buttons.wiki = this.createButton(
-      l.boardPanelX + l.boardPanelW - 364, // To the left of START button
+      l.boardPanelX + l.boardPanelW - ctaW - 100, // To the left of START button
       y1 + 8,
-      76,
+      86,
       34,
       "📖 Wiki",
       () => this.toggleWikiModal(),
       { variant: "ghost", fontSize: 13 }
     );
-    if (this.historyButtonRect) {
-      this.buttons.history = this.createButton(
-        this.historyButtonRect.x,
-        this.historyButtonRect.y,
-        this.historyButtonRect.w,
-        this.historyButtonRect.h,
-        "Lịch sử",
-        () => this.toggleHistoryModal(true),
-        { variant: "ghost", fontSize: 12, bold: true }
-      );
-      this.registerRightPanelButton(this.buttons.history);
-    }
 
+    this.buttons.history = this.createButton(
+      l.boardPanelX + l.boardPanelW - ctaW - 194,
+      y1 + 8,
+      86,
+      34,
+      "📜 Lịch sử",
+      () => this.toggleHistoryModal(true),
+      { variant: "ghost", fontSize: 13 }
+    );
 
-
+    const controlsX = l.boardPanelX + l.boardPanelW - 14;
+    const controlsY = l.topPanelY + 54;
     this.controlsText = this.add.text(
-      l.boardPanelX,
-      l.controlsY,
-      "[SPACE] Giao tranh • [S] Bán thú • [R] Ván mới • [ESC] Cài đặt • Chuột: Zoom/Kéo bản đồ • Tay cầm: A chọn, B hủy, X shop, LB dự bị",
+      controlsX,
+      controlsY,
+      "[SPACE] Giao tranh • [S] Bán thú • [R] Ván mới\n[ESC] Cài đặt • Chuột: Zoom/Kéo bản đồ\nTay cầm: A chọn, B hủy, X shop, LB dự bị",
       {
         fontFamily: UI_FONT,
-        fontSize: "13px",
-        color: UI_COLORS.textMuted
+        fontSize: "11px",
+        color: UI_COLORS.textMuted,
+        align: "right",
+        lineSpacing: 2,
+        wordWrap: { width: Math.min(560, Math.floor(l.boardPanelW * 0.44)) }
       }
     );
+    this.controlsText.setOrigin(1, 0);
     this.controlsText.setDepth(2000);
-    this.refreshRightPanelScrollMetrics();
   }
 
   createButton(x, y, w, h, label, onClick, options = {}) {
@@ -1769,7 +1771,7 @@ export class PlanningScene extends Phaser.Scene {
     shade.setInteractive();
     this.settingsOverlay.push(shade);
 
-    const panel = this.add.rectangle(cx, cy, 540, 488, 0x102035, 0.98);
+    const panel = this.add.rectangle(cx, cy, 540, 560, 0x102035, 0.98);
     panel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.9);
     panel.setDepth(5001);
     panel.setVisible(false);
@@ -1796,13 +1798,15 @@ export class PlanningScene extends Phaser.Scene {
     };
 
     this.modalButtons = {};
-    this.modalButtons.save = makeModalBtn(0, -102, 260, 44, "Lưu tiến trình", () => this.onSaveClick());
-    this.modalButtons.load = makeModalBtn(0, -50, 260, 44, "Tải tiến trình", () => this.onLoadClick());
-    this.modalButtons.clear = makeModalBtn(0, 2, 260, 44, "Xóa tiến trình lưu", () => this.onClearClick());
-    this.modalButtons.audio = makeModalBtn(0, 54, 260, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.volume = makeModalBtn(0, 106, 260, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
-    this.modalButtons.menu = makeModalBtn(-136, 158, 230, 44, "Về trang chủ", () => this.goMainMenu());
-    this.modalButtons.close = makeModalBtn(136, 158, 230, 44, "Đóng", () => this.toggleSettingsOverlay(false));
+    this.modalButtons.save = makeModalBtn(0, -132, 260, 44, "Lưu tiến trình", () => this.onSaveClick());
+    this.modalButtons.load = makeModalBtn(0, -80, 260, 44, "Tải tiến trình", () => this.onLoadClick());
+    this.modalButtons.clear = makeModalBtn(0, -28, 260, 44, "Xóa tiến trình lưu", () => this.onClearClick());
+    this.modalButtons.audio = makeModalBtn(0, 24, 260, 44, "Âm thanh: Bật", () => this.toggleAudio());
+    this.modalButtons.volume = makeModalBtn(0, 76, 260, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
+    this.modalButtons.resolution = makeModalBtn(0, 128, 260, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
+    this.modalButtons.guiScale = makeModalBtn(0, 180, 260, 44, "Kích thước GUI: 3/5", () => this.changeGuiScale());
+    this.modalButtons.menu = makeModalBtn(-136, 242, 230, 44, "Về trang chủ", () => this.goMainMenu());
+    this.modalButtons.close = makeModalBtn(136, 242, 230, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
   toggleSettingsOverlay(force = null) {
@@ -1817,6 +1821,15 @@ export class PlanningScene extends Phaser.Scene {
     }
     if (this.modalButtons?.loseMode) {
       this.modalButtons.loseMode.setLabel(`Điều kiện thua: ${getLoseConditionLabel(this.getLoseCondition())}`);
+    }
+    if (this.modalButtons?.resolution) {
+      const resolution = resolveResolution(this.runtimeSettings?.resolutionKey);
+      const label = resolution?.label ?? `${resolution.width}x${resolution.height}`;
+      this.modalButtons.resolution.setLabel(`Độ phân giải: ${label}`);
+    }
+    if (this.modalButtons?.guiScale) {
+      const level = normalizeGuiScale(this.runtimeSettings?.guiScale);
+      this.modalButtons.guiScale.setLabel(`Kích thước GUI: ${level}/5`);
     }
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
@@ -2000,83 +2013,512 @@ export class PlanningScene extends Phaser.Scene {
     if (!this.wikiListContainer) return;
     this.wikiListContainer.removeAll(true);
 
-    const units = [...UNIT_CATALOG].sort((a, b) => a.tier - b.tier || a.classType.localeCompare(b.classType) || a.name.localeCompare(b.name));
-
-    // Summary
-    const classCount = {};
-    const tribeCount = {};
-    units.forEach((unit) => {
-      classCount[unit.classType] = (classCount[unit.classType] ?? 0) + 1;
-      tribeCount[unit.tribe] = (tribeCount[unit.tribe] ?? 0) + 1;
-    });
-
-    const maxSummaryItems = 4;
-    const classSummaryArr = Object.entries(classCount)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
-      .map(([code, count]) => `${getClassLabelVi(code)}: ${count}`);
-    const classSummary = classSummaryArr.length > maxSummaryItems
-      ? classSummaryArr.slice(0, maxSummaryItems).join(" • ") + ` (+${classSummaryArr.length - maxSummaryItems})`
-      : classSummaryArr.join(" • ");
-    const tribeSummaryArr = Object.entries(tribeCount)
-      .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
-      .map(([code, count]) => `${getTribeLabelVi(code)}: ${count}`);
-    const tribeSummary = tribeSummaryArr.length > maxSummaryItems
-      ? tribeSummaryArr.slice(0, maxSummaryItems).join(" • ") + ` (+${tribeSummaryArr.length - maxSummaryItems})`
-      : tribeSummaryArr.join(" • ");
-
-    let y = 0;
-    const intro = this.add.text(0, y, `Tổng thú: ${units.length}\nTheo nghề: ${classSummary}\nTheo tộc: ${tribeSummary}`, {
-      fontFamily: "Consolas",
-      fontSize: "16px",
-      color: "#d8edff",
-      lineSpacing: 5,
-      wordWrap: { width: 900 }
-    });
-    this.wikiListContainer.add(intro);
-    y += intro.height + 14;
+    // Prepare craft recipes with base item lookups (lazy)
+    if (!this._wikiCraftRecipes) {
+      const baseById = Object.fromEntries(BASE_ITEMS.map((b) => [b.id, b]));
+      this._wikiCraftRecipes = CRAFT_RECIPES.map((r) => ({
+        ...r,
+        _pattern: this.getRecipePattern(r).map((id) => (id ? baseById[id] ?? { icon: "?", name: id } : null)),
+        _requiredLabel: this.getRecipeRequiredList(r)
+          .map((id) => baseById[id] ?? { icon: "?", name: id })
+          .map((item) => `${item.icon} ${item.name}`)
+          .join(" + ")
+      }));
+    }
 
     const w = this.scale.width;
     const modalW = Math.min(1060, w - 40);
     const viewportW = modalW - 48;
-    const columns = viewportW > 820 ? 2 : 1;
-    const gap = 12;
-    const cardW = Math.floor((viewportW - gap * (columns - 1)) / columns);
-    const cardH = 92;
 
-    units.forEach((unit, idx) => {
-      const visual = getUnitVisual(unit.id, unit.classType);
-      const skillNameRaw = SKILL_LIBRARY?.[unit.skillId]?.name ?? unit.skillId;
-      const skillName = skillNameRaw;
-      const col = idx % columns;
-      const row = Math.floor(idx / columns);
-      const cardX = col * (cardW + gap);
-      const cardY = y + row * (cardH + 8);
+    let y = 0;
 
-      const bg = this.add.rectangle(cardX, cardY, cardW, cardH, idx % 2 === 0 ? 0x182b44 : 0x16273f, 0.88).setOrigin(0, 0);
-      bg.setStrokeStyle(1, 0x7ab8f5, 0.45);
-
-      const name = this.add.text(cardX + 10, cardY + 8, unit.name, {
-        fontFamily: UI_FONT, fontSize: "15px", color: "#ffeab0", fontStyle: "bold"
+    // --- Tab bar ---
+    const tabDefs = [
+      { key: "units", label: "🐾 LINH THÚ" },
+      { key: "recipes", label: "⚗️ CÔNG THỨC" }
+    ];
+    tabDefs.forEach((td, i) => {
+      const active = this._wikiTab === td.key;
+      const tabW = 180;
+      const tabX = i * (tabW + 8);
+      const tabBg = this.add.rectangle(tabX, y, tabW, 32, active ? 0x2a5080 : 0x1a2d40, active ? 1 : 0.8).setOrigin(0, 0);
+      tabBg.setStrokeStyle(1, active ? 0x7ab8f5 : 0x3a5070, 1);
+      tabBg.setInteractive({ useHandCursor: true });
+      tabBg.on("pointerdown", () => {
+        this._wikiDetailUnit = null;
+        this._wikiTab = td.key;
+        this.wikiScrollY = 0;
+        this.refreshWikiList();
       });
-      const tierBadge = this.add.text(cardX + cardW - 30, cardY + 8, `T${unit.tier}`, {
-        fontFamily: "Consolas", fontSize: "14px", color: "#8df2ff"
-      }).setOrigin(1, 0);
-
-      const meta = this.add.text(cardX + 10, cardY + 30, `${getClassLabelVi(unit.classType)} • ${getTribeLabelVi(unit.tribe)}`, {
-        fontFamily: UI_FONT, fontSize: "13px", color: "#a6bed3"
-      });
-
-      const skill = this.add.text(cardX + 10, cardY + 52, `Skill: ${skillName}`, {
-        fontFamily: UI_FONT, fontSize: "13px", color: "#d6f5ff"
-      });
-
-      this.wikiListContainer.add([bg, name, tierBadge, meta, skill]);
+      const tabLabel = this.add.text(tabX + tabW / 2, y + 16, td.label, {
+        fontFamily: UI_FONT, fontSize: "14px",
+        color: active ? "#ffeab0" : "#8ab4d4"
+      }).setOrigin(0.5);
+      this.wikiListContainer.add([tabBg, tabLabel]);
     });
+    y += 44;
 
-    const rows = Math.ceil(units.length / columns);
-    y += rows * (cardH + 8);
+    // ---- UNIT DETAIL VIEW ----
+    if (this._wikiDetailUnit) {
+      const unit =
+        typeof this._wikiDetailUnit === "string" ? UNIT_BY_ID[this._wikiDetailUnit] : this._wikiDetailUnit;
+      if (!unit) {
+        this._wikiDetailUnit = null;
+        this.refreshWikiList();
+        return;
+      }
+      const visual = getUnitVisual(unit.id, unit.classType);
+      const skill = SKILL_LIBRARY?.[unit.skillId];
+      const stats = unit.stats ?? {};
+      const range = Number.isFinite(stats.range) ? stats.range : 1;
+      const evasionPct = Math.round(getBaseEvasion(unit.classType) * 100);
+
+      const backBtn = this.add.text(0, y, "← Quay lại danh sách", {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#7ab8f5"
+      }).setInteractive({ useHandCursor: true });
+      backBtn.on("pointerdown", () => {
+        this._wikiDetailUnit = null;
+        this.wikiScrollY = 0;
+        this.refreshWikiList();
+      });
+      this.wikiListContainer.add(backBtn);
+      y += 28;
+
+      const detailBg = this.add.rectangle(0, y, viewportW - 14, 300, 0x0f1e30, 0.95).setOrigin(0, 0);
+      detailBg.setStrokeStyle(1, 0x5a8ab0, 0.8);
+      this.wikiListContainer.add(detailBg);
+
+      const nameText = this.add.text(16, y + 12, `${visual.icon}  ${visual.nameVi}`, {
+        fontFamily: UI_FONT, fontSize: "24px", color: "#ffeab0", fontStyle: "bold"
+      });
+      this.wikiListContainer.add(nameText);
+
+      const tierText = this.add.text(viewportW - 30, y + 12, `Bậc ${unit.tier}`, {
+        fontFamily: UI_FONT, fontSize: "16px", color: "#8df2ff"
+      }).setOrigin(1, 0);
+      this.wikiListContainer.add(tierText);
+
+      const metaText = this.add.text(16, y + 46, [
+        `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
+        `HP: ${stats.hp ?? "?"}   ATK: ${stats.atk ?? "?"}   DEF: ${stats.def ?? "?"}   MDEF: ${stats.mdef ?? "?"}`,
+        `MATK: ${stats.matk ?? "?"}   Tầm đánh: ${range}   Né tránh: ${evasionPct}%   Nộ tối đa: ${stats.rageMax ?? "?"}`
+      ].join("\n"), {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#c0ddf5", lineSpacing: 6
+      });
+      this.wikiListContainer.add(metaText);
+
+      const skillTitle = this.add.text(16, y + 126, "⚡ KỸ NĂNG:", {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#ffd580", fontStyle: "bold"
+      });
+      this.wikiListContainer.add(skillTitle);
+
+      const skillNameText = this.add.text(16, y + 148, skill?.name ?? unit.skillId, {
+        fontFamily: UI_FONT, fontSize: "17px", color: "#8df2ff", fontStyle: "bold"
+      });
+      this.wikiListContainer.add(skillNameText);
+
+      const skillDesc = this.add.text(16, y + 172, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
+        fontFamily: UI_FONT, fontSize: "13px", color: "#d0eaff", lineSpacing: 5,
+        wordWrap: { width: viewportW - 44 }
+      });
+      this.wikiListContainer.add(skillDesc);
+
+      const atkY = y + 172 + skillDesc.height + 14;
+      const atkTitle = this.add.text(16, atkY, "⚔️ ĐÁNH THƯỜNG:", {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#ffd580", fontStyle: "bold"
+      });
+      this.wikiListContainer.add(atkTitle);
+
+      const rangeLabel = range >= 3 ? "Tầm xa (3+)" : range >= 2 ? "Tầm trung (2)" : "Cận chiến (1)";
+      const atkDesc = this.add.text(16, atkY + 22, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
+        fontFamily: UI_FONT, fontSize: "13px", color: "#d0eaff", lineSpacing: 4,
+        wordWrap: { width: viewportW - 44 }
+      });
+      this.wikiListContainer.add(atkDesc);
+
+      const detailBottom = atkY + 22 + atkDesc.height + 16;
+      const detailHeight = Math.max(300, detailBottom - y);
+      detailBg.setSize(viewportW - 14, detailHeight);
+
+      const arenaY = y + detailHeight + 12;
+      const arenaHeight = this.renderWikiBattlePreview(arenaY, viewportW - 14, unit);
+      y = arenaY + arenaHeight + 8;
+      this.wikiMaxScroll = Math.max(0, y - (Math.min(760, this.scale.height - 40) - 100));
+      return;
+    }
+
+    // ---- UNITS TAB ----
+    if (this._wikiTab === "units") {
+      const units = [...UNIT_CATALOG].sort((a, b) => a.tier - b.tier || a.classType.localeCompare(b.classType) || a.name.localeCompare(b.name));
+      const classCount = {};
+      const tribeCount = {};
+      units.forEach((unit) => {
+        classCount[unit.classType] = (classCount[unit.classType] ?? 0) + 1;
+        tribeCount[unit.tribe] = (tribeCount[unit.tribe] ?? 0) + 1;
+      });
+      const maxSummaryItems = 4;
+      const classSummaryArr = Object.entries(classCount).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([code, count]) => `${getClassLabelVi(code)}: ${count}`);
+      const classSummary = classSummaryArr.length > maxSummaryItems ? classSummaryArr.slice(0, maxSummaryItems).join(" • ") + ` (+${classSummaryArr.length - maxSummaryItems})` : classSummaryArr.join(" • ");
+      const tribeSummaryArr = Object.entries(tribeCount).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([code, count]) => `${getTribeLabelVi(code)}: ${count}`);
+      const tribeSummary = tribeSummaryArr.length > maxSummaryItems ? tribeSummaryArr.slice(0, maxSummaryItems).join(" • ") + ` (+${tribeSummaryArr.length - maxSummaryItems})` : tribeSummaryArr.join(" • ");
+
+      const intro = this.add.text(0, y, `Tổng thú: ${units.length}\nTheo nghề: ${classSummary}\nTheo tộc: ${tribeSummary}`, {
+        fontFamily: "Consolas", fontSize: "16px", color: "#d8edff", lineSpacing: 5, wordWrap: { width: 900 }
+      });
+      this.wikiListContainer.add(intro);
+      y += intro.height + 14;
+
+      const sectionTitle = this.add.text(0, y, "Danh sách thú  (click để xem chi tiết)", {
+        fontFamily: UI_FONT, fontSize: "18px", color: "#ffeab0"
+      });
+      this.wikiListContainer.add(sectionTitle);
+      y += sectionTitle.height + 10;
+
+      const columns = viewportW > 820 ? 2 : 1;
+      const gap = 12;
+      const cardW = Math.floor((viewportW - gap * (columns - 1)) / columns);
+      const cardH = 92;
+
+      units.forEach((unit, idx) => {
+        const visual = getUnitVisual(unit.id, unit.classType);
+        const skillNameRaw = SKILL_LIBRARY?.[unit.skillId]?.name ?? unit.skillId;
+        const skillName = skillNameRaw;
+        const col = idx % columns;
+        const row = Math.floor(idx / columns);
+        const cardX = col * (cardW + gap);
+        const cardY = y + row * (cardH + 8);
+
+        const bg = this.add.rectangle(cardX, cardY, cardW, cardH, idx % 2 === 0 ? 0x182b44 : 0x16273f, 0.88).setOrigin(0, 0);
+        bg.setStrokeStyle(1, 0x7ab8f5, 0.45);
+        bg.setInteractive({ useHandCursor: true });
+        bg.on("pointerover", () => bg.setStrokeStyle(1, 0xffeab0, 0.9));
+        bg.on("pointerout", () => bg.setStrokeStyle(1, 0x7ab8f5, 0.45));
+        bg.on("pointerdown", () => {
+          this._wikiDetailUnit = unit;
+          this.wikiScrollY = 0;
+          this.refreshWikiList();
+        });
+
+        const name = this.add.text(cardX + 10, cardY + 8, unit.name, {
+          fontFamily: UI_FONT, fontSize: "15px", color: "#ffeab0", fontStyle: "bold"
+        });
+        const tierBadge = this.add.text(cardX + cardW - 30, cardY + 8, `T${unit.tier}`, {
+          fontFamily: "Consolas", fontSize: "14px", color: "#8df2ff"
+        }).setOrigin(1, 0);
+
+        const meta = this.add.text(cardX + 10, cardY + 30, `${getClassLabelVi(unit.classType)} • ${getTribeLabelVi(unit.tribe)}`, {
+          fontFamily: UI_FONT, fontSize: "13px", color: "#a6bed3"
+        });
+
+        const skill = this.add.text(cardX + 10, cardY + 52, `Skill: ${skillName}`, {
+          fontFamily: UI_FONT, fontSize: "13px", color: "#d6f5ff"
+        });
+
+        this.wikiListContainer.add([bg, name, tierBadge, meta, skill]);
+      });
+
+      const rows = Math.ceil(units.length / columns);
+      y += rows * (cardH + 8);
+    }
+
+    // ---- RECIPES TAB ----
+    if (this._wikiTab === "recipes") {
+      const recipeTitle = this.add.text(0, y, "Công thức chế tạo trang bị", {
+        fontFamily: UI_FONT, fontSize: "20px", color: "#ffeab0"
+      });
+      this.wikiListContainer.add(recipeTitle);
+      y += recipeTitle.height + 8;
+
+      const hint = this.add.text(0, y, "Khung chế tạo theo mẫu 2x2. Công thức có thể cần 2, 3 hoặc 4 nguyên liệu.", {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#9ec4e8", wordWrap: { width: viewportW - 14 }
+      });
+      this.wikiListContainer.add(hint);
+      y += hint.height + 12;
+
+      const rcols = viewportW > 700 ? 2 : 1;
+      const rgap = 12;
+      const rcardW = Math.floor((viewportW - rgap * (rcols - 1)) / rcols);
+      const rcardH = 136;
+
+      this._wikiCraftRecipes.forEach((recipe, idx) => {
+        const col = idx % rcols;
+        const row = Math.floor(idx / rcols);
+        const cardX = col * (rcardW + rgap);
+        const cardY = y + row * (rcardH + 8);
+        const bg = this.add.rectangle(cardX, cardY, rcardW, rcardH, idx % 2 === 0 ? 0x1a2e44 : 0x162840, 0.9).setOrigin(0, 0);
+        bg.setStrokeStyle(1, 0x5a8ab0, 0.5);
+        const title = this.add.text(cardX + 10, cardY + 8, `${recipe.icon} ${recipe.name}`, {
+          fontFamily: UI_FONT,
+          fontSize: "14px",
+          color: "#e9f5ff",
+          fontStyle: "bold"
+        });
+
+        const slotSize = 22;
+        const slotGap = 6;
+        const gridX = cardX + 10;
+        const gridY = cardY + 34;
+        const patternSlots = [];
+        for (let s = 0; s < 4; s += 1) {
+          const sx = gridX + (s % 2) * (slotSize + slotGap);
+          const sy = gridY + Math.floor(s / 2) * (slotSize + slotGap);
+          const cellBg = this.add.rectangle(sx + slotSize / 2, sy + slotSize / 2, slotSize, slotSize, 0x112235, 0.98);
+          cellBg.setStrokeStyle(1, 0x5a8ab0, 0.7);
+          const item = recipe._pattern?.[s] ?? null;
+          const icon = this.add.text(sx + slotSize / 2, sy + slotSize / 2, item?.icon ?? "", {
+            fontFamily: "Segoe UI Emoji",
+            fontSize: "14px",
+            color: "#ffffff"
+          }).setOrigin(0.5);
+          patternSlots.push(cellBg, icon);
+        }
+
+        const arrow = this.add.text(gridX + slotSize * 2 + slotGap + 10, gridY + slotSize, "→", {
+          fontFamily: UI_FONT,
+          fontSize: "18px",
+          color: "#a6cff1",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+        const outX = gridX + slotSize * 2 + slotGap + 24;
+        const outBg = this.add.rectangle(outX + slotSize / 2, gridY + slotSize, slotSize, slotSize, 0x2a4563, 0.96);
+        outBg.setStrokeStyle(1, 0x82c2ff, 0.9);
+        const outIcon = this.add.text(outX + slotSize / 2, gridY + slotSize, recipe.icon, {
+          fontFamily: "Segoe UI Emoji",
+          fontSize: "15px",
+          color: "#ffffff"
+        }).setOrigin(0.5);
+
+        const reqText = this.add.text(cardX + 10, cardY + 88, `Nguyên liệu: ${recipe._requiredLabel || "?"}`, {
+          fontFamily: UI_FONT,
+          fontSize: "12px",
+          color: "#b9d8f2",
+          wordWrap: { width: rcardW - 20 }
+        });
+        const desc = this.add.text(cardX + 10, cardY + 106, recipe.description, {
+          fontFamily: UI_FONT,
+          fontSize: "12px",
+          color: "#d7ecff",
+          wordWrap: { width: rcardW - 20 }
+        });
+        this.wikiListContainer.add([bg, title, ...patternSlots, arrow, outBg, outIcon, reqText, desc]);
+      });
+
+      const totalRRows = Math.ceil(this._wikiCraftRecipes.length / rcols);
+      y += totalRRows * (rcardH + 8);
+    }
 
     this.wikiMaxScroll = Math.max(0, y - (Math.min(760, this.scale.height - 40) - 100));
+  }
+
+  renderWikiBattlePreview(y, width, unit) {
+    const panelX = 0;
+    const panelH = 318;
+    const panel = this.add.rectangle(panelX, y, width, panelH, 0x0f1e30, 0.95).setOrigin(0, 0);
+    panel.setStrokeStyle(1, 0x5a8ab0, 0.8);
+
+    const title = this.add.text(panelX + 16, y + 10, "Sân đấu preview đòn đánh / kỹ năng", {
+      fontFamily: UI_FONT,
+      fontSize: "15px",
+      color: "#ffeab0",
+      fontStyle: "bold"
+    });
+
+    const subTitle = this.add.text(panelX + 16, y + 30, "Phe địch: toàn bộ là hình nộm. Phe ta: 1 linh thú ở trung tâm.", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#9ec4e8"
+    });
+
+    const buttonY = y + 52;
+    const buttonH = 24;
+    const buttonW = 124;
+    const buttonGap = 10;
+    const boardX = panelX + 16;
+    const boardY = y + 84;
+    const boardW = width - 32;
+    const boardH = 176;
+    const cellW = Math.max(20, Math.floor(boardW / COLS));
+    const cellH = Math.max(24, Math.floor(boardH / ROWS));
+    const gridW = cellW * COLS;
+    const gridH = cellH * ROWS;
+    const gridX = boardX + Math.floor((boardW - gridW) * 0.5);
+    const gridY = boardY + Math.floor((boardH - gridH) * 0.5);
+
+    const baseGrid = this.add.graphics();
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < COLS; col += 1) {
+        const x0 = gridX + col * cellW;
+        const y0 = gridY + row * cellH;
+        const isEnemy = col >= RIGHT_COL_START;
+        const fill = isEnemy ? 0x35201f : 0x193229;
+        baseGrid.fillStyle(fill, 0.55);
+        baseGrid.fillRoundedRect(x0 + 1, y0 + 1, cellW - 2, cellH - 2, 3);
+        baseGrid.lineStyle(1, 0x2f4d63, 0.85);
+        baseGrid.strokeRoundedRect(x0 + 0.5, y0 + 0.5, cellW - 1, cellH - 1, 3);
+      }
+    }
+    baseGrid.lineStyle(2, 0x6cb7f0, 0.7);
+    baseGrid.beginPath();
+    baseGrid.moveTo(gridX + RIGHT_COL_START * cellW, gridY);
+    baseGrid.lineTo(gridX + RIGHT_COL_START * cellW, gridY + gridH);
+    baseGrid.strokePath();
+
+    const allyLabel = this.add.text(gridX + cellW * 2.5, gridY - 18, "PHE TA", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#8fe8bd",
+      fontStyle: "bold"
+    }).setOrigin(0.5);
+    const enemyLabel = this.add.text(gridX + cellW * 7.5, gridY - 18, "PHE ĐỊCH", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#ffb0a6",
+      fontStyle: "bold"
+    }).setOrigin(0.5);
+
+    const dummyFontSize = `${Math.max(12, Math.min(20, Math.floor(cellH * 0.65)))}px`;
+    const dummyIcons = [];
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
+        const cx = gridX + col * cellW + cellW * 0.5;
+        const cy = gridY + row * cellH + cellH * 0.5;
+        const icon = this.add.text(cx, cy, "🪵", {
+          fontFamily: "Segoe UI Emoji",
+          fontSize: dummyFontSize
+        }).setOrigin(0.5);
+        dummyIcons.push(icon);
+      }
+    }
+
+    const attackerRow = Math.floor(ROWS / 2);
+    const attackerCol = Math.floor((PLAYER_COLS - 1) / 2);
+    const attackerVisual = getUnitVisual(unit.id, unit.classType);
+    const attackerX = gridX + attackerCol * cellW + cellW * 0.5;
+    const attackerY = gridY + attackerRow * cellH + cellH * 0.5;
+    const attackerIcon = this.add.text(attackerX, attackerY, attackerVisual.icon, {
+      fontFamily: "Segoe UI Emoji",
+      fontSize: `${Math.max(14, Math.min(24, Math.floor(cellH * 0.75)))}px`
+    }).setOrigin(0.5);
+    const attackerRing = this.add.circle(attackerX, attackerY, Math.max(10, Math.floor(Math.min(cellW, cellH) * 0.38)), 0x8de8ff, 0.14);
+    attackerRing.setStrokeStyle(1.2, 0x8de8ff, 0.9);
+
+    const highlight = this.add.graphics();
+    const beam = this.add.graphics();
+    const infoText = this.add.text(panelX + 16, y + panelH - 28, "Nhấn nút để xem phạm vi tác động.", {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#d0eaff"
+    });
+
+    const getCellCenter = (row, col) => ({
+      x: gridX + col * cellW + cellW * 0.5,
+      y: gridY + row * cellH + cellH * 0.5
+    });
+
+    const runPreview = (mode) => {
+      const range = Number.isFinite(unit?.stats?.range) ? unit.stats.range : 1;
+      const attacker = this.buildPlanningPreviewActor("LEFT", attackerRow, attackerCol, unit.classType, 1, unit.skillId, range);
+      attacker.atk = Number.isFinite(unit?.stats?.atk) ? unit.stats.atk : 100;
+      attacker.matk = Number.isFinite(unit?.stats?.matk) ? unit.stats.matk : 100;
+      const allies = [attacker];
+      const enemies = [];
+      for (let row = 0; row < ROWS; row += 1) {
+        for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
+          const dummy = this.buildPlanningPreviewActor("RIGHT", row, col, "TANKER", 1, null, 1);
+          dummy.atk = 90;
+          enemies.push(dummy);
+        }
+      }
+      const target = [...enemies].sort((a, b) => this.compareTargets(attacker, a, b))[0];
+      if (!target) return;
+
+      const skill = SKILL_LIBRARY[unit.skillId];
+      const rawCells =
+        mode === "skill"
+          ? this.collectSkillPreviewCells(attacker, target, skill, allies, enemies)
+          : [{ row: target.row, col: target.col }];
+      const cells = this.dedupePreviewCells(rawCells);
+      const primary = cells.find((cell) => cell.row === target.row && cell.col === target.col) ?? cells[0] ?? target;
+
+      highlight.clear();
+      cells.forEach((cell) => {
+        const x0 = gridX + cell.col * cellW;
+        const y0 = gridY + cell.row * cellH;
+        const isPrimary = cell.row === primary.row && cell.col === primary.col;
+        const fill = isPrimary ? 0xffcc6a : 0x6fd6ff;
+        const alpha = isPrimary ? 0.34 : 0.2;
+        const edge = isPrimary ? 0xffefb5 : 0xb8ebff;
+        highlight.fillStyle(fill, alpha);
+        highlight.fillRoundedRect(x0 + 1, y0 + 1, cellW - 2, cellH - 2, 3);
+        highlight.lineStyle(isPrimary ? 2 : 1.4, edge, 0.95);
+        highlight.strokeRoundedRect(x0 + 0.5, y0 + 0.5, cellW - 1, cellH - 1, 3);
+      });
+
+      const from = getCellCenter(attacker.row, attacker.col);
+      const to = getCellCenter(primary.row, primary.col);
+      beam.clear();
+      beam.lineStyle(2, mode === "skill" ? 0x93d8ff : 0xffdba0, 0.9);
+      beam.beginPath();
+      beam.moveTo(from.x, from.y);
+      beam.lineTo(to.x, to.y);
+      beam.strokePath();
+
+      const projectile = this.add.circle(from.x, from.y, Math.max(3, Math.floor(Math.min(cellW, cellH) * 0.13)), mode === "skill" ? 0x8fdfff : 0xffd783, 0.95);
+      this.wikiListContainer.add(projectile);
+      this.tweens.add({
+        targets: projectile,
+        x: to.x,
+        y: to.y,
+        duration: 220,
+        ease: "Sine.Out",
+        onComplete: () => projectile.destroy()
+      });
+
+      infoText.setText(
+        mode === "skill"
+          ? `Kỹ năng: ${skill?.name ?? unit.skillId} • ${cells.length} ô tác động`
+          : `Đánh thường: mục tiêu chính tại ${this.toChessCoord(primary.row, primary.col)}`
+      );
+    };
+
+    const createActionButton = (x, label, onClick) => {
+      const bg = this.add.rectangle(x, buttonY, buttonW, buttonH, 0x1e3852, 0.95).setOrigin(0, 0);
+      bg.setStrokeStyle(1, 0x6aaad8, 0.88);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on("pointerdown", onClick);
+      bg.on("pointerover", () => bg.setFillStyle(0x2c5070, 0.98));
+      bg.on("pointerout", () => bg.setFillStyle(0x1e3852, 0.95));
+      const text = this.add.text(x + buttonW * 0.5, buttonY + buttonH * 0.5, label, {
+        fontFamily: UI_FONT,
+        fontSize: "12px",
+        color: "#e9f5ff",
+        fontStyle: "bold"
+      }).setOrigin(0.5);
+      return [bg, text];
+    };
+
+    const basicButton = createActionButton(panelX + 16, "Preview đánh thường", () => runPreview("basic"));
+    const skillButton = createActionButton(panelX + 16 + buttonW + buttonGap, "Preview kỹ năng", () => runPreview("skill"));
+
+    this.wikiListContainer.add([
+      panel,
+      title,
+      subTitle,
+      ...basicButton,
+      ...skillButton,
+      baseGrid,
+      allyLabel,
+      enemyLabel,
+      ...dummyIcons,
+      attackerRing,
+      attackerIcon,
+      highlight,
+      beam,
+      infoText
+    ]);
+
+    runPreview("basic");
+    return panelH;
   }
 
   toggleWikiModal(force = null) {
@@ -2219,6 +2661,26 @@ export class PlanningScene extends Phaser.Scene {
     this.persistProgress();
   }
 
+  changeResolution() {
+    const currentKey = normalizeResolutionKey(this.runtimeSettings?.resolutionKey);
+    const idx = RESOLUTION_PRESETS.findIndex((preset) => preset.key === currentKey);
+    const next = RESOLUTION_PRESETS[(idx + 1) % RESOLUTION_PRESETS.length];
+    this.runtimeSettings.resolutionKey = next.key;
+    saveUiSettings(this.runtimeSettings);
+    this.modalButtons?.resolution?.setLabel(`Độ phân giải: ${next.label ?? `${next.width}x${next.height}`}`);
+    const restoredState = this.exportRunState();
+    this.scene.start("PlanningScene", { restoredState, settings: this.runtimeSettings, mode: this.gameMode });
+  }
+
+  changeGuiScale() {
+    const current = normalizeGuiScale(this.runtimeSettings?.guiScale);
+    const next = current >= 5 ? 1 : current + 1;
+    this.runtimeSettings.guiScale = next;
+    saveUiSettings(this.runtimeSettings);
+    this.modalButtons?.guiScale?.setLabel(`Kích thước GUI: ${next}/5`);
+    this.applyDisplaySettings(this.runtimeSettings, false);
+  }
+
   goMainMenu() {
     this.toggleSettingsOverlay(false);
     this.persistProgress();
@@ -2256,6 +2718,8 @@ export class PlanningScene extends Phaser.Scene {
         zone.on("pointerup", (pointer) => {
           if (this.boardDragConsumed) return;
           if (this.isPanPointer(pointer)) return;
+          const occupant = this.player?.board?.[row]?.[col];
+          if (occupant) return;
           this.onPlayerCellClick(row, col);
         });
         zone.setDepth(20);
@@ -2264,6 +2728,13 @@ export class PlanningScene extends Phaser.Scene {
     }
   }
   createBenchSlots() {
+    this.benchSlots.forEach(s => {
+      s.bg.destroy();
+      s.label.destroy();
+      s.icon.destroy();
+    });
+    this.benchSlots = [];
+
     const l = this.layout;
     const maxSlots = l.benchCols * l.benchRows;
     const startX = l.benchRegionX;
@@ -2282,9 +2753,12 @@ export class PlanningScene extends Phaser.Scene {
       const label = this.createBenchSlotLabel(x, yy, slotW);
       const icon = this.createBenchSlotIcon(x, yy, slotH);
       bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", (pointer) => {
+      bg.on("pointerdown", (pointer, _localX, _localY, event) => {
         if (pointer?.rightButtonDown?.()) {
-          this.sellBenchIndex(i);
+          if (event?.stopPropagation) event.stopPropagation();
+          if (this.phase !== PHASE.PLANNING || this.settingsVisible || this.wikiVisible || this.historyModalVisible) return;
+          const unit = this.player?.bench?.[i];
+          if (unit) this.showContextMenu(unit, "BENCH", i, null, pointer.x, pointer.y);
           return;
         }
         this.onBenchClick(i);
@@ -2297,6 +2771,7 @@ export class PlanningScene extends Phaser.Scene {
       this.benchSlots.push({ x, y: yy, slotW, slotH, bg, label, icon });
     }
 
+    if (this.shopTitle) this.shopTitle.destroy();
     this.shopTitle = this.add.text(l.shopRegionX, l.shopY - 30, "Cửa hàng", {
       fontFamily: UI_FONT,
       fontSize: "17px",
@@ -2305,6 +2780,7 @@ export class PlanningScene extends Phaser.Scene {
     });
     this.shopTitle.setDepth(2000);
 
+    if (this.benchTitle) this.benchTitle.destroy();
     this.benchTitle = this.add.text(l.benchRegionX, l.benchY - 24, "Dự bị", {
       fontFamily: UI_FONT,
       fontSize: "17px",
@@ -2410,43 +2886,70 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.input.on("pointerdown", (pointer) => {
-      if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
-      this.boardPointerDown = { x: pointer.x, y: pointer.y };
-      this.boardDragConsumed = false;
-      if (!this.isPanPointer(pointer)) return;
-      this.isBoardDragging = true;
-      this.lastDragPoint = { x: pointer.x, y: pointer.y };
-    });
-
-    this.input.on("pointermove", (pointer) => {
-      if (!this.isBoardDragging || !this.lastDragPoint) {
-        if (!this.boardPointerDown) return;
-        if (!this.pointInBoardPanel(this.boardPointerDown.x, this.boardPointerDown.y)) return;
-        const dx0 = pointer.x - this.boardPointerDown.x;
-        const dy0 = pointer.y - this.boardPointerDown.y;
-        const moved = Math.hypot(dx0, dy0);
-        const buttons = pointer.event?.buttons ?? 0;
-        const isPointerDown = pointer.isDown || buttons !== 0;
-        const allowLeftDrag = (buttons & 1) !== 0 || (isPointerDown && (pointer.button === 0 || pointer.primaryDown));
-        const allowRightOrMiddle = (buttons & 2) !== 0 || (buttons & 4) !== 0;
-        if (!this.isPanPointer(pointer) && !allowLeftDrag && !allowRightOrMiddle) return;
-        if (moved < 6) return;
+      if (pointer?.rightButtonDown?.()) return;
+      if (this.isPanPointer(pointer)) {
+        if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
+        this.boardPointerDown = { x: pointer.x, y: pointer.y };
+        this.boardDragConsumed = false;
         this.isBoardDragging = true;
-        this.boardDragConsumed = true;
         this.lastDragPoint = { x: pointer.x, y: pointer.y };
         return;
       }
-      const dx = pointer.x - this.lastDragPoint.x;
-      const dy = pointer.y - this.lastDragPoint.y;
-      if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
-      this.boardDragConsumed = true;
-      this.boardPanX += dx;
-      this.boardPanY += dy;
-      this.lastDragPoint = { x: pointer.x, y: pointer.y };
-      this.refreshBoardGeometry();
+
+      // Check left click for Unit Drag
+      if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.wikiVisible && !this.historyModalVisible && !this.settingsVisible) {
+        const unit = this.getUnitAt(pointer.x, pointer.y);
+        if (unit) {
+          this.startUnitDrag(unit, pointer);
+          return;
+        }
+      }
+
+      // Fallback to Pan if missed unit but on board panel
+      if (this.pointInBoardPanel(pointer.x, pointer.y)) {
+        this.boardPointerDown = { x: pointer.x, y: pointer.y };
+        this.boardDragConsumed = false;
+        this.lastDragPoint = { x: pointer.x, y: pointer.y };
+      }
     });
 
-    const releaseDrag = () => {
+    this.input.on("pointermove", (pointer) => {
+      if (this.isUnitDragging) {
+        this.updateUnitDrag(pointer);
+        return;
+      }
+
+      if (this.isBoardDragging && this.lastDragPoint) {
+        const dx = pointer.x - this.lastDragPoint.x;
+        const dy = pointer.y - this.lastDragPoint.y;
+        if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
+        this.boardDragConsumed = true;
+        this.boardPanX += dx;
+        this.boardPanY += dy;
+        this.lastDragPoint = { x: pointer.x, y: pointer.y };
+        this.refreshBoardGeometry();
+        return;
+      }
+
+      // Check threshold for starting pan if not already dragging
+      if (!this.isBoardDragging && this.boardPointerDown) {
+        if (!this.pointInBoardPanel(this.boardPointerDown.x, this.boardPointerDown.y)) return;
+        const dx0 = pointer.x - this.boardPointerDown.x;
+        const dy0 = pointer.y - this.boardPointerDown.y;
+        if (Math.hypot(dx0, dy0) > 6) {
+          this.isBoardDragging = true;
+          this.boardDragConsumed = true;
+          this.lastDragPoint = { x: pointer.x, y: pointer.y };
+        }
+      }
+    });
+
+    const releaseDrag = (pointer) => {
+      if (this.isUnitDragging) {
+        this.endUnitDrag(pointer);
+        return;
+      }
+
       this.isBoardDragging = false;
       this.lastDragPoint = null;
       this.boardPointerDown = null;
@@ -2456,10 +2959,180 @@ export class PlanningScene extends Phaser.Scene {
         });
       } else {
         this.boardDragConsumed = false;
+        this.clearHighlights();
       }
     };
     this.input.on("pointerup", releaseDrag);
     this.input.on("pointerupoutside", releaseDrag);
+  }
+
+  findPlayerBoardCellFromPoint(x, y, allowNear = true) {
+    const { tileW, tileH } = this.getTileSize();
+    const halfW = Math.max(1, tileW * 0.5);
+    const halfH = Math.max(1, tileH * 0.5);
+    const nearThreshold = Math.max(40, Math.min(180, Math.hypot(halfW, halfH) + 8));
+    let bestInside = null;
+    let bestInsideDist = Number.POSITIVE_INFINITY;
+    let bestNear = null;
+    let bestNearDist = Number.POSITIVE_INFINITY;
+
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < PLAYER_COLS; col += 1) {
+        const tile = this.tileLookup.get(gridKey(row, col));
+        if (!tile?.center) continue;
+        const dx = Math.abs(x - tile.center.x);
+        const dy = Math.abs(y - tile.center.y);
+        const dist = Phaser.Math.Distance.Between(x, y, tile.center.x, tile.center.y);
+        const diamond = dx / halfW + dy / halfH;
+        if (diamond <= 1.08 && dist < bestInsideDist) {
+          bestInsideDist = dist;
+          bestInside = { row, col, center: tile.center };
+        }
+        if (allowNear && dist < nearThreshold && dist < bestNearDist) {
+          bestNearDist = dist;
+          bestNear = { row, col, center: tile.center };
+        }
+      }
+    }
+
+    return bestInside ?? bestNear;
+  }
+
+  getUnitAt(x, y) {
+    // Check Bench
+    for (let i = 0; i < this.benchSlots.length; i++) {
+      const slot = this.benchSlots[i];
+      if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) {
+        const unit = this.player?.bench?.[i];
+        return unit ? { unit, region: "BENCH", index: i } : null;
+      }
+    }
+    // Check Board (zoom-aware hit)
+    const hit = this.findPlayerBoardCellFromPoint(x, y, true);
+    if (hit) {
+      const { row: r, col: c } = hit;
+      const unit = this.player?.board?.[r]?.[c];
+      return unit ? { unit, region: "BOARD", r, c } : null;
+    }
+    return null;
+  }
+
+  getDropTarget(x, y) {
+    // Check Bench first (UI overlay)
+    for (let i = 0; i < this.benchSlots.length; i++) {
+      const slot = this.benchSlots[i];
+      if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) {
+        return { type: "BENCH", index: i, center: { x: slot.x + slot.slotW / 2, y: slot.y + slot.slotH / 2 } };
+      }
+    }
+    // Check Board (zoom-aware hit)
+    const hit = this.findPlayerBoardCellFromPoint(x, y, true);
+    if (hit) {
+      const { row: r, col: c, center } = hit;
+      return { type: "BOARD", r, c, center };
+    }
+    // Check Sell Button
+    if (this.buttons.sell && this.buttons.sell.visible && this.buttons.sell.getBounds().contains(x, y)) {
+      return { type: "SELL" };
+    }
+
+    return null;
+  }
+
+  startUnitDrag(dragData, pointer) {
+    this.isUnitDragging = true;
+    this.dragUnit = dragData.unit;
+    this.dragOrigin = dragData;
+
+    // Create Clone
+    const visual = getUnitVisual(dragData.unit.baseId, dragData.unit.base.classType);
+    const clone = this.add.container(pointer.x, pointer.y);
+    const bg = this.add.circle(0, 0, 24, 0x365675, 0.8);
+    bg.setStrokeStyle(2, 0xbdcf47, 1);
+    const txt = this.add.text(0, 0, visual.icon, { fontSize: "32px" }).setOrigin(0.5);
+    clone.add([bg, txt]);
+    clone.setDepth(4000);
+    this.dragClone = clone;
+
+    // Hide original
+    if (dragData.unit.sprite) dragData.unit.sprite.setVisible(false);
+    // If on bench
+    if (dragData.region === "BENCH") {
+      const slot = this.benchSlots[dragData.index];
+      if (slot && slot.icon) slot.icon.setVisible(false); // Hide bench icon
+    }
+
+    this.audioFx.playSound("sfx_ui_click");
+  }
+
+  updateUnitDrag(pointer) {
+    if (!this.dragClone) return;
+    this.dragClone.setPosition(pointer.x, pointer.y);
+
+    // Highlight target
+    const target = this.getDropTarget(pointer.x, pointer.y);
+    if (target) {
+      if (target.type === "SELL") {
+        this.buttons.sell.bg.setStrokeStyle(2, 0xff4444);
+      }
+      // Bench/Board highlights could be added here
+    }
+  }
+
+  endUnitDrag(pointer) {
+    this.isUnitDragging = false;
+    if (this.dragClone) {
+      this.dragClone.destroy();
+      this.dragClone = null;
+    }
+
+    // Show original back (default, will be moved if successful)
+    if (this.dragUnit && this.dragUnit.sprite) this.dragUnit.sprite.setVisible(true);
+    if (this.dragOrigin && this.dragOrigin.region === "BENCH") {
+      this.refreshBenchUi(); // Restore icon visibility
+    }
+
+    const target = this.getDropTarget(pointer.x, pointer.y);
+    if (!target) {
+      // Cancelled
+      return;
+    }
+
+    const suppressBoardClickOnce = () => {
+      this.boardDragConsumed = true;
+      this.time.delayedCall(0, () => {
+        this.boardDragConsumed = false;
+      });
+    };
+    suppressBoardClickOnce();
+
+    if (target.type === "SELL") {
+      this.sellUnit(this.dragUnit.uid);
+      return;
+    }
+
+    // Move Logic
+    const from = this.dragOrigin;
+    const to = target.type === "BOARD" ? { region: "BOARD", row: target.r, col: target.c }
+      : target.type === "BENCH" ? { region: "BENCH", index: target.index }
+        : null;
+
+    if (to) {
+      // Check if same slot
+      if (from.region === to.region) {
+        if (from.region === "BOARD" && from.row === to.row && from.col === to.col) {
+          return;
+        }
+        if (from.region === "BENCH" && from.index === to.index) {
+          return;
+        }
+      }
+
+      const moved = this.moveUnit(from, to, true); // true = swap
+      if (moved) {
+        this.audioFx.playSound("sfx_place");
+      }
+    }
   }
 
   isPanPointer(pointer) {
@@ -2486,6 +3159,24 @@ export class PlanningScene extends Phaser.Scene {
       y >= this.rightPanelArea.y &&
       y <= this.rightPanelArea.y + this.rightPanelArea.h
     );
+  }
+
+  refreshRightPanelScrollMetrics() {
+    if (!this.rightPanelArea || !this.rightPanelScrollItems.length) return;
+    const viewBottom = this.rightPanelArea.y + this.rightPanelArea.h;
+    let contentBottom = this.rightPanelArea.y;
+    this.rightPanelScrollItems.forEach((entry) => {
+      if (!entry.item?.visible) return;
+      const bounds = entry.item.getBounds?.();
+      if (!bounds) return;
+      const baseBottom = bounds.bottom + this.rightPanelScrollOffset;
+      if (baseBottom > contentBottom) contentBottom = baseBottom;
+    });
+    this.rightPanelMaxScroll = Math.max(0, Math.ceil(contentBottom - viewBottom + 8));
+    this.rightPanelScrollOffset = clamp(this.rightPanelScrollOffset, 0, this.rightPanelMaxScroll);
+    this.rightPanelScrollItems.forEach((entry) => {
+      entry.item.y = entry.baseY - this.rightPanelScrollOffset;
+    });
   }
 
   refreshBoardGeometry() {
@@ -2635,14 +3326,159 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getBenchCap() {
-    const bonus = Number.isFinite(this.player?.benchBonus) ? Math.floor(this.player.benchBonus) : 0;
-    return Math.max(0, 9 + bonus);
+    return this.benchUpgradeLevel > 0 ? 14 : 8;
+  }
+
+  upgradeBench() {
+    if (this.settingsVisible || this.phase !== PHASE.PLANNING) return;
+    if (this.benchUpgradeLevel > 0) {
+      this.addLog("Dự bị đã đạt cấp tối đa.");
+      return;
+    }
+    const cost = 10;
+    if (this.player.gold < cost) {
+      this.addLog("Không đủ vàng để nâng cấp dự bị.");
+      return;
+    }
+    this.player.gold -= cost;
+    this.benchUpgradeLevel = 1;
+    this.addLog("Đã nâng cấp dự bị lên 14 ô.");
+    this.audioFx.play("buy");
+
+    // Refresh layout and UI
+    this.layout = this.computeLayout();
+    this.createBenchSlots();
+    this.refreshPlanningUi();
+    this.persistProgress();
+  }
+
+  moveUnit(from, to, allowSwap = true) {
+    if (!from || !to) return false;
+    if (this.settingsVisible || !this.canInteractFormation() || this.overlaySprites.length) return false;
+    if (!["BOARD", "BENCH"].includes(from.region) || !["BOARD", "BENCH"].includes(to.region)) return false;
+
+    const board = this.player.board;
+    const bench = this.player.bench;
+    const validBoardCell = (row, col) =>
+      Number.isInteger(row) &&
+      Number.isInteger(col) &&
+      row >= 0 &&
+      row < ROWS &&
+      col >= 0 &&
+      col < PLAYER_COLS;
+    const validBenchIndex = (index) => Number.isInteger(index) && index >= 0 && index < this.getBenchCap();
+    let moved = false;
+
+    if (from.region === "BOARD" && to.region === "BOARD") {
+      if (!validBoardCell(from.row, from.col) || !validBoardCell(to.row, to.col)) return false;
+      if (from.row === to.row && from.col === to.col) return false;
+      const moving = board[from.row][from.col];
+      if (!moving) return false;
+      const target = board[to.row][to.col];
+      if (target && !allowSwap) return false;
+      board[to.row][to.col] = moving;
+      board[from.row][from.col] = target ?? null;
+      moved = true;
+    } else if (from.region === "BENCH" && to.region === "BOARD") {
+      if (!validBenchIndex(from.index) || from.index >= bench.length) return false;
+      if (!validBoardCell(to.row, to.col)) return false;
+      const moving = bench[from.index];
+      if (!moving) return false;
+      if (this.checkDuplicateUnit(moving.baseId, to.row, to.col)) {
+        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        return false;
+      }
+      const target = board[to.row][to.col];
+      if (!target && this.getDeployCount() >= this.getDeployCap()) {
+        this.addLog(
+          `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
+        );
+        return false;
+      }
+      if (target && !allowSwap) return false;
+      board[to.row][to.col] = moving;
+      if (target) {
+        bench[from.index] = target;
+      } else {
+        bench.splice(from.index, 1);
+      }
+      moved = true;
+    } else if (from.region === "BOARD" && to.region === "BENCH") {
+      if (!validBoardCell(from.row, from.col) || !validBenchIndex(to.index)) return false;
+      const moving = board[from.row][from.col];
+      if (!moving) return false;
+      const target = bench[to.index] ?? null;
+      if (target && !allowSwap) return false;
+      if (!target && bench.length >= this.getBenchCap()) {
+        this.addLog("Hàng dự bị đã đầy.");
+        return false;
+      }
+      if (target) {
+        board[from.row][from.col] = target;
+        bench[to.index] = moving;
+      } else {
+        board[from.row][from.col] = null;
+        if (to.index >= bench.length) bench.push(moving);
+        else if (bench[to.index] == null) bench[to.index] = moving;
+        else bench.splice(to.index, 0, moving);
+      }
+      moved = true;
+    } else if (from.region === "BENCH" && to.region === "BENCH") {
+      if (!validBenchIndex(from.index) || from.index >= bench.length || !validBenchIndex(to.index)) return false;
+      if (from.index === to.index) return false;
+      const moving = bench[from.index];
+      if (!moving) return false;
+      const target = bench[to.index] ?? null;
+      if (target) {
+        if (!allowSwap) return false;
+        bench[to.index] = moving;
+        bench[from.index] = target;
+      } else {
+        bench.splice(from.index, 1);
+        const insertIndex = Math.max(0, Math.min(to.index, bench.length));
+        bench.splice(insertIndex, 0, moving);
+      }
+      moved = true;
+    }
+
+    if (!moved) return false;
+    this.selectedBenchIndex = null;
+    this.tryAutoMerge();
+    this.refreshPlanningUi();
+    this.persistProgress();
+    return true;
+  }
+
+  getUnitSalePrice(unit) {
+    if (!unit?.base) return 1;
+    return Math.max(1, Math.floor(unit.base.tier * (unit.star === 3 ? 5 : unit.star === 2 ? 3 : 1)));
+  }
+
+  sellUnit(uid) {
+    if (!uid) return false;
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < PLAYER_COLS; col += 1) {
+        const unit = this.player?.board?.[row]?.[col];
+        if (!unit || unit.uid !== uid) continue;
+        const salePrice = this.getUnitSalePrice(unit);
+        this.player.board[row][col] = null;
+        this.player.gold += salePrice;
+        this.selectedBenchIndex = null;
+        this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
+        this.refreshPlanningUi();
+        this.persistProgress();
+        return true;
+      }
+    }
+    const benchIndex = this.player?.bench?.findIndex((unit) => unit?.uid === uid) ?? -1;
+    if (benchIndex >= 0) return this.sellBenchIndex(benchIndex);
+    return false;
   }
 
   sellBenchIndex(index) {
     const unit = this.player?.bench?.[index];
     if (!unit) return false;
-    const salePrice = Math.max(1, Math.floor(unit.base.tier * (unit.star === 3 ? 5 : unit.star === 2 ? 3 : 1)));
+    const salePrice = this.getUnitSalePrice(unit);
     this.player.gold += salePrice;
     this.player.bench.splice(index, 1);
     if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
@@ -2689,6 +3525,119 @@ export class PlanningScene extends Phaser.Scene {
     return true;
   }
 
+  getRecipePattern(recipe) {
+    const out = Array.from({ length: 4 }, () => null);
+    if (!recipe || typeof recipe !== "object") return out;
+    if (Array.isArray(recipe.pattern) && recipe.pattern.length) {
+      for (let i = 0; i < 4; i += 1) out[i] = recipe.pattern[i] ?? null;
+      return out;
+    }
+    const req = Array.isArray(recipe.requires) ? recipe.requires : [];
+    for (let i = 0; i < Math.min(4, req.length); i += 1) out[i] = req[i] ?? null;
+    return out;
+  }
+
+  getRecipeRequiredList(recipe) {
+    return this.getRecipePattern(recipe).filter(Boolean);
+  }
+
+  getCraftReservedCounts() {
+    const counts = {};
+    (this.craftGridItems ?? []).forEach((id) => {
+      if (!id) return;
+      counts[id] = (counts[id] ?? 0) + 1;
+    });
+    return counts;
+  }
+
+  getCraftResultRecipeId() {
+    const grid = (this.craftGridItems ?? []).slice(0, 4).map((id) => id ?? null);
+    if (!grid.some(Boolean)) return null;
+    for (let i = 0; i < CRAFT_RECIPES.length; i += 1) {
+      const recipe = CRAFT_RECIPES[i];
+      const pattern = this.getRecipePattern(recipe);
+      let matched = true;
+      for (let j = 0; j < 4; j += 1) {
+        if ((grid[j] ?? null) !== (pattern[j] ?? null)) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) return recipe.id;
+    }
+    return null;
+  }
+
+  clearCraftGridSlot(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= 4) return;
+    if (!this.craftGridItems[index]) return;
+    this.craftGridItems[index] = null;
+    this.refreshStorageUi();
+  }
+
+  clearCraftGrid() {
+    this.craftGridItems = [null, null, null, null];
+    this.refreshStorageUi();
+  }
+
+  addBaseItemToCraftGrid(itemId) {
+    if (!itemId) return false;
+    const item = ITEM_BY_ID[itemId];
+    if (!item || item.kind !== "base") return false;
+    const slotIndex = this.craftGridItems.findIndex((id) => !id);
+    if (slotIndex < 0) {
+      this.addLog("Ô chế tạo 2x2 đã đầy.");
+      return false;
+    }
+    const totalOwned = this.getItemCount(itemId);
+    const reserved = this.getCraftReservedCounts()[itemId] ?? 0;
+    if (reserved >= totalOwned) {
+      this.addLog(`Không còn ${item.icon} ${item.name} trong kho để đưa vào ô chế tạo.`);
+      return false;
+    }
+    this.craftGridItems[slotIndex] = itemId;
+    this.refreshStorageUi();
+    return true;
+  }
+
+  craftFromGrid() {
+    if (this.settingsVisible || this.phase !== PHASE.PLANNING) return false;
+    const recipeId = this.getCraftResultRecipeId();
+    if (!recipeId) {
+      this.addLog("Chưa khớp công thức 2x2.");
+      return false;
+    }
+    const recipe = RECIPE_BY_ID[recipeId];
+    if (!recipe) return false;
+    const equipmentId = `eq_${recipe.id}`;
+    const equipment = ITEM_BY_ID[equipmentId];
+    if (!equipment) {
+      this.addLog(`Không thể ghép ${recipe.name}: thiếu dữ liệu trang bị.`);
+      return false;
+    }
+
+    const required = this.getRecipeRequiredList(recipe);
+    const bagCopy = [...this.player.itemBag];
+    for (let i = 0; i < required.length; i += 1) {
+      const idx = bagCopy.indexOf(required[i]);
+      if (idx < 0) {
+        this.addLog(`Thiếu vật phẩm để ghép ${recipe.name}.`);
+        return false;
+      }
+      bagCopy.splice(idx, 1);
+    }
+
+    bagCopy.push(equipmentId);
+    this.player.itemBag = bagCopy;
+    this.player.craftedItems.push(recipe.id);
+    this.craftGridItems = [null, null, null, null];
+    this.audioFx.play("buy");
+    this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}. Chọn ô vật phẩm rồi nhấn vào thú để trang bị.`);
+    this.refreshStorageUi();
+    this.persistProgress();
+    return true;
+  }
+
   onInventoryCellClick(cell) {
     if (!cell) return;
     if (!cell.itemId) {
@@ -2696,10 +3645,13 @@ export class PlanningScene extends Phaser.Scene {
       this.refreshStorageUi();
       return;
     }
-    if (!this.isEquipmentItem(cell.itemId)) {
-      this.addLog("Vật phẩm nguyên liệu chưa thể trang bị trực tiếp. Hãy ghép trước.");
+    const item = ITEM_BY_ID[cell.itemId];
+    if (item?.kind === "base") {
+      this.selectedInventoryItemId = null;
+      this.addBaseItemToCraftGrid(cell.itemId);
       return;
     }
+    if (!this.isEquipmentItem(cell.itemId)) return;
     this.selectedInventoryItemId = this.selectedInventoryItemId === cell.itemId ? null : cell.itemId;
     this.refreshStorageUi();
   }
@@ -3160,6 +4112,7 @@ export class PlanningScene extends Phaser.Scene {
     this.overlaySprites.push(title);
 
     choices.forEach((choice, idx) => {
+      const icon = this.getAugmentIcon(choice);
       const x = 220 + idx * 360;
       const y = 250;
       const card = this.add.rectangle(x, y, 320, 260, 0x1a2a3e, 0.98);
@@ -3171,7 +4124,7 @@ export class PlanningScene extends Phaser.Scene {
       card.on("pointerover", () => card.setFillStyle(0x2b3d57, 0.98));
       card.on("pointerout", () => card.setFillStyle(0x1f2b3d, 0.98));
 
-      const text = this.add.text(x - 146, y - 106, `${choice.name}\n\n[${this.translateAugmentGroup(choice.group)}]\n${choice.description}`, {
+      const text = this.add.text(x - 146, y - 106, `${icon} ${choice.name}\n\n[${this.translateAugmentGroup(choice.group)}]\n${choice.description}`, {
         fontFamily: UI_FONT,
         fontSize: "18px",
         color: UI_COLORS.textPrimary,
@@ -3689,6 +4642,142 @@ export class PlanningScene extends Phaser.Scene {
     return this.dedupePreviewCells(cells);
   }
 
+  countUnitCopies(baseId) {
+    let count = 0;
+    // Check board (player side only)
+    if (this.player.board) {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < PLAYER_COLS; c++) {
+          const u = this.player.board[r][c];
+          if (u && u.baseId === baseId) count++;
+        }
+      }
+    }
+    // Check bench
+    if (this.player.bench) {
+      this.player.bench.forEach((u) => {
+        if (u && u.baseId === baseId) count++;
+      });
+    }
+    return count;
+  }
+
+  handleRightClick(pointer) {
+    if (this.phase !== PHASE.PLANNING) return;
+    if (this.settingsVisible || this.wikiVisible || this.historyModalVisible) return;
+    if (this.isBoardDragging) {
+      this.isBoardDragging = false;
+      this.lastDragPoint = null;
+      this.boardPointerDown = null;
+      this.boardDragConsumed = false;
+    }
+
+    // Check Bench
+    for (let i = 0; i < this.benchSlots.length; i++) {
+      const slot = this.benchSlots[i];
+      if (slot.bg.visible && slot.bg.getBounds().contains(pointer.x, pointer.y)) {
+        const unit = this.player.bench[i];
+        if (unit) {
+          // Show Menu instead of direct sell
+          this.showContextMenu(unit, "BENCH", i, null, pointer.x, pointer.y);
+          return;
+        }
+      }
+    }
+
+    // Check Board
+    const hit = this.findPlayerBoardCellFromPoint(pointer.x, pointer.y, true);
+    if (hit) {
+      const r = hit.row;
+      const c = hit.col;
+      const unit = this.player.board[r][c];
+      if (unit) {
+        this.showContextMenu(unit, "BOARD", r, c, pointer.x, pointer.y);
+        return;
+      }
+    }
+  }
+
+  showContextMenu(unit, region, r_or_idx, c, x, y) {
+    if (this.contextMenu) {
+      this.contextMenu.destroy();
+      this.contextMenu = null;
+    }
+
+    const container = this.add.container(x, y);
+    container.setDepth(5000);
+
+    const options = [];
+    // Detail
+    options.push({
+      label: "Chi tiết", action: () => {
+        this._wikiDetailUnit = unit.baseId;
+        this.toggleWikiModal(true);
+      }
+    });
+
+    if (region === "BENCH") {
+      // Deploy (find free slot on board?) - Logic complex, maybe just Swap mode?
+      // For now: "Bán"
+      options.push({ label: "Bán", action: () => this.sellBenchIndex(r_or_idx) });
+    } else if (region === "BOARD") {
+      // Recall
+      options.push({
+        label: "Thu hồi", action: () => {
+          let freeSlot = this.player.bench.findIndex((u) => u == null);
+          if (freeSlot === -1 && this.player.bench.length < this.getBenchCap()) {
+            freeSlot = this.player.bench.length;
+          }
+          if (freeSlot !== -1) {
+            this.moveUnit({ region: "BOARD", row: r_or_idx, col: c }, { region: "BENCH", index: freeSlot });
+            this.audioFx.playSound("sfx_ping");
+          } else {
+            this.addLog("Hàng chờ đầy!");
+          }
+        }
+      });
+      options.push({ label: "Bán", action: () => this.sellUnit(unit.uid) });
+    }
+
+    // Background
+    const w = 120;
+    const h = options.length * 35 + 10;
+    const bg = this.add.rectangle(w / 2, h / 2, w, h, 0x111826, 0.95);
+    bg.setStrokeStyle(1, 0x4a6fa5);
+    container.add(bg);
+
+    options.forEach((opt, idx) => {
+      const btnY = 25 + idx * 35;
+      const btn = this.add.text(w / 2, btnY, opt.label, {
+        fontFamily: UI_FONT, fontSize: "14px", color: "#e0e0e0"
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btn.on("pointerover", () => btn.setColor("#ffffff"));
+      btn.on("pointerout", () => btn.setColor("#e0e0e0"));
+      btn.on("pointerdown", (pointer, localX, localY, event) => {
+        if (event && event.stopPropagation) event.stopPropagation();
+        opt.action();
+        container.destroy();
+        this.contextMenu = null;
+      });
+      container.add(btn);
+    });
+
+    this.contextMenu = container;
+
+    // Close when clicking outside
+    this.time.delayedCall(10, () => {
+      const closeHandler = () => {
+        if (this.contextMenu) {
+          this.contextMenu.destroy();
+          this.contextMenu = null;
+        }
+        this.input.off("pointerdown", closeHandler);
+      };
+      this.input.on("pointerdown", closeHandler);
+    });
+  }
+
   dedupePreviewCells(cells) {
     const map = new Map();
     cells.forEach((cell) => {
@@ -3752,7 +4841,6 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshBenchUi();
     this.refreshBoardUi();
     this.refreshSynergyPreview();
-    this.refreshQueuePreview();
     this.refreshStorageUi();
     this.refreshGamepadCursorVisual();
   }
@@ -3765,19 +4853,28 @@ export class PlanningScene extends Phaser.Scene {
     const loseCondition = this.getLoseCondition();
     const loseLabel = loseCondition === "NO_HEARTS" ? `${getLoseConditionLabel(loseCondition)} (${this.player.hp} tim)` : getLoseConditionLabel(loseCondition);
     this.setHeaderStatValue("round", `${this.player.round}`);
-    this.setHeaderStatValue("gold", `${this.player.gold}`);
+    this.setHeaderStatValue("gold", this.player.gold, 50);
     this.setHeaderStatValue("level", `${this.player.level}`);
-    this.setHeaderStatValue("xp", xpText);
-    this.setHeaderStatValue("deploy", deployText);
+    this.setHeaderStatValue("xp", xpText, xpNeed === Number.POSITIVE_INFINITY ? null : xpNeed);
+    this.setHeaderStatValue("deploy", deployText, this.getDeployCap());
     this.headerMetaText?.setText(`Pha ${this.getPhaseLabel(this.phase)} • AI ${AI_SETTINGS[this.aiMode].label} • ${modeLabel} • ${loseLabel}`);
-    this.phaseText.setText(this.getPhaseLabel(this.phase));
     this.updateLogText();
   }
 
-  setHeaderStatValue(key, value) {
+  setHeaderStatValue(key, value, max = null) {
     const chip = this.headerStatChips?.[key];
     if (!chip?.value) return;
     chip.value.setText(String(value ?? "-"));
+    if (chip.bar && max != null && max > 0) {
+      const pct = Math.min(1, Math.max(0, (value ?? 0) / max));
+      const barMaxW = chip.chipW - 4;
+      const barW = Math.max(2, Math.floor(barMaxW * pct));
+      chip.bar.clear();
+      chip.bar.fillStyle(chip.bar._barColor ?? 0x3a8fd4, 0.85);
+      chip.bar.fillRoundedRect(chip.bar._chipX + 2, chip.bar._chipY + 36, barW, 3, 1);
+    } else if (chip.bar) {
+      chip.bar.clear();
+    }
   }
 
   getPhaseLabel(phase) {
@@ -3846,8 +4943,26 @@ export class PlanningScene extends Phaser.Scene {
       shadow.setDepth(1498);
 
       const bg = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, cardFill, 0.92);
-      bg.setStrokeStyle(1, cardStroke, 0.9);
+      bg.setStrokeStyle(1.5, cardStroke, 0.9);
       bg.setDepth(1499);
+
+      // Rainbow border for owned units
+      if (offer && !sold) {
+        const ownedCount = this.countUnitCopies(offer.baseId);
+        if (ownedCount > 0) {
+          this.tweens.addCounter({
+            from: 0,
+            to: 100,
+            duration: 2500,
+            loop: -1,
+            onUpdate: (tween) => {
+              const val = tween.getValue();
+              const color = Phaser.Display.Color.HSVToRGB(val / 100, 1, 1).color;
+              if (bg.active) bg.setStrokeStyle(2.5, color, 1);
+            }
+          });
+        }
+      }
 
       let txt = "Ô này đã được mua ở lượt này.";
       let iconText = "❔";
@@ -3998,7 +5113,7 @@ export class PlanningScene extends Phaser.Scene {
       glow.setDepth(point.y + 10);
       const sprite = this.add.circle(point.x, point.y - 10, 22, roleTheme.fill, 0.95);
       sprite.setStrokeStyle(2, roleTheme.stroke, 1);
-      sprite.setDepth(point.y + 12);
+      sprite.setDepth(2000 + point.y);
       sprite.setInteractive({ useHandCursor: true });
       this.tooltip.attach(sprite, () => this.getUnitTooltip(preview.baseId, preview.star));
       sprite.on("pointerover", () => this.showAttackPreviewForUnit(actor));
@@ -4008,14 +5123,14 @@ export class PlanningScene extends Phaser.Scene {
         fontSize: "32px",
         color: "#ffffff"
       }).setOrigin(0.5);
-      icon.setDepth(point.y + 14);
+      icon.setDepth(2002 + point.y);
       const label = this.add.text(point.x + 15, point.y - 35, `${preview.star}★`, {
         fontFamily: UI_FONT,
         fontSize: "12px",
         color: "#ffe8e1",
         fontStyle: "bold"
       });
-      label.setDepth(point.y + 13);
+      label.setDepth(2003 + point.y);
       this.planningSprites.push(glow, sprite, icon, label);
     });
 
@@ -4039,30 +5154,60 @@ export class PlanningScene extends Phaser.Scene {
         glow.setDepth(point.y + 13);
         const sprite = this.add.circle(point.x, point.y - 10, 22, roleTheme.fill, 1);
         sprite.setStrokeStyle(2, roleTheme.stroke, 1);
-        sprite.setDepth(point.y + 15);
-        sprite.setInteractive({ useHandCursor: true });
-        this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
-        sprite.on("pointerup", (pointer) => {
-          if (this.boardDragConsumed) return;
-          if (this.isPanPointer(pointer)) return;
-          this.onPlayerCellClick(row, col);
-        });
-        sprite.on("pointerover", () => this.showAttackPreviewForUnit(actor));
-        sprite.on("pointerout", () => this.clearAttackPreview(actor));
-        const icon = this.add.text(point.x, point.y - 10, visual.icon, {
+        sprite.setDepth(2000 + point.y);
+        const icon = this.add.text(point.x, point.y - 10, visual.icon || "🐾", {
           fontFamily: "Segoe UI Emoji",
           fontSize: "32px",
           color: "#ffffff"
         }).setOrigin(0.5);
-        icon.setDepth(point.y + 17);
+        icon.setDepth(2002 + point.y);
         const label = this.add.text(point.x + 15, point.y - 35, `${unit.star}★`, {
           fontFamily: UI_FONT,
           fontSize: "12px",
           color: "#ffffff",
           fontStyle: "bold"
         });
-        label.setDepth(point.y + 16);
-        this.planningSprites.push(glow, sprite, label, icon);
+        label.setDepth(2003 + point.y);
+
+        const baseStats = scaledBaseStats(unit.base.stats, unit.star, unit.base.classType);
+        const barW = 52;
+        const hpBarBg = this.add.rectangle(point.x, point.y + 12, barW, 5, 0x0a1320, 0.9);
+        hpBarBg.setStrokeStyle(1, 0x30475f, 0.82);
+        hpBarBg.setDepth(2001 + point.y);
+        const hpBarFill = this.add.rectangle(point.x - barW / 2 + 1, point.y + 12, barW - 2, 3, 0x79df7b, 0.96).setOrigin(0, 0.5);
+        hpBarFill.setDepth(2002 + point.y);
+
+        const rageMax = Math.max(1, baseStats.rageMax || 100);
+        const rageRatio = clamp((this.player?.startingRage ?? 0) / rageMax, 0, 1);
+        const rageBarBg = this.add.rectangle(point.x, point.y + 19, barW, 4, 0x0a1320, 0.88);
+        rageBarBg.setStrokeStyle(1, 0x4a4127, 0.76);
+        rageBarBg.setDepth(2001 + point.y);
+        const rageBarFill = this.add
+          .rectangle(point.x - barW / 2 + 1, point.y + 19, Math.max(1, (barW - 2) * rageRatio), 2, 0xf3d66b, 0.95)
+          .setOrigin(0, 0.5);
+        rageBarFill.setDepth(2002 + point.y);
+
+        const bindHoverAndClick = (obj, withTooltip = false) => {
+          if (!obj) return;
+          obj.setInteractive({ useHandCursor: true });
+          if (withTooltip) this.tooltip.attach(obj, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
+          obj.on("pointerover", () => this.showAttackPreviewForUnit(actor));
+          obj.on("pointerout", () => this.clearAttackPreview(actor));
+          obj.on("pointerup", (pointer) => {
+            if (this.boardDragConsumed) return;
+            if (this.isPanPointer(pointer)) return;
+            this.onPlayerCellClick(row, col);
+          });
+        };
+
+        bindHoverAndClick(sprite, true);
+        bindHoverAndClick(icon, true);
+        bindHoverAndClick(label, false);
+        bindHoverAndClick(hpBarBg, false);
+        bindHoverAndClick(hpBarFill, false);
+        bindHoverAndClick(rageBarBg, false);
+        bindHoverAndClick(rageBarFill, false);
+        this.planningSprites.push(glow, sprite, icon, label, hpBarBg, hpBarFill, rageBarBg, rageBarFill);
       }
     }
   }
@@ -4096,46 +5241,19 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshRightPanelScrollMetrics();
   }
 
-  refreshQueuePreview() {
-    this.enemyToggleText?.setText(this.enemyInfoExpanded ? "Thu gọn ▾" : "Chi tiết ▸");
-    const queueH = this.enemyInfoExpanded ? 92 : 56;
-    this.queueText.setFixedSize(this.rightPanelContentWidth ?? this.queueText.width, queueH);
-    if (this.phase !== PHASE.COMBAT) {
-      if (!this.enemyInfoExpanded) {
-        this.queueText.setText(
-          `• Vòng ${this.player.round} • ${this.player.enemyPreview?.length ?? 0} linh thú • Ngân sách ${this.player.enemyBudget ?? 0}`
-        );
-      } else {
-        this.queueText.setText(
-          `• Đội hình địch vòng ${this.player.round}\n• Ngân sách AI: ${this.player.enemyBudget ?? 0}\n• Số linh thú: ${this.player.enemyPreview?.length ?? 0
-          }`
-        );
-      }
-      this.refreshRightPanelScrollMetrics();
-      return;
-    }
-    const next = [];
-    for (let i = 0; i < 8; i += 1) {
-      const idx = this.turnIndex + i;
-      if (idx >= this.turnQueue.length) break;
-      const unit = this.turnQueue[idx];
-      if (!unit || !unit.alive) continue;
-      next.push(`${i + 1}. ${unit.name} (${unit.side === "LEFT" ? "Ta" : "Địch"})`);
-    }
-    if (!this.enemyInfoExpanded) {
-      this.queueText.setText(`• Còn ${next.length || 0} hành động sắp tới.`);
-    } else {
-      this.queueText.setText(`• Thứ tự lượt tiếp theo\n${next.join("\n") || "Đã hết lượt."}`);
-    }
-    this.refreshRightPanelScrollMetrics();
-  }
 
   refreshStorageUi() {
     if (!this.storageSummaryText) return;
 
-    const bagCounts = {};
+    const bagCountsRaw = {};
     this.player.itemBag.forEach((id) => {
-      bagCounts[id] = (bagCounts[id] ?? 0) + 1;
+      bagCountsRaw[id] = (bagCountsRaw[id] ?? 0) + 1;
+    });
+    const reservedCounts = this.getCraftReservedCounts();
+    const bagCounts = {};
+    Object.keys(bagCountsRaw).forEach((id) => {
+      const available = (bagCountsRaw[id] ?? 0) - (reservedCounts[id] ?? 0);
+      if (available > 0) bagCounts[id] = available;
     });
     if (this.selectedInventoryItemId && !bagCounts[this.selectedInventoryItemId]) {
       this.selectedInventoryItemId = null;
@@ -4150,10 +5268,10 @@ export class PlanningScene extends Phaser.Scene {
       .join(", ");
 
     const selectedItem = this.selectedInventoryItemId ? ITEM_BY_ID[this.selectedInventoryItemId] : null;
-    this.storageSummaryText.setText(
-      `• Kho thú: ${this.player.bench.length}/${this.getBenchCap()}\n• Ô vật phẩm: ${this.player.itemBag.length}${selectedItem ? `\n• Đang chọn: ${selectedItem.icon} ${selectedItem.name}` : ""}`
+    this.storageSummaryText.setText(`• Kho thú ${this.player.bench.length}/${this.getBenchCap()} • Ô vật phẩm ${this.player.itemBag.length}`);
+    this.storageCraftText?.setText(
+      `• Đồ ghép gần đây: ${craftedText || "Chưa có"}${selectedItem ? ` • Đang chọn: ${selectedItem.icon} ${selectedItem.name}` : ""}`
     );
-    this.storageCraftText?.setText(`• Đồ ghép gần đây: ${craftedText || "Chưa có"}`);
 
     const bagEntries = Object.entries(bagCounts).sort((a, b) => b[1] - a[1]);
     this.inventoryCells.forEach((cell, idx) => {
@@ -4161,7 +5279,7 @@ export class PlanningScene extends Phaser.Scene {
       if (!pair) {
         cell.itemId = null;
         cell.amount = 0;
-        const isSelected = this.selectedInventoryItemId && this.selectedInventoryItemId === cell.itemId;
+        const isSelected = false;
         cell.bg.setFillStyle(0x162639, isSelected ? 1 : 0.95);
         cell.bg.setStrokeStyle(1, isSelected ? UI_COLORS.accent : UI_COLORS.panelEdgeSoft, isSelected ? 0.95 : 0.78);
         cell.icon.setText("＋");
@@ -4181,6 +5299,40 @@ export class PlanningScene extends Phaser.Scene {
       cell.count.setText(`x${amount}`);
     });
 
+    this.craftInputSlots.forEach((slot) => {
+      const itemId = this.craftGridItems?.[slot.index] ?? null;
+      if (!itemId) {
+        slot.bg.setFillStyle(0x162639, 0.96);
+        slot.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
+        slot.icon.setText("·");
+        slot.icon.setColor(UI_COLORS.textMuted);
+        return;
+      }
+      const item = ITEM_BY_ID[itemId];
+      slot.bg.setFillStyle(0x203450, 0.96);
+      slot.bg.setStrokeStyle(1, UI_COLORS.panelEdge, 0.85);
+      slot.icon.setText(item?.icon ?? "❔");
+      slot.icon.setColor("#ffffff");
+    });
+
+    const resultRecipeId = this.getCraftResultRecipeId();
+    if (this.craftOutputSlot?.bg && this.craftOutputSlot?.icon) {
+      if (resultRecipeId) {
+        const recipe = RECIPE_BY_ID[resultRecipeId];
+        this.craftOutputSlot.bg.setFillStyle(0x2a4563, 0.96);
+        this.craftOutputSlot.bg.setStrokeStyle(1, UI_COLORS.accent, 0.95);
+        this.craftOutputSlot.icon.setText(recipe?.icon ?? "✨");
+        this.craftOutputSlot.icon.setColor("#ffffff");
+        this.craftHintText?.setText(`Công thức khớp: ${recipe?.name ?? resultRecipeId}. Nhấn ô đầu ra để chế tạo.`);
+      } else {
+        this.craftOutputSlot.bg.setFillStyle(0x1e2f42, 0.95);
+        this.craftOutputSlot.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.8);
+        this.craftOutputSlot.icon.setText("?");
+        this.craftOutputSlot.icon.setColor(UI_COLORS.textMuted);
+        this.craftHintText?.setText("Nhấn nguyên liệu để đưa vào ô chế tạo.");
+      }
+    }
+
     this.refreshRightPanelScrollMetrics();
   }
 
@@ -4196,8 +5348,9 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     const bagCopy = [...this.player.itemBag];
-    for (let i = 0; i < recipe.requires.length; i += 1) {
-      const idx = bagCopy.indexOf(recipe.requires[i]);
+    const required = this.getRecipeRequiredList(recipe);
+    for (let i = 0; i < required.length; i += 1) {
+      const idx = bagCopy.indexOf(required[i]);
       if (idx < 0) {
         this.addLog(`Thiếu vật phẩm để ghép ${recipe.name}.`);
         return;
@@ -4210,16 +5363,8 @@ export class PlanningScene extends Phaser.Scene {
     this.player.craftedItems.push(recipe.id);
     this.audioFx.play("buy");
     this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}. Chọn ô vật phẩm rồi nhấn vào thú để trang bị.`);
-    this.applyCraftBonus(recipe);
     this.refreshStorageUi();
     this.persistProgress();
-  }
-
-  applyCraftBonus(recipe) {
-    const bonus = recipe.bonus ?? {};
-    if (bonus.teamAtkPct) this.player.teamAtkPct += bonus.teamAtkPct;
-    if (bonus.teamHpPct) this.player.teamHpPct += bonus.teamHpPct;
-    if (bonus.teamMatkPct) this.player.teamMatkPct += bonus.teamMatkPct;
   }
 
   inferLogCategory(message) {
@@ -4342,13 +5487,13 @@ export class PlanningScene extends Phaser.Scene {
     return {
       title: `${visual.icon} ${visual.nameVi} (${star}★)`,
       body: [
-        `Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
-        `HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
-        `MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range}`,
-        `Nộ tối đa:${base.stats.rageMax}`,
-        equipmentLine,
-        `Mốc nghề: ${classMarks}`,
-        `Mốc tộc: ${tribeMarks}`
+        `🏷️ Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
+        `❤️ HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
+        `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range}`,
+        `🔥 Nộ tối đa:${base.stats.rageMax}`,
+        `🎒 ${equipmentLine}`,
+        `🎯 Mốc nghề: ${classMarks}`,
+        `🌿 Mốc tộc: ${tribeMarks}`
       ].join("\n"),
       rightBody: rightLines.join("\n")
     };
@@ -4356,7 +5501,7 @@ export class PlanningScene extends Phaser.Scene {
 
   getAugmentTooltip(augment) {
     return {
-      title: `${augment.name} [${this.translateAugmentGroup(augment.group)}]`,
+      title: `${this.getAugmentIcon(augment)} ${augment.name} [${this.translateAugmentGroup(augment.group)}]`,
       body: `${augment.description}\n\nHiệu ứng: ${this.translateAugmentEffect(augment.effect.type)}${augment.effect.value != null ? ` (${augment.effect.value})` : ""}`
     };
   }
@@ -4401,7 +5546,7 @@ export class PlanningScene extends Phaser.Scene {
       this.player.augments.forEach((id) => {
         const aug = AUGMENT_LIBRARY.find((x) => x.id === id);
         if (!aug) return;
-        lines.push(`- ${aug.name}: ${aug.description}`);
+        lines.push(`- ${this.getAugmentIcon(aug)} ${aug.name}: ${aug.description}`);
       });
     }
 
@@ -4592,6 +5737,17 @@ export class PlanningScene extends Phaser.Scene {
     return map[group] ?? group;
   }
 
+  getAugmentIcon(augment) {
+    if (augment?.icon) return augment.icon;
+    const map = {
+      ECONOMY: "💰",
+      FORMATION: "🧩",
+      COMBAT: "⚔️",
+      SYNERGY: "✨"
+    };
+    return map[augment?.group] ?? "🌲";
+  }
+
   getAI() {
     return AI_SETTINGS[this.aiMode];
   }
@@ -4644,9 +5800,16 @@ export class PlanningScene extends Phaser.Scene {
   computeSynergyCounts(units, side) {
     const classCounts = {};
     const tribeCounts = {};
+    const normalizeSynergyKey = (value) => {
+      const key = typeof value === "string" ? value.trim() : value;
+      if (!key || key === "undefined" || key === "null") return null;
+      return key;
+    };
     units.forEach((unit) => {
-      classCounts[unit.classType] = (classCounts[unit.classType] ?? 0) + 1;
-      tribeCounts[unit.tribe] = (tribeCounts[unit.tribe] ?? 0) + 1;
+      const classType = normalizeSynergyKey(unit?.classType ?? unit?.base?.classType);
+      const tribe = normalizeSynergyKey(unit?.tribe ?? unit?.base?.tribe);
+      if (classType) classCounts[classType] = (classCounts[classType] ?? 0) + 1;
+      if (tribe) tribeCounts[tribe] = (tribeCounts[tribe] ?? 0) + 1;
     });
     if (side === "LEFT" && units.length > 0) {
       if (this.player.extraClassCount > 0) {
@@ -4694,15 +5857,18 @@ export class PlanningScene extends Phaser.Scene {
 
   applyBonusToUnit(unit, bonus) {
     if (!bonus) return;
+    const hpPct = bonus.hpPct ?? bonus.teamHpPct ?? 0;
+    const atkPct = bonus.atkPct ?? bonus.teamAtkPct ?? 0;
+    const matkPct = bonus.matkPct ?? bonus.teamMatkPct ?? 0;
     if (bonus.defFlat) unit.def += bonus.defFlat;
     if (bonus.mdefFlat) unit.mdef += bonus.mdefFlat;
-    if (bonus.hpPct) {
-      const add = Math.round(unit.maxHp * bonus.hpPct);
+    if (hpPct) {
+      const add = Math.round(unit.maxHp * hpPct);
       unit.maxHp += add;
       unit.hp += add;
     }
-    if (bonus.atkPct) unit.atk = Math.round(unit.atk * (1 + bonus.atkPct));
-    if (bonus.matkPct) unit.matk = Math.round(unit.matk * (1 + bonus.matkPct));
+    if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
+    if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
     if (bonus.healPct) unit.mods.healPct += bonus.healPct;
     if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
     if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
@@ -5570,25 +6736,33 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (attacker && !options.forceHit) {
-      if (Math.random() < defender.mods.evadePct) {
+      const evadePct = Phaser.Math.Clamp(Number(defender.mods.evadePct ?? 0), 0, 0.6);
+      if (Math.random() < evadePct) {
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
         return 0;
       }
     }
 
     let raw = Math.max(1, rawDamage);
+    let isPhysicalCrit = false;
     if (attacker && damageType === "physical" && Math.random() < attacker.mods.critPct) {
+      isPhysicalCrit = true;
       raw *= 1.5;
       this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CRIT", "#ffd785");
     }
 
     let final = raw;
     if (damageType === "physical") {
-      const armorBreak = defender.statuses.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
-      const pen = options.armorPen || 0;
-      const effectiveDef = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
-      const def = effectiveDef * (1 - pen);
-      final = raw * (100 / (100 + def));
+      if (isPhysicalCrit) {
+        // Crit vật lý xuyên giáp: giữ đúng 150% raw và bỏ qua giảm sát thương bởi DEF.
+        final = raw;
+      } else {
+        const armorBreak = defender.statuses.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
+        const pen = options.armorPen || 0;
+        const effectiveDef = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
+        const def = effectiveDef * (1 - pen);
+        final = raw * (100 / (100 + def));
+      }
     } else if (damageType === "magic") {
       final = raw * (100 / (100 + this.getEffectiveMdef(defender)));
     }

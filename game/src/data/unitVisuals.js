@@ -232,9 +232,13 @@ export function getUnitVisual(baseId, classType = null) {
 }
 
 export function getClassLabelVi(code) {
-  return CLASS_LABELS_VI[code] ?? code;
+  const normalized = typeof code === "string" ? code.trim() : code;
+  if (!normalized || normalized === "undefined" || normalized === "null") return "Không rõ";
+  return CLASS_LABELS_VI[normalized] ?? String(normalized);
 }
 
 export function getTribeLabelVi(code) {
-  return TRIBE_LABELS_VI[code] ?? code;
+  const normalized = typeof code === "string" ? code.trim() : code;
+  if (!normalized || normalized === "undefined" || normalized === "null") return "Không rõ";
+  return TRIBE_LABELS_VI[normalized] ?? String(normalized);
 }
