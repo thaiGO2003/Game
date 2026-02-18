@@ -13,7 +13,7 @@ eagle_marksman,Đại Bàng Xạ Thủ,dai-bang,🦅,WIND,Phong,ARCHER,Xạ th�
 monkey_spear,Khỉ Lao Cành,khi,🐒,WIND,Phong,ARCHER,Xạ thủ,1,250,68,12,12,12,4,3,row_pierce
 owl_nightshot,Cú Đêm,cu,🦉,NIGHT,Dạ,ARCHER,Xạ thủ,3,265,74,13,14,13,4,3,sleep_shot
 cat_goldbow,Ong Lửa,ong,🐝,FIRE,Hỏa,ARCHER,Xạ thủ,4,280,82,14,16,14,4,3,armor_break_arrow
-wasp_sting,Ong Bắp Cày,ong,🐝,SWARM,Trùng,ARCHER,Xạ thủ,1,260,65,15,12,14,4,3,poison_sting
+wasp_sting,Ong Bắp Cày,ong,🐝,SWARM,Trùng,ARCHER,Xạ thủ,1,260,65,15,12,14,4,3,wasp_triple_strike
 ice_mage,Chuồn Chuồn Băng,chuon-chuon,🪰,TIDE,Thủy,MAGE,Pháp sư,2,215,16,10,74,20,4,5,ice_column
 worm_ice,Sâu Băng,sau,🐛,TIDE,Thủy,MAGE,Pháp sư,2,230,18,10,80,21,4,5,snow_burst
 storm_mage,Rắn Lôi,ran,🐍,WIND,Phong,MAGE,Pháp sư,3,245,20,11,88,22,4,5,storm_column
@@ -49,4 +49,3 @@ kraken_void,Kraken Hư Không,bach-tuoc,🐙,TIDE,Thủy,MAGE,Pháp sư,5,480,30
 kirin_thunder,Kỳ Lân Lôi,ky-lan,🦄,WIND,Phong,MAGE,Pháp sư,5,460,35,22,100,38,4,5,kirin_judgment
 lizard_elder,Rồng Đất Cổ,tac-ke,🦎,STONE,Nham,SUPPORT,Hỗ trợ,5,500,40,45,80,40,3,4,elder_blessing
 pangolin_plate,Tê Tê Thiết Giáp,te-te,🛡️,STONE,Nham,TANKER,Đỡ đòn,3,390,45,40,12,32,1,4,pangolin_reflect
-

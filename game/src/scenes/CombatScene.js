@@ -1319,7 +1319,7 @@ export class CombatScene extends Phaser.Scene {
         amount -= need;
         this.player.level += 1;
         this.player.xp = 0;
-        this.addLog(`Len level ${this.player.level}.`);
+        this.addLog(`Lên cấp ${this.player.level}.`);
       } else {
         this.player.xp += amount;
         amount = 0;
@@ -1357,7 +1357,7 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.player.bench.length >= this.getBenchCap()) {
-      this.addLog("Bench da day.");
+      this.addLog("Hàng chờ dự bị đã đầy.");
       return;
     }
     this.player.gold -= cost;
@@ -2040,6 +2040,47 @@ export class CombatScene extends Phaser.Scene {
     }
 
     switch (skill.effect) {
+
+      case "global_stun":
+      case "global_debuff_atk":
+      case "global_fire":
+      case "global_slow":
+        pushUnits(enemies);
+        break;
+      case "single_burst_armor_pen":
+      case "single_poison_slow":
+      case "single_bleed":
+      case "knockback_charge":
+      case "single_strong_poison":
+      case "execute_heal":
+      case "true_execute":
+        pushCell(target.row, target.col);
+        break;
+      case "aoe_circle_stun":
+      case "cleave_armor_break":
+        enemies.filter(e => Math.abs(e.row - target.row) <= 1 && Math.abs(e.col - target.col) <= 1)
+               .forEach(e => pushCell(e.row, e.col));
+        break;
+      case "cone_shot":
+        enemies.filter(e => Math.abs(e.row - target.row) <= 1 && e.col >= target.col)
+               .forEach(e => pushCell(e.row, e.col));
+        break;
+      case "shield_immune":
+      case "revive_or_heal":
+      case "team_buff_def":
+        pushUnits(allies);
+        break;
+      case "self_bersek":
+        pushCell(attacker.row, attacker.col);
+        break;
+      case "multi_disarm":
+        enemies.sort((a,b) => b.atk - a.atk).slice(0, 3).forEach(e => pushCell(e.row, e.col));
+        break;
+      case "random_lightning":
+        pushCell(target.row, target.col);
+        break;
+      
+
       case "global_poison_team":
         pushUnits(enemies);
         break;
@@ -2064,6 +2105,12 @@ export class CombatScene extends Phaser.Scene {
             .slice(0, skill.maxHits ?? 3)
         );
         break;
+      case "random_multi": {
+        const pool = enemies.filter((enemy) => enemy.alive);
+        const count = Math.min(skill.maxHits ?? 3, pool.length);
+        pushUnits(sampleWithoutReplacement(pool, count));
+        break;
+      }
       case "column_freeze":
         pushUnits(enemies.filter((enemy) => enemy.col === target.col));
         break;
@@ -2573,6 +2620,7 @@ export class CombatScene extends Phaser.Scene {
       single_delayed_echo: "Gây sát thương, sau đó nổ thêm lần nữa (vọng âm).",
       cross_5: "Tấn công 5 ô theo hình chữ thập.",
       row_multi: `Bắn xuyên thấu ${maxHits ?? 3} mục tiêu trên cùng hàng.`,
+      random_multi: `Bắn ngẫu nhiên ${maxHits ?? 3} mục tiêu.`,
       single_sleep: "Gây sát thương và ru ngủ mục tiêu.",
       single_armor_break: "Gây sát thương và phá giáp mục tiêu.",
       column_freeze: "Triệu hồi cột băng tấn công dọc và gây đóng băng.",
@@ -2650,6 +2698,7 @@ export class CombatScene extends Phaser.Scene {
       single_delayed_echo: "Sát thương + nổ dội",
       cross_5: "Sát thương hình chữ thập 5 ô",
       row_multi: "Bắn xuyên theo hàng",
+      random_multi: "Bắn ngẫu nhiên nhiều mục tiêu",
       single_sleep: "Sát thương + gây ngủ",
       single_armor_break: "Sát thương + giảm giáp",
       column_freeze: "Cột băng + đóng băng",
@@ -2839,7 +2888,11 @@ export class CombatScene extends Phaser.Scene {
           this.updateCombatUnitUi(actor);
           await this.castSkill(actor, target);
         } else {
-          await this.basicAttack(actor, target);
+          if (actor.statuses.disarmTurns <= 0) {
+            await this.basicAttack(actor, target);
+          } else {
+            this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
+          }
         }
       }
     }
@@ -2868,6 +2921,12 @@ export class CombatScene extends Phaser.Scene {
     this.tickTimedStatus(unit, "atkBuffTurns");
     this.tickTimedStatus(unit, "defBuffTurns");
     this.tickTimedStatus(unit, "mdefBuffTurns");
+    this.tickTimedStatus(unit, "slowTurns");
+    this.tickTimedStatus(unit, "disarmTurns");
+    this.tickTimedStatus(unit, "immuneTurns");
+    this.tickTimedStatus(unit, "physReflectTurns");
+    this.tickTimedStatus(unit, "counterTurns");
+    this.tickTimedStatus(unit, "isProtecting");
 
     if (unit.statuses.burnTurns > 0) {
       this.resolveDamage(null, unit, unit.statuses.burnDamage, "true", "THIÊU", { noRage: true, noReflect: true });
@@ -2876,6 +2935,10 @@ export class CombatScene extends Phaser.Scene {
     if (unit.statuses.poisonTurns > 0) {
       this.resolveDamage(null, unit, unit.statuses.poisonDamage, "true", "ĐỘC", { noRage: true, noReflect: true });
       unit.statuses.poisonTurns -= 1;
+    }
+    if (unit.statuses.bleedTurns > 0) {
+      this.resolveDamage(null, unit, unit.statuses.bleedDamage, "true", "MÁU", { noRage: true, noReflect: true });
+      unit.statuses.bleedTurns -= 1;
     }
     if (unit.statuses.diseaseTurns > 0) {
       const neighbors = [
@@ -2932,6 +2995,13 @@ export class CombatScene extends Phaser.Scene {
     if (key === "reflectTurns" && unit.statuses.reflectTurns <= 0) {
       unit.statuses.reflectPct = 0;
       unit.statuses.reflectTurns = 0;
+    }
+    if (key === "atkDebuffTurns" && unit.statuses.atkDebuffTurns <= 0) {
+      unit.statuses.atkDebuffValue = 0;
+      unit.statuses.atkDebuffTurns = 0;
+    }
+    if (key === "immuneTurns" && unit.statuses.immuneTurns <= 0) {
+      unit.statuses.immuneTurns = 0;
     }
   }
 
@@ -3062,6 +3132,207 @@ export class CombatScene extends Phaser.Scene {
     const skillOpts = { isSkill: true };
 
     switch (skill.effect) {
+
+      case "global_stun": {
+        enemies.forEach((enemy) => {
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
+          const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult);
+          if (enemy.alive && Math.random() < effectiveStunChance) {
+            enemy.statuses.stun = Math.max(enemy.statuses.stun, skill.stunTurns);
+            this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHOÁNG", "#ffd97b");
+            this.updateCombatUnitUi(enemy);
+          }
+        });
+        break;
+      }
+      case "single_burst_armor_pen": {
+        const penOpts = { ...skillOpts, armorPen: skill.armorPen || 0.5 };
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, penOpts);
+        break;
+      }
+      case "single_poison_slow": {
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns);
+          target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, skill.poisonPerTurn);
+          target.statuses.slowTurns = Math.max(target.statuses.slowTurns, skill.slowTurns);
+          this.updateCombatUnitUi(target);
+        }
+        break;
+      }
+      case "aoe_circle_stun": {
+        const expandAoe = 1 + areaBonus;
+        enemies
+          .filter((enemy) => Math.abs(enemy.row - target.row) <= expandAoe && Math.abs(enemy.col - target.col) <= expandAoe)
+          .forEach((enemy) => {
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
+            const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult);
+            if (enemy.alive && Math.random() < effectiveStunChance) {
+              enemy.statuses.stun = Math.max(enemy.statuses.stun, skill.stunTurns);
+              this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHOÁNG", "#ffd97b");
+              this.updateCombatUnitUi(enemy);
+            }
+          });
+        break;
+      }
+      case "single_bleed": {
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
+          const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.3);
+          target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, bleedDmg);
+          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
+          this.updateCombatUnitUi(target);
+        }
+        break;
+      }
+      case "cone_shot": {
+        const victims = enemies.filter(e => Math.abs(e.row - target.row) <= 1 && e.col >= target.col);
+        victims.forEach(e => this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts));
+        break;
+      }
+      case "global_debuff_atk": {
+        enemies.forEach(e => {
+          this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
+          if (e.alive) {
+            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns);
+            e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, skill.selfAtkBuff || 20);
+            this.showFloatingText(e.sprite.x, e.sprite.y - 45, "YẾU ỚT", "#ffaaaa");
+            this.updateCombatUnitUi(e);
+          }
+        });
+        break;
+      }
+      case "knockback_charge": {
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          const push = attacker.side === "LEFT" ? 1 : -1;
+          const newCol = Math.max(0, Math.min(9, target.col + push));
+          if (!enemies.find(u => u.row === target.row && u.col === newCol)) {
+             target.col = newCol;
+             const screen = this.gridToScreen(target.col, target.row);
+             this.tweens.add({ targets: target.sprite, x: screen.x, y: screen.y - 10, duration: 200 });
+             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
+          }
+        }
+        break;
+      }
+      case "cleave_armor_break": {
+        enemies
+          .filter(e => Math.abs(e.row - target.row) <= 1 && Math.abs(e.col - target.col) <= 1)
+          .forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
+            if (e.alive) {
+              e.statuses.armorBreakTurns = Math.max(e.statuses.armorBreakTurns, skill.turns);
+              e.statuses.armorBreakValue = Math.max(e.statuses.armorBreakValue, skill.armorBreak);
+              this.updateCombatUnitUi(e);
+            }
+          });
+        break;
+      }
+      case "single_strong_poison": {
+         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+         if (target.alive) {
+           target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 5);
+           target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, Math.round(rawSkill * 0.5));
+           this.updateCombatUnitUi(target);
+         }
+         break;
+      }
+      case "shield_immune": {
+        allies.forEach(a => {
+          this.addShield(a, rawSkill);
+          a.statuses.immuneTurns = Math.max(a.statuses.immuneTurns, skill.turns || 2);
+          this.showFloatingText(a.sprite.x, a.sprite.y - 45, "MIỄN NHIỄM", "#ffffff");
+          this.updateCombatUnitUi(a);
+        });
+        break;
+      }
+      case "self_bersek": {
+         attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, 5);
+         attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, Math.round(attacker.atk * 0.5));
+         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỒNG NỘ", "#ff0000");
+         this.updateCombatUnitUi(attacker);
+         break;
+      }
+      case "execute_heal": {
+         const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+         if (!target.alive) {
+            this.healUnit(attacker, attacker, Math.round(attacker.maxHp * 0.2), "HẤP THỤ");
+            attacker.rage = Math.min(attacker.rageMax, attacker.rage + 2);
+         }
+         break;
+      }
+      case "global_fire": {
+        enemies.forEach(e => {
+          this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
+          if (e.alive) {
+            e.statuses.burnTurns = Math.max(e.statuses.burnTurns, 3);
+            e.statuses.burnDamage = Math.max(e.statuses.burnDamage, Math.round(rawSkill * 0.2));
+            this.updateCombatUnitUi(e);
+          }
+        });
+        break;
+      }
+      case "revive_or_heal": {
+         const dead = this.combatUnits.find(u => u.side === attacker.side && !u.alive);
+         if (dead && Math.random() < 0.5) {
+            dead.alive = true;
+            dead.hp = Math.round(dead.maxHp * 0.4);
+            dead.sprite.clearFill();
+            dead.tag.setColor("#ffffff");
+            this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
+            this.updateCombatUnitUi(dead);
+         } else {
+            allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
+         }
+         break;
+      }
+      case "true_execute": {
+        const bonus = target.hp < target.maxHp * 0.4 ? rawSkill * 2 : rawSkill;
+        this.resolveDamage(attacker, target, bonus, "true", skill.name, skillOpts);
+        break;
+      }
+      case "global_slow": {
+         enemies.forEach(e => {
+           this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
+           if (e.alive) {
+             e.statuses.slowTurns = Math.max(e.statuses.slowTurns, 3);
+             this.showFloatingText(e.sprite.x, e.sprite.y - 45, "LÀM CHẬM", "#888888");
+             this.updateCombatUnitUi(e);
+           }
+         });
+         break;
+      }
+      case "multi_disarm": {
+         const victims = enemies.sort((a,b) => b.atk - a.atk).slice(0, 3);
+         victims.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill * 0.5, "magic", skill.name, skillOpts);
+            if (e.alive) {
+              e.statuses.disarmTurns = Math.max(e.statuses.disarmTurns, 2);
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "TƯỚC KHÍ", "#ffffff");
+              this.updateCombatUnitUi(e);
+            }
+         });
+         break;
+      }
+      case "random_lightning": {
+         for (let i = 0; i < 5; i++) {
+           const e = enemies[Math.floor(Math.random() * enemies.length)];
+           if (e) this.resolveDamage(attacker, e, rawSkill, "magic", "LÔI PHẠT", skillOpts);
+         }
+         break;
+      }
+      case "team_buff_def": {
+         allies.forEach(a => {
+           a.statuses.defBuffTurns = Math.max(a.statuses.defBuffTurns, 3);
+           a.statuses.defBuffValue = Math.max(a.statuses.defBuffValue, skill.armorBuff || 30);
+           this.updateCombatUnitUi(a);
+         });
+         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẢO VỆ", "#00ff00");
+         break;
+      }
+
       case "damage_shield_taunt": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         this.addShield(attacker, Math.round(skill.shieldBase + this.getEffectiveAtk(attacker) * 0.4));
@@ -3152,6 +3423,13 @@ export class CombatScene extends Phaser.Scene {
           .filter((enemy) => enemy.row === target.row)
           .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
           .slice(0, maxHits);
+        victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts));
+        break;
+      }
+      case "random_multi": {
+        const maxHits = (skill.maxHits ?? 3) + targetBonus;
+        const pool = enemies.filter((enemy) => enemy.alive);
+        const victims = sampleWithoutReplacement(pool, Math.min(maxHits, pool.length));
         victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts));
         break;
       }
@@ -3376,7 +3654,8 @@ export class CombatScene extends Phaser.Scene {
   }
   getEffectiveAtk(unit) {
     const buff = unit.statuses.atkBuffTurns > 0 ? unit.statuses.atkBuffValue : 0;
-    return Math.max(1, unit.atk + buff);
+    const debuff = unit.statuses.atkDebuffTurns > 0 ? unit.statuses.atkDebuffValue : 0;
+    return Math.max(1, unit.atk + buff - debuff);
   }
 
   getEffectiveDef(unit) {
@@ -3427,19 +3706,24 @@ export class CombatScene extends Phaser.Scene {
       }
     }
 
-    let raw = Math.max(1, rawDamage);
-    if (attacker && damageType === "physical" && Math.random() < attacker.mods.critPct) {
-      raw *= 1.5;
-      this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẠO KÍCH", "#ffd785");
+        let raw = Math.max(1, rawDamage);
+    if (attacker && damageType === "physical") {
+      if (Math.random() < attacker.mods.critPct) {
+        raw *= 1.5;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẠO KÍCH", "#ffd785");
+      }
     }
 
     let final = raw;
     if (damageType === "physical") {
       const armorBreak = defender.statuses.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
-      const def = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
+      const pen = options.armorPen || 0;
+      const effectiveDef = Math.max(0, this.getEffectiveDef(defender) - armorBreak);
+      const def = effectiveDef * (1 - pen);
       final = raw * (100 / (100 + def));
     } else if (damageType === "magic") {
       final = raw * (100 / (100 + this.getEffectiveMdef(defender)));
+    }
     }
 
     // Khắc chế nguyên tố: +20% damage nếu attacker tribe khắc defender tribe
@@ -3647,17 +3931,22 @@ export class CombatScene extends Phaser.Scene {
     const s = [];
     if (unit.rage >= unit.rageMax - 1 && unit.rage > 0 && unit.alive) s.push("⚡");
     if (unit.shield > 0) s.push("🛡️");
+    if (unit.statuses.immuneTurns > 0) s.push("🧤");
     if (unit.statuses.freeze > 0) s.push("❄");
     if (unit.statuses.stun > 0) s.push("💫");
     if (unit.statuses.sleep > 0) s.push("😴");
     if (unit.statuses.silence > 0) s.push("🔇");
+    if (unit.statuses.disarmTurns > 0) s.push("🚫");
     if (unit.statuses.burnTurns > 0) s.push("🔥");
     if (unit.statuses.poisonTurns > 0) s.push("☠");
+    if (unit.statuses.bleedTurns > 0) s.push("🩸");
     if (unit.statuses.diseaseTurns > 0) s.push("🦠");
     if (unit.statuses.tauntTurns > 0 && unit.statuses.tauntTargetId) s.push("🎯");
-    if (unit.statuses.armorBreakTurns > 0) s.push("🛡️‍⚔️");
-    if (unit.statuses.reflectTurns > 0) s.push("💫");
-    const statusText = s.slice(0, 4).join(" ");
+    if (unit.statuses.armorBreakTurns > 0) s.push("⚔️");
+    if (unit.statuses.slowTurns > 0) s.push("⏳");
+    if (unit.statuses.atkDebuffTurns > 0) s.push("📉");
+    if (unit.statuses.reflectTurns > 0 || unit.statuses.physReflectTurns > 0) s.push("🌀");
+    const statusText = s.slice(0, 5).join(" ");
     unit.statusLabel.setText(statusText);
     unit.statusLabel.setVisible(Boolean(statusText));
   }

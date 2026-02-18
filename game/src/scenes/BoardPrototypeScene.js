@@ -1644,6 +1644,13 @@ export class BoardPrototypeScene extends Phaser.Scene {
         victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
         break;
       }
+      case "random_multi": {
+        const pool = enemies.filter((enemy) => enemy.alive);
+        const count = Math.min(skill.maxHits ?? 3, pool.length);
+        const victims = sampleWithoutReplacement(pool, count);
+        victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
+        break;
+      }
       case "single_sleep": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name);
         if (target.alive && Math.random() < skill.sleepChance) {
