@@ -2089,9 +2089,9 @@ export class CombatScene extends Phaser.Scene {
     const allies = this.getCombatUnits(attacker.side);
     const enemies = this.getCombatUnits(enemySide);
     const skill = SKILL_LIBRARY[attacker.skillId];
-    const impactCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
-    const hasTarget = impactCells.some((cell) => cell.row === target.row && cell.col === target.col);
-    const primary = hasTarget ? { row: target.row, col: target.col } : impactCells[0] ?? { row: target.row, col: target.col };
+    const primary = { row: target.row, col: target.col };
+    const skillCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
+    const impactCells = this.dedupePreviewCells([primary, ...skillCells]);
     return { primary, cells: impactCells };
   }
 
@@ -2114,6 +2114,7 @@ export class CombatScene extends Phaser.Scene {
       case "global_debuff_atk":
       case "global_fire":
       case "global_slow":
+      case "global_poison_team":
         pushUnits(enemies);
         break;
       case "single_burst_armor_pen":
@@ -2139,8 +2140,25 @@ export class CombatScene extends Phaser.Scene {
       case "team_buff_def":
         pushUnits(allies);
         break;
-      case "self_bersek":
+      case "damage_shield_taunt":
+        pushCell(target.row, target.col);
+        pushUnits(enemies);
+        break;
+      case "damage_shield_reflect":
+        pushCell(target.row, target.col);
         pushCell(attacker.row, attacker.col);
+        break;
+      case "self_bersek":
+      case "metamorphosis":
+      case "turtle_protection":
+      case "rhino_counter":
+      case "pangolin_reflect":
+        pushCell(attacker.row, attacker.col);
+        break;
+      case "lifesteal_disease":
+      case "self_atk_and_assist":
+        pushCell(target.row, target.col);
+        pushUnits(allies.filter((ally) => ally.uid !== attacker.uid && ally.row === attacker.row));
         break;
       case "multi_disarm":
         enemies.sort((a, b) => b.atk - a.atk).slice(0, 3).forEach(e => pushCell(e.row, e.col));
@@ -2150,21 +2168,21 @@ export class CombatScene extends Phaser.Scene {
         break;
 
 
-      case "global_poison_team":
-        pushUnits(enemies);
-        break;
-      case "lifesteal_disease":
-        pushCell(target.row, target.col);
-        break;
-      case "metamorphosis":
-        pushCell(attacker.row, attacker.col);
-        break;
       case "cross_5":
-        pushCell(target.row, target.col);
-        pushCell(target.row - 1, target.col);
-        pushCell(target.row + 1, target.col);
-        pushCell(target.row, target.col - 1);
-        pushCell(target.row, target.col + 1);
+        {
+          const targetOnRight = target.col >= RIGHT_COL_START;
+          const minCol = targetOnRight ? RIGHT_COL_START : 0;
+          const maxCol = targetOnRight ? RIGHT_COL_END : PLAYER_COLS - 1;
+          const pushCross = (row, col) => {
+            if (col < minCol || col > maxCol) return;
+            pushCell(row, col);
+          };
+          pushCross(target.row, target.col);
+          pushCross(target.row - 1, target.col);
+          pushCross(target.row + 1, target.col);
+          pushCross(target.row, target.col - 1);
+          pushCross(target.row, target.col + 1);
+        }
         break;
       case "row_multi":
         pushUnits(

@@ -4611,8 +4611,11 @@ export class PlanningScene extends Phaser.Scene {
       this.attackPreviewLayer?.lineStyle(isPrimary ? 3 : 2, isPrimary ? 0xffefb5 : 0xb8ebff, 0.95);
       this.drawDiamond(this.attackPreviewLayer, tile.center.x, tile.center.y);
     });
-    const primaryIcon = this.getPreviewPrimaryIcon(unit, skill);
-    this.drawAttackPreviewPrimaryIcon(impact.primary.row, impact.primary.col, primaryIcon);
+    this.drawAttackPreviewSword(impact.primary.row, impact.primary.col, unit);
+    if (impact.skillPrimary) {
+      const primaryIcon = this.getPreviewPrimaryIcon(unit, skill);
+      this.drawAttackPreviewPrimaryIcon(impact.skillPrimary.row, impact.skillPrimary.col, primaryIcon);
+    }
   }
 
   clearAttackPreview(unit = null) {
@@ -4637,6 +4640,7 @@ export class PlanningScene extends Phaser.Scene {
     const shieldEffects = new Set(["shield_immune", "team_buff_def", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
     const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
 
+    if (effect === "damage_shield_taunt") return "🎯";
     if (shieldEffects.has(effect)) return "🛡️";
     if (healBuffEffects.has(effect)) return "💚";
     if (attacker?.classType === "ARCHER") return "🏹";
@@ -4707,12 +4711,17 @@ export class PlanningScene extends Phaser.Scene {
     const allies = this.phase === PHASE.COMBAT ? this.getCombatUnits(attacker.side) : this.collectPlanningPreviewUnits(attacker.side);
     const enemies = this.phase === PHASE.COMBAT ? this.getCombatUnits(enemySide) : this.collectPlanningPreviewUnits(enemySide);
     const skill = SKILL_LIBRARY[attacker.skillId];
-    const impactCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
-    const hasTarget = impactCells.some((cell) => cell.row === target.row && cell.col === target.col);
-    const primary = hasTarget
-      ? { row: target.row, col: target.col }
-      : [...impactCells].sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))[0] ?? { row: target.row, col: target.col };
-    return { primary, cells: impactCells };
+    const attackCell = { row: target.row, col: target.col };
+    const skillCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
+    const impactCells = this.dedupePreviewCells([attackCell, ...skillCells]);
+    let skillPrimary = null;
+    if (skillCells.length) {
+      const skillHasTarget = skillCells.some((cell) => cell.row === target.row && cell.col === target.col);
+      skillPrimary = skillHasTarget
+        ? attackCell
+        : [...skillCells].sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))[0] ?? null;
+    }
+    return { primary: attackCell, skillPrimary, cells: impactCells };
   }
 
   collectSkillPreviewCells(attacker, target, skill, allies, enemies) {
@@ -4734,6 +4743,7 @@ export class PlanningScene extends Phaser.Scene {
       case "global_debuff_atk":
       case "global_fire":
       case "global_slow":
+      case "global_poison_team":
         pushUnits(enemies);
         break;
       case "single_burst_armor_pen":
@@ -4759,8 +4769,25 @@ export class PlanningScene extends Phaser.Scene {
       case "team_buff_def":
         pushUnits(allies);
         break;
-      case "self_bersek":
+      case "damage_shield_taunt":
+        pushCell(target.row, target.col);
+        pushUnits(enemies);
+        break;
+      case "damage_shield_reflect":
+        pushCell(target.row, target.col);
         pushCell(attacker.row, attacker.col);
+        break;
+      case "self_bersek":
+      case "metamorphosis":
+      case "turtle_protection":
+      case "rhino_counter":
+      case "pangolin_reflect":
+        pushCell(attacker.row, attacker.col);
+        break;
+      case "lifesteal_disease":
+      case "self_atk_and_assist":
+        pushCell(target.row, target.col);
+        pushUnits(allies.filter((ally) => ally.uid !== attacker.uid && ally.row === attacker.row));
         break;
       case "multi_disarm":
         enemies.sort((a, b) => b.atk - a.atk).slice(0, 3).forEach(e => pushCell(e.row, e.col));
