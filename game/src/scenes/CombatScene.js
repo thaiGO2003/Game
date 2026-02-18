@@ -2059,11 +2059,11 @@ export class CombatScene extends Phaser.Scene {
       case "aoe_circle_stun":
       case "cleave_armor_break":
         enemies.filter(e => Math.abs(e.row - target.row) <= 1 && Math.abs(e.col - target.col) <= 1)
-               .forEach(e => pushCell(e.row, e.col));
+          .forEach(e => pushCell(e.row, e.col));
         break;
       case "cone_shot":
         enemies.filter(e => Math.abs(e.row - target.row) <= 1 && e.col >= target.col)
-               .forEach(e => pushCell(e.row, e.col));
+          .forEach(e => pushCell(e.row, e.col));
         break;
       case "shield_immune":
       case "revive_or_heal":
@@ -2074,12 +2074,12 @@ export class CombatScene extends Phaser.Scene {
         pushCell(attacker.row, attacker.col);
         break;
       case "multi_disarm":
-        enemies.sort((a,b) => b.atk - a.atk).slice(0, 3).forEach(e => pushCell(e.row, e.col));
+        enemies.sort((a, b) => b.atk - a.atk).slice(0, 3).forEach(e => pushCell(e.row, e.col));
         break;
       case "random_lightning":
         pushCell(target.row, target.col);
         break;
-      
+
 
       case "global_poison_team":
         pushUnits(enemies);
@@ -3209,10 +3209,10 @@ export class CombatScene extends Phaser.Scene {
           const push = attacker.side === "LEFT" ? 1 : -1;
           const newCol = Math.max(0, Math.min(9, target.col + push));
           if (!enemies.find(u => u.row === target.row && u.col === newCol)) {
-             target.col = newCol;
-             const screen = this.gridToScreen(target.col, target.row);
-             this.tweens.add({ targets: target.sprite, x: screen.x, y: screen.y - 10, duration: 200 });
-             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
+            target.col = newCol;
+            const screen = this.gridToScreen(target.col, target.row);
+            this.tweens.add({ targets: target.sprite, x: screen.x, y: screen.y - 10, duration: 200 });
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
           }
         }
         break;
@@ -3231,13 +3231,13 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "single_strong_poison": {
-         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
-         if (target.alive) {
-           target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 5);
-           target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, Math.round(rawSkill * 0.5));
-           this.updateCombatUnitUi(target);
-         }
-         break;
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 5);
+          target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, Math.round(rawSkill * 0.5));
+          this.updateCombatUnitUi(target);
+        }
+        break;
       }
       case "shield_immune": {
         allies.forEach(a => {
@@ -3249,19 +3249,19 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "self_bersek": {
-         attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, 5);
-         attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, Math.round(attacker.atk * 0.5));
-         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỒNG NỘ", "#ff0000");
-         this.updateCombatUnitUi(attacker);
-         break;
+        attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, 5);
+        attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, Math.round(attacker.atk * 0.5));
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỒNG NỘ", "#ff0000");
+        this.updateCombatUnitUi(attacker);
+        break;
       }
       case "execute_heal": {
-         const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
-         if (!target.alive) {
-            this.healUnit(attacker, attacker, Math.round(attacker.maxHp * 0.2), "HẤP THỤ");
-            attacker.rage = Math.min(attacker.rageMax, attacker.rage + 2);
-         }
-         break;
+        const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (!target.alive) {
+          this.healUnit(attacker, attacker, Math.round(attacker.maxHp * 0.2), "HẤP THỤ");
+          attacker.rage = Math.min(attacker.rageMax, attacker.rage + 2);
+        }
+        break;
       }
       case "global_fire": {
         enemies.forEach(e => {
@@ -3275,18 +3275,18 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "revive_or_heal": {
-         const dead = this.combatUnits.find(u => u.side === attacker.side && !u.alive);
-         if (dead && Math.random() < 0.5) {
-            dead.alive = true;
-            dead.hp = Math.round(dead.maxHp * 0.4);
-            dead.sprite.clearFill();
-            dead.tag.setColor("#ffffff");
-            this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
-            this.updateCombatUnitUi(dead);
-         } else {
-            allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
-         }
-         break;
+        const dead = this.combatUnits.find(u => u.side === attacker.side && !u.alive);
+        if (dead && Math.random() < 0.5) {
+          dead.alive = true;
+          dead.hp = Math.round(dead.maxHp * 0.4);
+          dead.sprite.clearFill();
+          dead.tag.setColor("#ffffff");
+          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
+          this.updateCombatUnitUi(dead);
+        } else {
+          allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
+        }
+        break;
       }
       case "true_execute": {
         const bonus = target.hp < target.maxHp * 0.4 ? rawSkill * 2 : rawSkill;
@@ -3294,43 +3294,43 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "global_slow": {
-         enemies.forEach(e => {
-           this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
-           if (e.alive) {
-             e.statuses.slowTurns = Math.max(e.statuses.slowTurns, 3);
-             this.showFloatingText(e.sprite.x, e.sprite.y - 45, "LÀM CHẬM", "#888888");
-             this.updateCombatUnitUi(e);
-           }
-         });
-         break;
+        enemies.forEach(e => {
+          this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
+          if (e.alive) {
+            e.statuses.slowTurns = Math.max(e.statuses.slowTurns, 3);
+            this.showFloatingText(e.sprite.x, e.sprite.y - 45, "LÀM CHẬM", "#888888");
+            this.updateCombatUnitUi(e);
+          }
+        });
+        break;
       }
       case "multi_disarm": {
-         const victims = enemies.sort((a,b) => b.atk - a.atk).slice(0, 3);
-         victims.forEach(e => {
-            this.resolveDamage(attacker, e, rawSkill * 0.5, "magic", skill.name, skillOpts);
-            if (e.alive) {
-              e.statuses.disarmTurns = Math.max(e.statuses.disarmTurns, 2);
-              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "TƯỚC KHÍ", "#ffffff");
-              this.updateCombatUnitUi(e);
-            }
-         });
-         break;
+        const victims = enemies.sort((a, b) => b.atk - a.atk).slice(0, 3);
+        victims.forEach(e => {
+          this.resolveDamage(attacker, e, rawSkill * 0.5, "magic", skill.name, skillOpts);
+          if (e.alive) {
+            e.statuses.disarmTurns = Math.max(e.statuses.disarmTurns, 2);
+            this.showFloatingText(e.sprite.x, e.sprite.y - 45, "TƯỚC KHÍ", "#ffffff");
+            this.updateCombatUnitUi(e);
+          }
+        });
+        break;
       }
       case "random_lightning": {
-         for (let i = 0; i < 5; i++) {
-           const e = enemies[Math.floor(Math.random() * enemies.length)];
-           if (e) this.resolveDamage(attacker, e, rawSkill, "magic", "LÔI PHẠT", skillOpts);
-         }
-         break;
+        for (let i = 0; i < 5; i++) {
+          const e = enemies[Math.floor(Math.random() * enemies.length)];
+          if (e) this.resolveDamage(attacker, e, rawSkill, "magic", "LÔI PHẠT", skillOpts);
+        }
+        break;
       }
       case "team_buff_def": {
-         allies.forEach(a => {
-           a.statuses.defBuffTurns = Math.max(a.statuses.defBuffTurns, 3);
-           a.statuses.defBuffValue = Math.max(a.statuses.defBuffValue, skill.armorBuff || 30);
-           this.updateCombatUnitUi(a);
-         });
-         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẢO VỆ", "#00ff00");
-         break;
+        allies.forEach(a => {
+          a.statuses.defBuffTurns = Math.max(a.statuses.defBuffTurns, 3);
+          a.statuses.defBuffValue = Math.max(a.statuses.defBuffValue, skill.armorBuff || 30);
+          this.updateCombatUnitUi(a);
+        });
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẢO VỆ", "#00ff00");
+        break;
       }
 
       case "damage_shield_taunt": {
@@ -3448,6 +3448,17 @@ export class CombatScene extends Phaser.Scene {
         target.statuses.armorBreakTurns = Math.max(target.statuses.armorBreakTurns, skill.turns);
         target.statuses.armorBreakValue = Math.max(target.statuses.armorBreakValue, skill.armorBreak);
         this.updateCombatUnitUi(target);
+        break;
+      }
+      case "single_poison_stack": {
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns || 3);
+          const perTurn = skill.poisonPerTurn || 15;
+          target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + perTurn;
+          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỘC +", "#880088");
+          this.updateCombatUnitUi(target);
+        }
         break;
       }
       case "column_freeze": {
@@ -3706,7 +3717,7 @@ export class CombatScene extends Phaser.Scene {
       }
     }
 
-        let raw = Math.max(1, rawDamage);
+    let raw = Math.max(1, rawDamage);
     if (attacker && damageType === "physical") {
       if (Math.random() < attacker.mods.critPct) {
         raw *= 1.5;
@@ -3723,7 +3734,6 @@ export class CombatScene extends Phaser.Scene {
       final = raw * (100 / (100 + def));
     } else if (damageType === "magic") {
       final = raw * (100 / (100 + this.getEffectiveMdef(defender)));
-    }
     }
 
     // Khắc chế nguyên tố: +20% damage nếu attacker tribe khắc defender tribe
@@ -4041,7 +4051,9 @@ export class CombatScene extends Phaser.Scene {
       alpha: 0,
       duration: 540,
       ease: "Cubic.easeOut",
-      onComplete: () => label.destroy()
+      onComplete: () => {
+        if (label && label.destroy) label.destroy();
+      }
     });
   }
 

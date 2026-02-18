@@ -1114,12 +1114,21 @@ export class PlanningScene extends Phaser.Scene {
       const p = this.gridToScreen(entry.col, entry.row);
       let dx = 0;
       let dy = 0;
-      if (entry.anchor === "bottom") dy = tileH * 0.7;
-      if (entry.anchor === "top") dy = -tileH * 0.72;
-      if (entry.anchor === "left") dx = -tileW * 0.7;
-      if (entry.anchor === "right") dx = tileW * 0.7;
+      if (entry.anchor === "bottom") {
+        dx = tileW * 0.3;
+        dy = tileH * 0.6;
+      } else if (entry.anchor === "top") {
+        dx = -tileW * 0.3;
+        dy = -tileH * 0.6;
+      } else if (entry.anchor === "left") {
+        dx = -tileW * 0.3;
+        dy = tileH * 0.6;
+      } else if (entry.anchor === "right") {
+        dx = tileW * 0.3;
+        dy = -tileH * 0.6;
+      }
       entry.label.setPosition(p.x + dx, p.y + dy);
-      entry.label.setDepth(p.y + 4);
+      entry.label.setDepth(2101); // Giữ depth cao để không bị đè
     });
   }
 

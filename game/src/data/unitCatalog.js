@@ -2,16 +2,39 @@ import unitsCsv from "../../data/units.csv?raw";
 
 function parseCsv(csvText) {
   const lines = csvText.trim().split(/\r?\n/);
-  const headers = lines[0].split(",");
+  const headers = lines[0].split(",").map((h) => h.trim());
   const data = [];
   for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(",");
-    if (row.length < headers.length) continue;
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const values = [];
+    let current = "";
+    let inQuote = false;
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+        if (inQuote && line[j + 1] === '"') {
+          current += '"';
+          j++;
+        } else {
+          inQuote = !inQuote;
+        }
+      } else if (char === ',' && !inQuote) {
+        values.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+
     const unit = {};
     const stats = {};
     headers.forEach((header, index) => {
-      const value = row[index]?.trim();
-      if (!header) return;
+      const value = values[index];
+      if (!header || value === undefined || value === "") return;
+
       if (["hp", "atk", "def", "matk", "mdef", "range", "rageMax"].includes(header)) {
         stats[header] = Number(value);
       } else if (header === "tier") {
