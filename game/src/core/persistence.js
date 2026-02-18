@@ -34,3 +34,12 @@ export function clearProgress() {
     return false;
   }
 }
+
+export function clearAllLocalStorage() {
+  try {
+    localStorage.clear();
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}

@@ -9,6 +9,7 @@ import { EQUIPMENT_ITEMS, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { VfxController } from "../core/vfx.js";
+import { clearAllLocalStorage } from "../core/persistence.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -377,7 +378,7 @@ export class CombatScene extends Phaser.Scene {
     this.runStatePayload = hydrated;
     this.aiMode = hydrated.aiMode ?? "MEDIUM";
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
-    this.audioFx.startBgm("bgm_combat", 0.2);
+    this.audioFx.startBgm("bgm_warrior", 0.2);
     this.player = hydrated.player;
     this.loseCondition = normalizeLoseCondition(this.player?.loseCondition);
     this.phase = PHASE.PLANNING;
@@ -685,6 +686,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   startNewRun() {
+    clearAllLocalStorage();
     this.clearCombatSprites();
     this.clearPlanningSprites();
     this.clearOverlay();
@@ -785,7 +787,8 @@ export class CombatScene extends Phaser.Scene {
     const shopY = benchY - UI_SPACING.SM - shopCardH;
     const controlsY = shopY - UI_SPACING.SM - controlsH;
     const actionsY = controlsY - UI_SPACING.SM - actionsH;
-    const boardPanelH = Math.max(250, actionsY - UI_SPACING.LG - boardPanelY);
+    // Combat scene: board panel stretches to the bottom for better battlefield focus.
+    const boardPanelH = Math.max(250, h - margin - boardPanelY);
 
     return {
       width: w,
@@ -1928,7 +1931,9 @@ export class CombatScene extends Phaser.Scene {
         burnOnHit: 0,
         poisonOnHit: 0,
         shieldStart: 0,
-        startingRage: 0
+        startingRage: 0,
+        basicAttackType: "physical",
+        basicAttackScaleStat: "atk"
       },
       statuses: {
         freeze: 0,
@@ -2102,6 +2107,7 @@ export class CombatScene extends Phaser.Scene {
       cells.push({ row, col });
     };
     const pushUnits = (units) => units.forEach((u) => pushCell(u.row, u.col));
+    const isWaterUnit = (unit) => (unit?.tribe ?? unit?.base?.tribe) === "TIDE";
 
     if (!skill) {
       pushCell(target.row, target.col);
@@ -2116,6 +2122,10 @@ export class CombatScene extends Phaser.Scene {
       case "global_slow":
       case "global_poison_team":
         pushUnits(enemies);
+        break;
+      case "global_tide_evade":
+        pushUnits(enemies);
+        pushUnits(allies.filter(isWaterUnit));
         break;
       case "single_burst_armor_pen":
       case "single_poison_slow":
@@ -2149,11 +2159,14 @@ export class CombatScene extends Phaser.Scene {
         pushCell(attacker.row, attacker.col);
         break;
       case "self_bersek":
-      case "metamorphosis":
       case "turtle_protection":
       case "rhino_counter":
       case "pangolin_reflect":
         pushCell(attacker.row, attacker.col);
+        break;
+      case "metamorphosis":
+        pushCell(attacker.row, attacker.col);
+        if ((attacker.star ?? 1) >= 2) pushUnits(allies);
         break;
       case "lifesteal_disease":
       case "self_atk_and_assist":
@@ -2208,6 +2221,9 @@ export class CombatScene extends Phaser.Scene {
         break;
       case "column_plus_splash":
         pushUnits(enemies.filter((enemy) => enemy.col === target.col || enemy.col === target.col - 1 || enemy.col === target.col + 1));
+        break;
+      case "column_bleed":
+        pushUnits(enemies.filter((enemy) => enemy.col === target.col));
         break;
       case "row_cleave":
         pushUnits(enemies.filter((enemy) => enemy.row === target.row));
@@ -2272,7 +2288,7 @@ export class CombatScene extends Phaser.Scene {
     const xpNeed = getXpToLevelUp(this.player.level);
     const xpText = xpNeed === Number.POSITIVE_INFINITY ? "TỐI ĐA" : `${this.player.xp}/${xpNeed}`;
     const deployText = `${this.getDeployCount()}/${this.getDeployCap()}`;
-    const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Hành trình";
+    const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Vô tận";
     const loseLabel = getLoseConditionLabel(this.loseCondition);
     this.headerText.setText(
       `Vòng ${this.player.round}  •  Vàng ${this.player.gold}  •  Cấp ${this.player.level}  •  XP ${xpText}  •  Triển khai ${deployText}  •  AI ${AI_SETTINGS[this.aiMode].label}  •  ${modeLabel}  •  ${loseLabel}`
@@ -2711,18 +2727,20 @@ export class CombatScene extends Phaser.Scene {
       column_freeze: "Triệu hồi cột băng tấn công dọc và gây đóng băng.",
       aoe_circle: "Nổ năng lượng vùng tròn nhỏ (5 ô).",
       column_plus_splash: "Tấn công cột dọc và lan sang 2 bên.",
+      column_bleed: "Xé dọc theo cột mục tiêu, gây chảy máu cho toàn bộ nạn nhân trúng đòn.",
       aoe_poison: "Phun mưa độc vùng 3x3 (tối đa 9 ô).",
       dual_heal: "Hồi máu cho 2 đồng minh yếu nhất.",
       shield_cleanse: "Tạo khiên và xóa hiệu ứng xấu cho đồng minh.",
       team_rage: `Hồi nộ cho ${maxTargets ?? 3} đồng minh xung quanh.`,
       column_bless: "Ban phước tấn công và né tránh cho cột dọc đồng minh.",
+      global_tide_evade: "Sóng thần đánh toàn bộ địch, đồng thời tăng né tránh cho đồng minh hệ Thủy.",
       row_cleave: "Quét vũ khí tấn công toàn bộ hàng ngang.",
       self_atk_and_assist: "Tự tăng công và gọi đồng minh cùng hàng đánh bồi.",
       cone_smash: "Nện xuống đất gây sát thương hình nón 3 ô.",
       true_single: "Gây sát thương chuẩn (bỏ qua giáp) vào 1 mục tiêu.",
       global_poison_team: "Rải độc tố gây sát thương theo thời gian lên TẤT CẢ kẻ địch.",
       lifesteal_disease: "Hút máu mục tiêu và lây bệnh sang kẻ địch lân cận mỗi lượt.",
-      metamorphosis: "Biến hình thành Bướm Chúa, hồi phục HP và tăng mạnh chỉ số."
+      metamorphosis: "Hóa kén thành Bướm Gió, tăng mạnh MATK và đổi đòn đánh thường thành sát thương phép theo MATK; từ 2★ buff nhanh nhẹn toàn đội."
     };
     const text = map[skill.effect];
     if (text) return text;
@@ -2805,13 +2823,15 @@ export class CombatScene extends Phaser.Scene {
       shield_cleanse: "Tạo khiên + thanh tẩy",
       team_rage: "Tăng nộ đồng minh",
       column_bless: "Cường hóa theo cột",
+      global_tide_evade: "Sóng thần + né tránh hệ Thủy",
+      column_bleed: "Cào rách theo cột",
       row_cleave: "Quét hàng",
       self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
       cone_smash: "Nện hình nón",
       true_single: "Sát thương chuẩn đơn mục tiêu",
       global_poison_team: "Đại Dịch Toàn Cầu",
       lifesteal_disease: "Hút Máu & Lây Bệnh",
-      metamorphosis: "Hóa Bướm"
+      metamorphosis: "Hóa Kén Phong Mộc (MATK + đòn phép)"
     };
     return map[effect] ?? effect;
   }
@@ -2896,6 +2916,8 @@ export class CombatScene extends Phaser.Scene {
     if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
     if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
     if (bonus.healPct) unit.mods.healPct += bonus.healPct;
+    if (bonus.lifestealPct) unit.mods.lifestealPct += bonus.lifestealPct;
+    if (bonus.evadePct) unit.mods.evadePct += bonus.evadePct;
     if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
     if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
     if (bonus.critPct) unit.mods.critPct += bonus.critPct;
@@ -3188,10 +3210,13 @@ export class CombatScene extends Phaser.Scene {
   async basicAttack(attacker, target) {
     const pattern = attacker.range >= 2 ? "RANGED_STATIC" : attacker.classType === "ASSASSIN" ? "ASSASSIN_BACK" : "MELEE_FRONT";
     await this.runActionPattern(attacker, target, pattern, async () => {
-      const raw = this.getEffectiveAtk(attacker) + Phaser.Math.Between(-5, 6);
+      const basicScaleStat = attacker?.mods?.basicAttackScaleStat === "matk" ? "matk" : "atk";
+      const damageType = attacker?.mods?.basicAttackType === "magic" ? "magic" : "physical";
+      const baseStat = basicScaleStat === "matk" ? this.getEffectiveMatk(attacker) : this.getEffectiveAtk(attacker);
+      const raw = baseStat + Phaser.Math.Between(-5, 6);
       this.audioFx.play("hit");
       this.vfx?.slash(attacker.sprite.x, attacker.sprite.y, target.sprite.x, target.sprite.y, 0xff9f8c);
-      this.resolveDamage(attacker, target, raw, "physical", "BASIC");
+      this.resolveDamage(attacker, target, raw, damageType, "BASIC");
     });
     this.addLog(`${attacker.name} đánh ${target.name}.`);
   }
@@ -3428,6 +3453,19 @@ export class CombatScene extends Phaser.Scene {
             this.showFloatingText(e.sprite.x, e.sprite.y - 45, "LÀM CHẬM", "#888888");
             this.updateCombatUnitUi(e);
           }
+        });
+        break;
+      }
+      case "global_tide_evade": {
+        enemies.forEach((enemy) => {
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
+        });
+        const evadeBuff = Phaser.Math.Clamp(Number(skill.evadeBuff ?? 0.15), 0, 0.6);
+        allies.forEach((ally) => {
+          if ((ally?.tribe ?? ally?.base?.tribe) !== "TIDE") return;
+          ally.mods.evadePct = Math.max(ally.mods.evadePct, evadeBuff);
+          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "THỦY ẢNH", "#7fd8ff");
+          this.updateCombatUnitUi(ally);
         });
         break;
       }
@@ -3698,6 +3736,21 @@ export class CombatScene extends Phaser.Scene {
           });
         break;
       }
+      case "column_bleed": {
+        enemies
+          .filter((enemy) => enemy.col === target.col)
+          .forEach((enemy) => {
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
+            if (enemy.alive) {
+              enemy.statuses.bleedTurns = Math.max(enemy.statuses.bleedTurns, skill.turns || 3);
+              const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.25);
+              enemy.statuses.bleedDamage = Math.max(enemy.statuses.bleedDamage || 0, bleedDmg);
+              this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHẢY MÁU", "#ff4444");
+              this.updateCombatUnitUi(enemy);
+            }
+          });
+        break;
+      }
       case "self_atk_and_assist": {
         attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, skill.turns);
         attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, skill.selfAtkBuff);
@@ -3749,13 +3802,23 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "metamorphosis": {
-        attacker.name = "Bướm Chúa";
-        attacker.icon = "🦋";
-        attacker.atk = Math.round(attacker.atk * (skill.buffStats?.atk || 1.5));
-        attacker.matk = Math.round(attacker.matk * (skill.buffStats?.matk || 1.5));
-        attacker.maxHp = Math.round(attacker.maxHp * (skill.buffStats?.hp || 1.5));
-        attacker.hp = attacker.maxHp;
+        attacker.name = "Bướm Gió";
+        attacker.tribe = "WIND";
+        if (attacker.icon && typeof attacker.icon.setText === "function") attacker.icon.setText("🦋");
+        else attacker.icon = "🦋";
+        const matkMult = skill.buffStats?.matk || 1.5;
+        attacker.matk = Math.round(attacker.matk * matkMult);
+        attacker.mods.basicAttackType = "magic";
+        attacker.mods.basicAttackScaleStat = "matk";
         attacker.rage = 0;
+        if ((attacker.star ?? 1) >= 2) {
+          const agilityBuff = 0.12;
+          allies.forEach((ally) => {
+            ally.mods.evadePct = Math.max(ally.mods.evadePct, agilityBuff);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 56, "NHANH NHẸN", "#9fe8ff");
+            this.updateCombatUnitUi(ally);
+          });
+        }
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 60, "BIẾN HÌNH!", "#ff00ff");
         this.updateCombatUnitUi(attacker);
         break;
@@ -4307,19 +4370,30 @@ export class CombatScene extends Phaser.Scene {
     this.toggleSettingsOverlay(false);
     this.phase = PHASE.PLANNING;
     const rightSurvivors = this.getCombatUnits("RIGHT").length;
+    const rightTeamUnits = Array.isArray(this.combatUnits)
+      ? this.combatUnits.filter((u) => u?.side === "RIGHT")
+      : [];
+    const winGoldBase = rightTeamUnits.length;
+    const winGoldStarBonus = rightTeamUnits.reduce((sum, unit) => {
+      const star = Number.isFinite(unit?.star) ? Math.floor(unit.star) : 1;
+      return sum + Math.max(0, star - 1);
+    }, 0);
     const result = {
       winnerSide,
       round: this.player.round,
       rightSurvivors,
       damage: Math.max(1, Math.min(4, rightSurvivors || 1)),
       goldDelta: 0,
+      goldBase: winGoldBase,
+      goldStarBonus: winGoldStarBonus,
       lootDrops: Array.isArray(this.combatLootDrops) ? [...this.combatLootDrops] : []
     };
 
     if (winnerSide === "LEFT") {
-      const nextWinStreak = this.player.winStreak + 1;
-      result.goldDelta = 1 + (nextWinStreak >= 3 ? 1 : 0);
-      this.addLog(`Thắng vòng ${this.player.round}. +${result.goldDelta} vàng.`);
+      result.goldDelta = winGoldBase + winGoldStarBonus;
+      this.addLog(
+        `Thắng vòng ${this.player.round}. +${result.goldDelta} vàng (${winGoldBase} theo số tướng địch +${winGoldStarBonus} thưởng sao).`
+      );
     } else if (winnerSide === "DRAW") {
       result.damage = 0;
       this.addLog(`Hòa vòng ${this.player.round}. Hai bên vẫn còn quân.`);

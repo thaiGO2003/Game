@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { AudioFx } from "../core/audioFx.js";
-import { clearProgress, loadProgress } from "../core/persistence.js";
+import { clearAllLocalStorage, loadProgress } from "../core/persistence.js";
 import {
   RESOLUTION_PRESETS,
   createDefaultUiSettings,
@@ -17,7 +17,7 @@ import { getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules
 import { UNIT_CATALOG } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
-import { BASE_ITEMS, CRAFT_RECIPES } from "../data/items.js";
+import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 
 const AI_LABELS = {
   EASY: "Dễ",
@@ -104,12 +104,14 @@ export class MainMenuScene extends Phaser.Scene {
       lineSpacing: 4,
       align: "right"
     }).setOrigin(1, 1);
-    // Inject recipe data with base item lookups
-    const baseById = Object.fromEntries(BASE_ITEMS.map((b) => [b.id, b]));
+    // Inject recipe data with full item lookups (base + equipment)
     this._craftRecipes = CRAFT_RECIPES.map((r) => ({
       ...r,
-      _baseItems: (r.requires ?? []).map((id) => baseById[id] ?? { icon: "?", name: id })
-    }));
+      _requiredLabel: (r.requires ?? [])
+        .map((id) => ITEM_BY_ID[id] ?? { icon: "?", name: id })
+        .map((item) => `${item.icon} ${item.name}`)
+        .join(" + ")
+    })).sort((a, b) => (a.tier ?? 1) - (b.tier ?? 1));
     this.input.on("wheel", (pointer, _objects, _deltaX, deltaY) => {
       if (!this.wikiPanel?.visible || !this.wikiWheelArea) return;
       if (!Phaser.Geom.Rectangle.Contains(this.wikiWheelArea, pointer.x, pointer.y)) return;
@@ -159,6 +161,9 @@ export class MainMenuScene extends Phaser.Scene {
     }, 0x2b5874, 0x9cd0ff);
 
     this.createButton(w * 0.5, startY + 70, 320, 56, "Bắt đầu mới", () => {
+      clearAllLocalStorage();
+      this.savedRun = null;
+      this.refreshMainButtons();
       this.startPanel.setVisible(!this.startPanel.visible);
     }, 0x2f8f6f, 0x8bffd7);
 
@@ -171,10 +176,10 @@ export class MainMenuScene extends Phaser.Scene {
     }, 0x2e5f7d, 0x9ed8ff);
 
     this.createButton(w * 0.5, startY + 272, 320, 50, "Xóa tiến trình lưu", () => {
-      clearProgress();
+      clearAllLocalStorage();
       this.savedRun = null;
       this.refreshMainButtons();
-      this.flashStatus("Đã xóa tiến trình lưu cục bộ.");
+      this.flashStatus("Đã xóa toàn bộ localStorage.");
     }, 0x5f2f3d, 0xffc0cf);
 
     this.statusText = this.add.text(w * 0.5, startY + 340, "", {
@@ -248,11 +253,12 @@ export class MainMenuScene extends Phaser.Scene {
       width: rightWidth,
       title: "Chế độ",
       options: [
-        { value: "PVE_JOURNEY", label: "Hành trình PvE theo vòng" },
-        { value: "PVE_SANDBOX", label: "PvE Sandbox" }
+        { value: "PVE_JOURNEY", label: "PvE Vô tận" },
+        { value: "PVE_SANDBOX", label: "PvE Sandbox (Khóa)", disabled: true }
       ],
       getValue: () => this.selectedMode,
-      onChange: (value) => {
+      onChange: (value, option) => {
+        if (option?.disabled) return;
         this.selectedMode = value;
         this.refreshStartPanel();
       }
@@ -280,6 +286,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     const actionY = panelHeight * 0.5 - 20;
     this.createButton(-102, actionY, 220, 50, "Vào game", () => {
+      clearAllLocalStorage();
+      this.savedRun = null;
       this.scene.start("PlanningScene", {
         settings: this.settings,
         mode: this.selectedMode,
@@ -677,15 +685,13 @@ export class MainMenuScene extends Phaser.Scene {
 
     // ---- RECIPES TAB ----
     if (this._wikiTab === "recipes") {
-      const { BASE_ITEMS, CRAFT_RECIPES } = window._wikiItems ?? {};
-      // We import via dynamic approach - use the data we know from CRAFT_RECIPES
       const recipeTitle = this.add.text(0, tabY, "Công thức chế tạo trang bị", {
         fontFamily: "Consolas", fontSize: "20px", color: "#ffeab0"
       });
       this.wikiContent.add(recipeTitle);
       tabY += recipeTitle.height + 8;
 
-      const hint = this.add.text(0, tabY, "Kéo trang bị cơ bản vào ô kho để ghép. Mỗi trang bị cần 2 nguyên liệu.", {
+      const hint = this.add.text(0, tabY, "Công thức có nhiều bậc. Bậc 2 dùng 3 nguyên liệu (có ít nhất 1 đồ đã ghép); bậc 4 dùng 4 nguyên liệu.", {
         fontFamily: "Consolas", fontSize: "14px", color: "#9ec4e8", wordWrap: { width: vw - 14 }
       });
       this.wikiContent.add(hint);
@@ -695,7 +701,7 @@ export class MainMenuScene extends Phaser.Scene {
       const rcols = vw > 700 ? 2 : 1;
       const rgap = 12;
       const rcardW = Math.floor((vw - 14 - rgap * (rcols - 1)) / rcols);
-      const rcardH = 72;
+      const rcardH = 108;
 
       recipes.forEach((recipe, idx) => {
         const col = idx % rcols;
@@ -704,10 +710,9 @@ export class MainMenuScene extends Phaser.Scene {
         const cardY = tabY + row * (rcardH + 8);
         const bg = this.add.rectangle(cardX, cardY, rcardW, rcardH, idx % 2 === 0 ? 0x1a2e44 : 0x162840, 0.9).setOrigin(0, 0);
         bg.setStrokeStyle(1, 0x5a8ab0, 0.5);
-        const req1 = recipe._baseItems?.[0] ?? { icon: "?", name: "?" };
-        const req2 = recipe._baseItems?.[1] ?? { icon: "?", name: "?" };
+        const tierText = `Bậc ${recipe.tier ?? 1}`;
         const label = this.add.text(cardX + 10, cardY + 8,
-          `${recipe.icon} ${recipe.name}\n${req1.icon} ${req1.name}  +  ${req2.icon} ${req2.name}\n${recipe.description}`,
+          `${recipe.icon} ${recipe.name}  •  ${tierText}\nNguyên liệu: ${recipe._requiredLabel || "?"}\n${recipe.description}`,
           { fontFamily: "Consolas", fontSize: "13px", color: "#d7ecff", lineSpacing: 3, wordWrap: { width: rcardW - 20 } }
         );
         this.wikiContent.add([bg, label]);
@@ -813,11 +818,13 @@ export class MainMenuScene extends Phaser.Scene {
         color: "#e7f4ff"
       });
 
-      rowBg.on("pointerdown", () => onChange(option.value));
+      rowBg.on("pointerdown", () => onChange(option.value, option));
       rowBg.on("pointerover", () => {
+        if (option.disabled) return;
         if (getValue() !== option.value) rowBg.setFillStyle(0x2f4d6a, 0.86);
       });
       rowBg.on("pointerout", () => {
+        if (option.disabled) return;
         if (getValue() !== option.value) rowBg.setFillStyle(0x233850, 0.7);
       });
 
@@ -829,9 +836,15 @@ export class MainMenuScene extends Phaser.Scene {
       const current = getValue();
       rows.forEach(({ option, rowBg, innerCircle, rowLabel }) => {
         const selected = option.value === current;
-        innerCircle.setVisible(selected);
-        rowBg.setFillStyle(selected ? 0x365b7d : 0x233850, selected ? 0.96 : 0.7);
-        rowLabel.setColor(selected ? "#ffffff" : "#e7f4ff");
+        innerCircle.setVisible(selected && !option.disabled);
+        if (option.disabled) {
+          rowBg.setFillStyle(0x1a2533, 0.6);
+          rowBg.setStrokeStyle(1, 0x4a5d73, 0.5);
+          rowLabel.setColor("#7f8c9d");
+        } else {
+          rowBg.setFillStyle(selected ? 0x365b7d : 0x233850, selected ? 0.96 : 0.7);
+          rowLabel.setColor(selected ? "#ffffff" : "#e7f4ff");
+        }
       });
     };
 
@@ -862,10 +875,10 @@ export class MainMenuScene extends Phaser.Scene {
 
   refreshStartPanel() {
     if (!this.startInfoText) return;
-    const modeLabel = this.selectedMode === "PVE_JOURNEY" ? "Hành trình PvE theo vòng" : "PvE Sandbox";
+    const modeLabel = this.selectedMode === "PVE_JOURNEY" ? "PvE Vô tận" : "PvE Sandbox";
     const modeDesc =
       this.selectedMode === "PVE_JOURNEY"
-        ? "Mỗi vòng xuất hiện đội hình địch đã xếp sẵn, bạn sắp quân để khắc chế."
+        ? "Thua khi quân ta chết hết. Mỗi vòng xuất hiện đội hình địch đã xếp sẵn, bạn sắp quân để khắc chế."
         : "Tập dượt đội hình nhanh, tập trung thử đội và kỹ năng.";
     this.startInfoText.setText(
       [

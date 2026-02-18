@@ -16,6 +16,7 @@ const PLAYER_TEMPLATE = {
   augmentRoundsTaken: [],
   deployCapBonus: 0,
   benchBonus: 0,
+  benchUpgradeLevel: 0,
   interestCapBonus: 0,
   rollCostDelta: 0,
   startingRage: 0,
@@ -138,6 +139,9 @@ export function hydrateRunState(raw) {
   state.player.hp = Math.max(0, state.player.hp);
   state.player.loseCondition = normalizeLoseCondition(state.player.loseCondition);
   state.player.gold = Math.max(0, state.player.gold);
+  state.player.benchUpgradeLevel = Number.isFinite(state.player.benchUpgradeLevel)
+    ? Math.max(0, Math.min(1, Math.floor(state.player.benchUpgradeLevel)))
+    : 0;
   if (!Array.isArray(state.player.itemBag)) state.player.itemBag = [];
   if (!Array.isArray(state.player.craftedItems)) state.player.craftedItems = [];
   state.player.craftTableLevel = Number.isFinite(state.player.craftTableLevel)

@@ -16,7 +16,8 @@ const TRIBE_LABELS_VI = {
   TIDE: "Thủy",
   NIGHT: "Dạ",
   SPIRIT: "Linh",
-  SWARM: "Trùng"
+  SWARM: "Trùng",
+  WOOD: "Mộc"
 };
 
 const UNIT_VISUALS = {
@@ -33,7 +34,7 @@ const UNIT_VISUALS = {
   owl_nightshot: { nameVi: "Cú Đêm", icon: "🦉" },
   cat_goldbow: { nameVi: "Ong Lửa", icon: "🐝" },
   ice_mage: { nameVi: "Chuồn Chuồn Băng", icon: "🪰" },
-  worm_ice: { nameVi: "Sâu Băng", icon: "🐛" },
+  worm_ice: { nameVi: "Cóc Băng", icon: "🐸" },
   storm_mage: { nameVi: "Rắn Lôi", icon: "🐍" },
   spore_mage: { nameVi: "Nhện Bào Tử", icon: "🕷️" },
   deer_song: { nameVi: "Nai Thần Ca", icon: "🦌" },
@@ -149,7 +150,8 @@ const TRIBE_TITLE_POOL = {
   TIDE: ["Thủy", "Triều", "Lam", "Hải"],
   NIGHT: ["Dạ", "U", "Nguyệt", "Hắc"],
   SPIRIT: ["Linh", "Thánh", "Tinh", "Phúc"],
-  SWARM: ["Trùng", "Độc", "Bào", "Gai"]
+  SWARM: ["Trùng", "Độc", "Bào", "Gai"],
+  WOOD: ["Mộc", "Lâm", "Diệp", "Thảo"]
 };
 
 const CLASS_TITLE_POOL = {

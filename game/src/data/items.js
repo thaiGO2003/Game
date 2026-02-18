@@ -280,6 +280,212 @@ const CRAFT_RECIPES_RAW = [
     ],
     bonus: { atkPct: 0.18, critPct: 0.2, startingRage: 15 },
     description: "Người mang +18% ATK, +20% Crit, +15 Nộ"
+  },
+
+  {
+    id: "dawn_edge",
+    name: "Lưỡi Rạng Đông",
+    icon: "🌅",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_death_blade", "claw", "tear", null],
+    bonus: { atkPct: 0.22, critPct: 0.12, startingRage: 8 },
+    description: "Cấp 2: Người mang +22% ATK, +12% Crit, +8 Nộ"
+  },
+  {
+    id: "aegis_oath",
+    name: "Thệ Ước Hộ Vệ",
+    icon: "🛡️",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_titan_resolve", "bark", "belt", null],
+    bonus: { hpPct: 0.2, defFlat: 18, mdefFlat: 12 },
+    description: "Cấp 2: Người mang +20% HP, +18 DEF, +12 MDEF"
+  },
+  {
+    id: "sanguine_codex",
+    name: "Sách Huyết Thuật",
+    icon: "📕",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_hextech_gunblade", "crystal", "belt", null],
+    bonus: { atkPct: 0.1, matkPct: 0.14, lifestealPct: 0.12 },
+    description: "Cấp 2: Người mang +10% ATK, +14% MATK, +12% hút máu"
+  },
+  {
+    id: "skyhunter_scope",
+    name: "Ống Ngắm Thiên Ưng",
+    icon: "🎯",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_giant_slayer", "feather", "crystal", null],
+    bonus: { atkPct: 0.16, critPct: 0.18 },
+    description: "Cấp 2: Người mang +16% ATK, +18% Crit"
+  },
+  {
+    id: "mindforge_spear",
+    name: "Thương Tâm Trí",
+    icon: "🪄",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_spear_shojin", "tear", "crystal", null],
+    bonus: { atkPct: 0.1, matkPct: 0.14, startingRage: 18 },
+    description: "Cấp 2: Người mang +10% ATK, +14% MATK, +18 Nộ"
+  },
+  {
+    id: "wild_talon_cloak",
+    name: "Áo Choàng Móng Dữ",
+    icon: "🦴",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_sterak_gage", "belt", "claw", null],
+    bonus: { hpPct: 0.2, atkPct: 0.12, defFlat: 8 },
+    description: "Cấp 2: Người mang +20% HP, +12% ATK, +8 DEF"
+  },
+  {
+    id: "thorn_abyss_plate",
+    name: "Giáp Gai Vực Sâu",
+    icon: "🧱",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_bramble_vest", "bark", "crystal", null],
+    bonus: { hpPct: 0.15, defFlat: 24, mdefFlat: 16 },
+    description: "Cấp 2: Người mang +15% HP, +24 DEF, +16 MDEF"
+  },
+  {
+    id: "tempest_shroud",
+    name: "Phong Ảnh Y",
+    icon: "🌪️",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_quicksilver", "feather", "tear", null],
+    bonus: { evadePct: 0.12, mdefFlat: 12, startingRage: 10 },
+    description: "Cấp 2: Người mang +12% né tránh, +12 MDEF, +10 Nộ"
+  },
+  {
+    id: "ember_grimoire",
+    name: "Hỏa Tâm Thư",
+    icon: "🔥",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_morellonomicon", "crystal", "tear", null],
+    bonus: { matkPct: 0.18, burnOnHit: 4, hpPct: 0.1 },
+    description: "Cấp 2: Người mang +18% MATK, đốt cháy mạnh khi đánh, +10% HP"
+  },
+  {
+    id: "stormbreaker_ballista",
+    name: "Nỏ Phá Bão",
+    icon: "🏹",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_statikk_shiv", "feather", "claw", null],
+    bonus: { atkPct: 0.15, critPct: 0.15, startingRage: 12 },
+    description: "Cấp 2: Người mang +15% ATK, +15% Crit, +12 Nộ"
+  },
+  {
+    id: "moonwell_pendant",
+    name: "Dây Chuyền Nguyệt Tuyền",
+    icon: "🌙",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_redemption", "tear", "bark", null],
+    bonus: { hpPct: 0.16, healPct: 0.15, mdefFlat: 10 },
+    description: "Cấp 2: Người mang +16% HP, +15% hồi máu, +10 MDEF"
+  },
+  {
+    id: "voidfang_lantern",
+    name: "Đèn Nanh Hư Không",
+    icon: "🏮",
+    tier: 2,
+    gridSize: 2,
+    pattern: ["eq_zzrot_portal", "crystal", "claw", null],
+    bonus: { hpPct: 0.12, atkPct: 0.1, poisonOnHit: 4 },
+    description: "Cấp 2: Người mang +12% HP, +10% ATK, gây độc khi đánh"
+  },
+
+  {
+    id: "astral_overlord",
+    name: "Vương Ấn Tinh Giới",
+    icon: "✨",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_dawn_edge", null, "eq_mindforge_spear",
+      null, "eq_storm_crown", null,
+      "crystal", null, null
+    ],
+    bonus: { atkPct: 0.24, matkPct: 0.26, critPct: 0.18, startingRage: 25 },
+    description: "Cấp 4: Người mang +24% ATK, +26% MATK, +18% Crit, +25 Nộ"
+  },
+  {
+    id: "leviathan_bastion",
+    name: "Thành Leviathan",
+    icon: "🐋",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_aegis_oath", null, "eq_titan_shell",
+      null, "bark", null,
+      "belt", null, null
+    ],
+    bonus: { hpPct: 0.42, defFlat: 42, mdefFlat: 30, shieldStart: 160 },
+    description: "Cấp 4: Người mang +42% HP, +42 DEF, +30 MDEF, +160 khiên đầu trận"
+  },
+  {
+    id: "phoenix_legacy",
+    name: "Di Sản Phượng Hoàng",
+    icon: "🕊️",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_ember_grimoire", null, "eq_phoenix_plume",
+      null, "tear", null,
+      "crystal", null, null
+    ],
+    bonus: { matkPct: 0.32, healPct: 0.22, burnOnHit: 6, startingRage: 20 },
+    description: "Cấp 4: Người mang +32% MATK, +22% hồi máu, thiêu đốt mạnh, +20 Nộ"
+  },
+  {
+    id: "shadow_harbinger",
+    name: "Sứ Giả Bóng Đêm",
+    icon: "🌑",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_tempest_shroud", null, "eq_bloodfang_reaper",
+      null, "feather", null,
+      "claw", null, null
+    ],
+    bonus: { atkPct: 0.28, critPct: 0.24, evadePct: 0.14, lifestealPct: 0.14 },
+    description: "Cấp 4: Người mang +28% ATK, +24% Crit, +14% né tránh, +14% hút máu"
+  },
+  {
+    id: "gaia_eternity",
+    name: "Vĩnh Ước Gaia",
+    icon: "🌍",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_moonwell_pendant", null, "eq_gaia_oath",
+      null, "belt", null,
+      "tear", null, null
+    ],
+    bonus: { hpPct: 0.36, healPct: 0.22, shieldStart: 180, startingRage: 15 },
+    description: "Cấp 4: Người mang +36% HP, +22% hồi máu, +180 khiên, +15 Nộ"
+  },
+  {
+    id: "thunder_apex",
+    name: "Đỉnh Lôi Vực",
+    icon: "🌩️",
+    tier: 4,
+    gridSize: 3,
+    pattern: [
+      "eq_stormbreaker_ballista", null, "eq_thunder_pike",
+      null, "feather", null,
+      "crystal", null, null
+    ],
+    bonus: { atkPct: 0.3, critPct: 0.26, startingRage: 20, matkPct: 0.12 },
+    description: "Cấp 4: Người mang +30% ATK, +26% Crit, +20 Nộ, +12% MATK"
   }
 ];
 
@@ -302,12 +508,15 @@ function normalizePattern(pattern, gridSize, requires = []) {
 
 function normalizeRecipe(recipe) {
   const gridSize = resolveGridSize(recipe);
+  const tierRaw = Number.isFinite(recipe?.tier) ? Math.floor(recipe.tier) : null;
+  const tier = tierRaw && tierRaw >= 1 ? tierRaw : (gridSize >= 3 ? 3 : 1);
   const pattern = normalizePattern(recipe.pattern, gridSize, recipe.requires ?? []);
   const requires = Array.isArray(recipe.requires) && recipe.requires.length
     ? recipe.requires.filter(Boolean)
     : pattern.filter(Boolean);
   return {
     ...recipe,
+    tier,
     gridSize,
     pattern,
     requires
@@ -327,3 +536,44 @@ export const EQUIPMENT_ITEMS = CRAFT_RECIPES.map((recipe) => ({
 
 export const ITEM_BY_ID = Object.fromEntries([...BASE_ITEMS, ...EQUIPMENT_ITEMS].map((x) => [x.id, x]));
 export const RECIPE_BY_ID = Object.fromEntries(CRAFT_RECIPES.map((x) => [x.id, x]));
+
+function ingredientIsEquipment(id) {
+  return ITEM_BY_ID[id]?.kind === "equipment";
+}
+
+function ingredientTier(id) {
+  if (!ingredientIsEquipment(id)) return 0;
+  const recipeId = String(id).startsWith("eq_") ? String(id).slice(3) : null;
+  return recipeId ? (RECIPE_BY_ID[recipeId]?.tier ?? 0) : 0;
+}
+
+function validateCraftRecipeRules() {
+  CRAFT_RECIPES.forEach((recipe) => {
+    const requires = Array.isArray(recipe?.requires) ? recipe.requires.filter(Boolean) : [];
+    requires.forEach((id) => {
+      if (!ITEM_BY_ID[id]) {
+        console.warn(`[Items] Recipe ${recipe.id} references unknown ingredient: ${id}`);
+      }
+    });
+
+    if (recipe.tier === 2) {
+      if (requires.length !== 3) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 2) must require exactly 3 ingredients.`);
+      }
+      if (!requires.some((id) => ingredientIsEquipment(id))) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 2) must include at least 1 crafted ingredient.`);
+      }
+    }
+
+    if (recipe.tier === 4) {
+      if (requires.length !== 4) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 4) must require exactly 4 ingredients.`);
+      }
+      if (!requires.some((id) => ingredientTier(id) >= 2)) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 4) must include at least 1 tier-2 crafted ingredient.`);
+      }
+    }
+  });
+}
+
+validateCraftRecipeRules();

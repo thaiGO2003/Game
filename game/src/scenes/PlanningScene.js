@@ -3,12 +3,12 @@ import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
-import { BASE_ITEMS, CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
+import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
-import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
+import { clearAllLocalStorage, clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -291,6 +291,7 @@ export class PlanningScene extends Phaser.Scene {
   resetTransientSceneState() {
     this.phase = PHASE.PLANNING;
     this.aiMode = "MEDIUM";
+    this.benchUpgradeLevel = 0;
     this.tileLookup = new Map();
     this.playerCellZones = [];
     this.buttons = {};
@@ -448,14 +449,13 @@ export class PlanningScene extends Phaser.Scene {
 
   startPlanningMusic() {
     const weights = {
-      bgm_warrior: 40,
-      bgm_gunny: 5,
-      bgm_planning: 10,
-      bgm_nature_1: 9,
-      bgm_nature_2: 9,
-      bgm_nature_3: 9,
-      bgm_nature_4: 9,
-      bgm_nature_5: 9
+      bgm_gunny: 15,
+      bgm_planning: 25,
+      bgm_nature_1: 12,
+      bgm_nature_2: 12,
+      bgm_nature_3: 12,
+      bgm_nature_4: 12,
+      bgm_nature_5: 12
     };
     this.audioFx.playWeightedPlaylist(weights, 0.2);
   }
@@ -601,6 +601,7 @@ export class PlanningScene extends Phaser.Scene {
 
     if (this.consumePadButton(pad, 0)) this.handleGamepadConfirm();
     if (this.consumePadButton(pad, 1)) this.handleGamepadCancel();
+    if (this.wikiVisible) return;
     if (this.consumePadButton(pad, 2)) this.gamepadFocus = "SHOP";
     if (this.consumePadButton(pad, 3)) this.gamepadFocus = "BOARD";
     if (this.consumePadButton(pad, 4)) this.gamepadFocus = "BENCH";
@@ -612,7 +613,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadMove(dx, dy) {
-    if (this.settingsVisible || this.historyModalVisible) return;
+    if (this.settingsVisible || this.historyModalVisible || this.wikiVisible) return;
     if (this.gamepadFocus === "SHOP") {
       this.gamepadCursor.shopIndex = clamp(this.gamepadCursor.shopIndex + dx, 0, 4);
       if (dy < 0) this.gamepadFocus = "BOARD";
@@ -640,6 +641,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadConfirm() {
+    if (this.wikiVisible) {
+      this.toggleWikiModal(false);
+      return;
+    }
     if (this.historyModalVisible) {
       this.toggleHistoryModal(false);
       return;
@@ -663,6 +668,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadCancel() {
+    if (this.wikiVisible) {
+      this.toggleWikiModal(false);
+      return;
+    }
     if (this.historyModalVisible) {
       this.toggleHistoryModal(false);
       return;
@@ -744,6 +753,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   startNewRun() {
+    clearAllLocalStorage();
     this.toggleSettingsOverlay(false);
     this.toggleHistoryModal(false);
     this.clearCombatSprites();
@@ -761,6 +771,9 @@ export class PlanningScene extends Phaser.Scene {
     this.historyScrollOffset = 0;
     this.historyFilter = "ALL";
     this.resetBoardViewTransform(true);
+    this.craftGridItems = Array.from({ length: 9 }, () => null);
+    this.selectedInventoryItemId = null;
+    this.selectedInventoryItemType = null;
 
     this.applyRunState(createDefaultRunState());
     this.player.gameMode = this.gameMode;
@@ -777,6 +790,9 @@ export class PlanningScene extends Phaser.Scene {
     this.audioFx.setEnabled(state.audioEnabled !== false);
     this.player = state.player;
     this.ensurePlayerStateFields();
+    // Always rebuild layout + bench hitboxes from restored state to avoid stale drag targets after continue.
+    this.layout = this.computeLayout();
+    this.createBenchSlots();
     this.runtimeSettings.loseCondition = normalizeLoseCondition(this.player.loseCondition ?? this.runtimeSettings?.loseCondition);
     this.refreshPlanningUi();
   }
@@ -832,6 +848,9 @@ export class PlanningScene extends Phaser.Scene {
     if (!Number.isFinite(this.player.loseStreak)) this.player.loseStreak = 0;
     if (!Number.isFinite(this.player.deployCapBonus)) this.player.deployCapBonus = 0;
     if (!Number.isFinite(this.player.benchBonus)) this.player.benchBonus = 0;
+    if (!Number.isFinite(this.player.benchUpgradeLevel)) this.player.benchUpgradeLevel = 0;
+    this.player.benchUpgradeLevel = clamp(Math.floor(this.player.benchUpgradeLevel), 0, 1);
+    this.benchUpgradeLevel = this.player.benchUpgradeLevel;
     if (!Number.isFinite(this.player.interestCapBonus)) this.player.interestCapBonus = 0;
     if (!Number.isFinite(this.player.rollCostDelta)) this.player.rollCostDelta = 0;
     if (!Number.isFinite(this.player.startingRage)) this.player.startingRage = 0;
@@ -875,7 +894,8 @@ export class PlanningScene extends Phaser.Scene {
     }
     this.getCraftActiveIndices().forEach((idx) => {
       const id = this.craftGridItems[idx];
-      if (id && ITEM_BY_ID[id]?.kind !== "base") this.craftGridItems[idx] = null;
+      const kind = ITEM_BY_ID[id]?.kind;
+      if (id && kind !== "base" && kind !== "equipment") this.craftGridItems[idx] = null;
     });
   }
 
@@ -1534,6 +1554,7 @@ export class PlanningScene extends Phaser.Scene {
           const recipe = RECIPE_BY_ID[item.fromRecipe];
           if (recipe?.description) extra = `\n\n◆ Hiệu ứng: ${recipe.description}`;
           extra += "\n◆ Nhấn vào thú để trang bị.";
+          extra += "\n◆ Nhấn lại lần 2 để đưa vào bàn chế tạo.";
         } else {
           extra = "\n◆ Dùng để ghép đồ.";
         }
@@ -1594,7 +1615,7 @@ export class PlanningScene extends Phaser.Scene {
           };
         }
         const itemId = this.craftGridItems[idx];
-        if (!itemId) return { title: "Ô chế tạo", body: "Ô trống. Nhấn nguyên liệu trong kho để đưa vào." };
+        if (!itemId) return { title: "Ô chế tạo", body: "Ô trống. Nhấn vật phẩm trong kho để đưa vào." };
         const item = ITEM_BY_ID[itemId];
         return { title: `${item?.icon ?? "❔"} ${item?.name ?? itemId}`, body: "Nhấn vào ô để bỏ nguyên liệu khỏi khung chế tạo." };
       });
@@ -1624,14 +1645,14 @@ export class PlanningScene extends Phaser.Scene {
     this.tooltip.attach(outBg, () => {
       const recipeId = this.getCraftResultRecipeId();
       const size = this.getCraftGridSize();
-      if (!recipeId) return { title: "Đầu ra", body: `Chưa có công thức khớp. Sắp nguyên liệu theo mẫu ${size}x${size}.` };
+      if (!recipeId) return { title: "Đầu ra", body: `Chưa có công thức khớp. Sắp vật phẩm theo mẫu ${size}x${size}.` };
       const recipe = RECIPE_BY_ID[recipeId];
       return {
         title: `${recipe?.icon ?? "✨"} ${recipe?.name ?? recipeId}`,
         body: `${recipe?.description ?? "Trang bị chế tạo"}\n\nNhấn để chế tạo và đưa vào kho đồ.`
       };
     });
-    this.craftHintText = this.add.text(craftX, craftY + craftGridH + 8, "Nhấn nguyên liệu để đưa vào ô chế tạo.", {
+    this.craftHintText = this.add.text(craftX, craftY + craftGridH + 8, "Nhấn vật phẩm trong kho để đưa vào ô chế tạo.", {
       fontFamily: UI_FONT,
       fontSize: "10px",
       color: UI_COLORS.textMuted
@@ -2025,13 +2046,16 @@ export class PlanningScene extends Phaser.Scene {
     const modalX = w / 2;
     const modalY = h / 2;
 
+    const topDepth = 6000;
     const dimmer = this.add.rectangle(modalX, modalY, w, h, UI_COLORS.screenOverlay, 0.85);
     dimmer.setInteractive();
+    dimmer.setDepth(topDepth);
     dimmer.on("pointerdown", () => this.toggleWikiModal(false));
 
     const bg = this.add.rectangle(modalX, modalY, modalW, modalH, UI_COLORS.panel, 0.98);
     bg.setStrokeStyle(1, UI_COLORS.panelEdge, 1);
     bg.setInteractive();
+    bg.setDepth(topDepth + 1);
 
     const title = this.add.text(modalX, modalY - modalH / 2 + 24, "Wiki Linh Thú", {
       fontFamily: UI_FONT,
@@ -2039,6 +2063,7 @@ export class PlanningScene extends Phaser.Scene {
       color: UI_COLORS.textPrimary,
       fontStyle: "bold"
     }).setOrigin(0.5);
+    title.setDepth(topDepth + 2);
 
     const closeBtn = this.createButton(
       modalX + modalW / 2 - 60,
@@ -2049,6 +2074,9 @@ export class PlanningScene extends Phaser.Scene {
       () => this.toggleWikiModal(false),
       { variant: "ghost", fontSize: 14 }
     );
+    closeBtn.shadow.setDepth(topDepth + 2);
+    closeBtn.bg.setDepth(topDepth + 3);
+    closeBtn.text.setDepth(topDepth + 4);
 
     const viewportX = modalX - modalW / 2 + 24;
     const viewportY = modalY - modalH / 2 + 60;
@@ -2063,9 +2091,11 @@ export class PlanningScene extends Phaser.Scene {
     this.wikiListBaseY = viewportY;
     this.wikiListContainer = this.add.container(viewportX, this.wikiListBaseY);
     this.wikiListContainer.setMask(mask);
+    this.wikiListContainer.setDepth(topDepth + 2);
 
     const wheelZone = this.add.zone(modalX, modalY, modalW, modalH);
     wheelZone.setInteractive();
+    wheelZone.setDepth(topDepth + 5);
     wheelZone.on("wheel", (pointer, deltaX, deltaY, deltaZ) => {
       this.onWikiWheel(deltaY);
     });
@@ -2078,7 +2108,6 @@ export class PlanningScene extends Phaser.Scene {
       closeBtn.text,
       closeBtn.shadow,
       this.wikiListContainer,
-      maskShape,
       wheelZone
     ];
   }
@@ -2087,23 +2116,27 @@ export class PlanningScene extends Phaser.Scene {
     if (!this.wikiListContainer) return;
     this.wikiListContainer.removeAll(true);
 
-    // Prepare craft recipes with base item lookups (lazy)
+    // Prepare craft recipes with item lookups (base + equipment) for wiki.
     if (!this._wikiCraftRecipes) {
-      const baseById = Object.fromEntries(BASE_ITEMS.map((b) => [b.id, b]));
+      const itemById = ITEM_BY_ID;
       this._wikiCraftRecipes = [...CRAFT_RECIPES]
         .map((r) => {
           const gridSize = this.getRecipeGridSize(r);
           return {
             ...r,
             _gridSize: gridSize,
-            _pattern: this.getRecipePattern(r).map((id) => (id ? baseById[id] ?? { icon: "?", name: id } : null)),
+            _pattern: this.getRecipePattern(r).map((id) => (id ? itemById[id] ?? { icon: "?", name: id } : null)),
             _requiredLabel: this.getRecipeRequiredList(r)
-              .map((id) => baseById[id] ?? { icon: "?", name: id })
+              .map((id) => itemById[id] ?? { icon: "?", name: id })
               .map((item) => `${item.icon} ${item.name}`)
               .join(" + ")
           };
         })
-        .sort((a, b) => (a._gridSize ?? 2) - (b._gridSize ?? 2));
+        .sort((a, b) => {
+          const tierDiff = (a.tier ?? 1) - (b.tier ?? 1);
+          if (tierDiff !== 0) return tierDiff;
+          return (a._gridSize ?? 2) - (b._gridSize ?? 2);
+        });
     }
 
     const w = this.scale.width;
@@ -2309,7 +2342,7 @@ export class PlanningScene extends Phaser.Scene {
       this.wikiListContainer.add(recipeTitle);
       y += recipeTitle.height + 8;
 
-      const hint = this.add.text(0, y, "Bàn chế mặc định 2x2. Nâng cấp 15 vàng sẽ mở 3x3 và thêm công thức xịn.", {
+      const hint = this.add.text(0, y, "Bàn chế mặc định 2x2. Nâng cấp 15 vàng mở 3x3. Công thức bậc cao cần dùng cả trang bị đã ghép.", {
         fontFamily: UI_FONT, fontSize: "14px", color: "#9ec4e8", wordWrap: { width: viewportW - 14 }
       });
       this.wikiListContainer.add(hint);
@@ -2356,7 +2389,7 @@ export class PlanningScene extends Phaser.Scene {
           patternSlots.push(cellBg, icon);
         }
 
-        const sizeTag = this.add.text(cardX + rcardW - 10, cardY + 10, `Khung ${gridSize}x${gridSize}`, {
+        const sizeTag = this.add.text(cardX + rcardW - 10, cardY + 10, `Bậc ${recipe.tier ?? 1} • Khung ${gridSize}x${gridSize}`, {
           fontFamily: UI_FONT,
           fontSize: "11px",
           color: "#9ec4e8"
@@ -2724,9 +2757,9 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   onClearClick() {
-    const ok = clearProgress();
+    const ok = clearAllLocalStorage();
     this.audioFx.play("click");
-    this.addLog(ok ? "Đã xóa dữ liệu lưu cục bộ." : "Không xóa được dữ liệu lưu.");
+    this.addLog(ok ? "Đã xóa toàn bộ localStorage." : "Không xóa được localStorage.");
   }
 
   toggleAudio() {
@@ -2971,6 +3004,7 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.input.on("pointerdown", (pointer) => {
+      if (this.wikiVisible) return;
       if (pointer?.rightButtonDown?.()) return;
       if (this.isPanPointer(pointer)) {
         if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
@@ -2983,9 +3017,10 @@ export class PlanningScene extends Phaser.Scene {
 
       // Check left click for Unit Drag
       if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.wikiVisible && !this.historyModalVisible && !this.settingsVisible) {
-        const unit = this.getUnitAt(pointer.x, pointer.y);
+        const pos = this.getPointerWorldPosition(pointer);
+        const unit = this.getUnitAt(pos.x, pos.y);
         if (unit) {
-          this.startUnitDrag(unit, pointer);
+          this.startUnitDrag(unit, pointer, pos);
           return;
         }
       }
@@ -2999,6 +3034,7 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.input.on("pointermove", (pointer) => {
+      if (this.wikiVisible) return;
       if (this.isUnitDragging) {
         this.updateUnitDrag(pointer);
         return;
@@ -3097,7 +3133,8 @@ export class PlanningScene extends Phaser.Scene {
     if (hit) {
       const { row: r, col: c } = hit;
       const unit = this.player?.board?.[r]?.[c];
-      return unit ? { unit, region: "BOARD", r, c } : null;
+      // Keep both row/col and r/c for compatibility with old callers.
+      return unit ? { unit, region: "BOARD", row: r, col: c, r, c } : null;
     }
     return null;
   }
@@ -3125,13 +3162,17 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   startUnitDrag(dragData, pointer) {
+    const dragPos = this.getPointerWorldPosition(pointer);
+    this.isBoardDragging = false;
+    this.lastDragPoint = null;
+    this.boardPointerDown = null;
     this.isUnitDragging = true;
     this.dragUnit = dragData.unit;
     this.dragOrigin = dragData;
 
     // Create Clone
     const visual = getUnitVisual(dragData.unit.baseId, dragData.unit.base.classType);
-    const clone = this.add.container(pointer.x, pointer.y);
+    const clone = this.add.container(dragPos.x, dragPos.y);
     const bg = this.add.circle(0, 0, 24, 0x365675, 0.8);
     bg.setStrokeStyle(2, 0xbdcf47, 1);
     const txt = this.add.text(0, 0, visual.icon, { fontSize: "32px" }).setOrigin(0.5);
@@ -3152,10 +3193,11 @@ export class PlanningScene extends Phaser.Scene {
 
   updateUnitDrag(pointer) {
     if (!this.dragClone) return;
-    this.dragClone.setPosition(pointer.x, pointer.y);
+    const dragPos = this.getPointerWorldPosition(pointer);
+    this.dragClone.setPosition(dragPos.x, dragPos.y);
 
     // Highlight target
-    const target = this.getDropTarget(pointer.x, pointer.y);
+    const target = this.getDropTarget(dragPos.x, dragPos.y);
     if (target) {
       if (target.type === "SELL") {
         this.buttons.sell.bg.setStrokeStyle(2, 0xff4444);
@@ -3165,6 +3207,14 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   endUnitDrag(pointer) {
+    const cleanupDragState = () => {
+      this.dragUnit = null;
+      this.dragOrigin = null;
+      this.isBoardDragging = false;
+      this.lastDragPoint = null;
+      this.boardPointerDown = null;
+    };
+
     this.isUnitDragging = false;
     if (this.dragClone) {
       this.dragClone.destroy();
@@ -3177,9 +3227,11 @@ export class PlanningScene extends Phaser.Scene {
       this.refreshBenchUi(); // Restore icon visibility
     }
 
-    const target = this.getDropTarget(pointer.x, pointer.y);
+    const dragPos = this.getPointerWorldPosition(pointer);
+    const target = this.getDropTarget(dragPos.x, dragPos.y);
     if (!target) {
       // Cancelled
+      cleanupDragState();
       return;
     }
 
@@ -3192,7 +3244,8 @@ export class PlanningScene extends Phaser.Scene {
     suppressBoardClickOnce();
 
     if (target.type === "SELL") {
-      this.sellUnit(this.dragUnit.uid);
+      if (this.dragUnit?.uid) this.sellUnit(this.dragUnit.uid);
+      cleanupDragState();
       return;
     }
 
@@ -3206,9 +3259,11 @@ export class PlanningScene extends Phaser.Scene {
       // Check if same slot
       if (from.region === to.region) {
         if (from.region === "BOARD" && from.row === to.row && from.col === to.col) {
+          cleanupDragState();
           return;
         }
         if (from.region === "BENCH" && from.index === to.index) {
+          cleanupDragState();
           return;
         }
       }
@@ -3218,6 +3273,7 @@ export class PlanningScene extends Phaser.Scene {
         this.audioFx.play("click");
       }
     }
+    cleanupDragState();
   }
 
   isPanPointer(pointer) {
@@ -3229,6 +3285,26 @@ export class PlanningScene extends Phaser.Scene {
     if ((buttons & 2) !== 0 || (buttons & 4) !== 0) return true;
     if ((buttons & 1) !== 0 && (pointer.event?.altKey || pointer.event?.ctrlKey)) return true;
     return false;
+  }
+
+  getPointerWorldPosition(pointer) {
+    if (!pointer) return { x: 0, y: 0 };
+    const worldX = Number(pointer.worldX);
+    const worldY = Number(pointer.worldY);
+    if (Number.isFinite(worldX) && Number.isFinite(worldY)) {
+      return { x: worldX, y: worldY };
+    }
+    const cam = this.cameras?.main;
+    if (cam && typeof cam.getWorldPoint === "function") {
+      const world = cam.getWorldPoint(pointer.x, pointer.y);
+      if (world && Number.isFinite(world.x) && Number.isFinite(world.y)) {
+        return { x: world.x, y: world.y };
+      }
+    }
+    return {
+      x: Number.isFinite(pointer.x) ? pointer.x : 0,
+      y: Number.isFinite(pointer.y) ? pointer.y : 0
+    };
   }
 
   pointInBoardPanel(x, y) {
@@ -3412,7 +3488,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getBenchCap() {
-    return this.benchUpgradeLevel > 0 ? 14 : 8;
+    const level = Number.isFinite(this.player?.benchUpgradeLevel)
+      ? Math.floor(this.player.benchUpgradeLevel)
+      : this.benchUpgradeLevel;
+    return level > 0 ? 14 : 8;
   }
 
   upgradeBench() {
@@ -3428,6 +3507,7 @@ export class PlanningScene extends Phaser.Scene {
     }
     this.player.gold -= cost;
     this.benchUpgradeLevel = 1;
+    this.player.benchUpgradeLevel = 1;
     this.addLog("Đã nâng cấp dự bị lên 14 ô.");
     this.audioFx.play("buy");
 
@@ -3745,10 +3825,10 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshStorageUi();
   }
 
-  addBaseItemToCraftGrid(itemId) {
+  addItemToCraftGrid(itemId) {
     if (!itemId) return false;
     const item = ITEM_BY_ID[itemId];
-    if (!item || item.kind !== "base") return false;
+    if (!item || (item.kind !== "base" && item.kind !== "equipment")) return false;
     const active = this.getCraftActiveIndices();
     const slotIndex = active.find((idx) => !this.craftGridItems[idx]);
     if (slotIndex == null) {
@@ -3814,11 +3894,22 @@ export class PlanningScene extends Phaser.Scene {
     const item = ITEM_BY_ID[cell.itemId];
     if (item?.kind === "base") {
       this.selectedInventoryItemId = null;
-      this.addBaseItemToCraftGrid(cell.itemId);
+      this.addItemToCraftGrid(cell.itemId);
       return;
     }
     if (!this.isEquipmentItem(cell.itemId)) return;
-    this.selectedInventoryItemId = this.selectedInventoryItemId === cell.itemId ? null : cell.itemId;
+    const isSameSelected = this.selectedInventoryItemId === cell.itemId;
+    if (isSameSelected) {
+      const pushed = this.addItemToCraftGrid(cell.itemId);
+      if (pushed) {
+        this.selectedInventoryItemId = null;
+        this.refreshStorageUi();
+        return;
+      }
+      this.refreshStorageUi();
+      return;
+    }
+    this.selectedInventoryItemId = cell.itemId;
     this.refreshStorageUi();
   }
 
@@ -4515,7 +4606,9 @@ export class PlanningScene extends Phaser.Scene {
         burnOnHit: 0,
         poisonOnHit: 0,
         shieldStart: 0,
-        startingRage: 0
+        startingRage: 0,
+        basicAttackType: "physical",
+        basicAttackScaleStat: "atk"
       },
       statuses: {
         freeze: 0,
@@ -4612,9 +4705,15 @@ export class PlanningScene extends Phaser.Scene {
       this.drawDiamond(this.attackPreviewLayer, tile.center.x, tile.center.y);
     });
     this.drawAttackPreviewSword(impact.primary.row, impact.primary.col, unit);
+    // Normal attack preview is always fist icon for all roles.
+    this.drawAttackPreviewPrimaryIcon(impact.primary.row, impact.primary.col, "👊", -11);
     if (impact.skillPrimary) {
-      const primaryIcon = this.getPreviewPrimaryIcon(unit, skill);
-      this.drawAttackPreviewPrimaryIcon(impact.skillPrimary.row, impact.skillPrimary.col, primaryIcon);
+      const primaryIcon = this.getPreviewSkillIcon(unit, skill);
+      const sameCell =
+        impact.skillPrimary.row === impact.primary.row &&
+        impact.skillPrimary.col === impact.primary.col;
+      const iconYOffset = sameCell ? 10 : -11;
+      this.drawAttackPreviewPrimaryIcon(impact.skillPrimary.row, impact.skillPrimary.col, primaryIcon, iconYOffset);
     }
   }
 
@@ -4635,27 +4734,30 @@ export class PlanningScene extends Phaser.Scene {
     this.attackPreviewIcons = [];
   }
 
-  getPreviewPrimaryIcon(attacker, skill) {
+  getPreviewSkillIcon(attacker, skill) {
     const effect = skill?.effect ?? null;
     const shieldEffects = new Set(["shield_immune", "team_buff_def", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
     const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
 
-    if (effect === "damage_shield_taunt") return "🎯";
+    if (effect === "global_tide_evade") return "💨";
     if (shieldEffects.has(effect)) return "🛡️";
     if (healBuffEffects.has(effect)) return "💚";
     if (attacker?.classType === "ARCHER") return "🏹";
     if (attacker?.classType === "ASSASSIN") return "🗡️";
+    if (attacker?.classType === "MAGE" || skill?.damageType === "magic") return "✨";
+    // Offensive non-ranged/non-assassin/non-mage skills fallback to fist.
     return "👊";
   }
 
-  drawAttackPreviewPrimaryIcon(row, col, iconText = "👊") {
+  drawAttackPreviewPrimaryIcon(row, col, iconText = "👊", yOffset = -11) {
     const tile = this.tileLookup.get(gridKey(row, col));
     if (!tile) return;
     const topDepth = 3300;
-    const badgeBg = this.add.circle(tile.center.x, tile.center.y - 11, 12, 0x0b1724, 0.9);
+    const badgeY = tile.center.y + yOffset;
+    const badgeBg = this.add.circle(tile.center.x, badgeY, 12, 0x0b1724, 0.9);
     badgeBg.setStrokeStyle(1.4, 0xe6f5ff, 0.95);
     badgeBg.setDepth(topDepth);
-    const badgeIcon = this.add.text(tile.center.x, tile.center.y - 11, iconText, {
+    const badgeIcon = this.add.text(tile.center.x, badgeY, iconText, {
       fontFamily: "Segoe UI Emoji",
       fontSize: "13px",
       color: "#ffffff"
@@ -4731,6 +4833,7 @@ export class PlanningScene extends Phaser.Scene {
       cells.push({ row, col });
     };
     const pushUnits = (units) => units.forEach((u) => pushCell(u.row, u.col));
+    const isWaterUnit = (unit) => (unit?.tribe ?? unit?.base?.tribe) === "TIDE";
 
     if (!skill) {
       pushCell(target.row, target.col);
@@ -4745,6 +4848,10 @@ export class PlanningScene extends Phaser.Scene {
       case "global_slow":
       case "global_poison_team":
         pushUnits(enemies);
+        break;
+      case "global_tide_evade":
+        pushUnits(enemies);
+        pushUnits(allies.filter(isWaterUnit));
         break;
       case "single_burst_armor_pen":
       case "single_poison_slow":
@@ -4778,11 +4885,14 @@ export class PlanningScene extends Phaser.Scene {
         pushCell(attacker.row, attacker.col);
         break;
       case "self_bersek":
-      case "metamorphosis":
       case "turtle_protection":
       case "rhino_counter":
       case "pangolin_reflect":
         pushCell(attacker.row, attacker.col);
+        break;
+      case "metamorphosis":
+        pushCell(attacker.row, attacker.col);
+        if ((attacker.star ?? 1) >= 2) pushUnits(allies);
         break;
       case "lifesteal_disease":
       case "self_atk_and_assist":
@@ -4837,6 +4947,9 @@ export class PlanningScene extends Phaser.Scene {
         break;
       case "column_plus_splash":
         pushUnits(enemies.filter((enemy) => enemy.col === target.col || enemy.col === target.col - 1 || enemy.col === target.col + 1));
+        break;
+      case "column_bleed":
+        pushUnits(enemies.filter((enemy) => enemy.col === target.col));
         break;
       case "row_cleave":
         pushUnits(enemies.filter((enemy) => enemy.row === target.row));
@@ -5084,7 +5197,7 @@ export class PlanningScene extends Phaser.Scene {
     const xpNeed = getXpToLevelUp(this.player.level);
     const xpText = xpNeed === Number.POSITIVE_INFINITY ? "TỐI ĐA" : `${this.player.xp}/${xpNeed}`;
     const deployText = `${this.getDeployCount()}/${this.getDeployCap()}`;
-    const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Hành trình";
+    const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Vô tận";
     const loseCondition = this.getLoseCondition();
     const loseLabel = loseCondition === "NO_HEARTS" ? `${getLoseConditionLabel(loseCondition)} (${this.player.hp} tim)` : getLoseConditionLabel(loseCondition);
     this.setHeaderStatValue("round", `${this.player.round}`);
@@ -5658,8 +5771,8 @@ export class PlanningScene extends Phaser.Scene {
         const lockedCount = tableSize >= 3 ? 0 : 5;
         this.craftHintText?.setText(
           lockedCount > 0
-            ? `Nhấn nguyên liệu để xếp mẫu ${tableSize}x${tableSize}. Còn ${lockedCount} ô sẽ mở khi nâng cấp.`
-            : `Nhấn nguyên liệu để xếp mẫu ${tableSize}x${tableSize}.`
+            ? `Nhấn vật phẩm để xếp mẫu ${tableSize}x${tableSize}. Còn ${lockedCount} ô sẽ mở khi nâng cấp.`
+            : `Nhấn vật phẩm để xếp mẫu ${tableSize}x${tableSize}.`
         );
       }
     }
@@ -5959,11 +6072,13 @@ export class PlanningScene extends Phaser.Scene {
       column_freeze: "Tấn công 5 ô hình cột dọc.",
       aoe_circle: "Tấn công 5 ô hình vòng tròn nhỏ.",
       column_plus_splash: "Tấn công 5 ô hình cột và lan 2 ô cạnh mục tiêu.",
+      column_bleed: "Tấn công toàn bộ cột mục tiêu và gây chảy máu.",
       aoe_poison: "Tấn công vùng 3x3 (tối đa 9 ô).",
       dual_heal: "Không tấn công. Hồi máu 2 ô đồng minh.",
       shield_cleanse: "Không tấn công. Tạo khiên + thanh tẩy cho đồng minh.",
       team_rage: `Không tấn công. Tăng nộ tối đa ${maxTargets ?? 3} đồng minh.`,
       column_bless: "Không tấn công. Cường hóa 1 cột đồng minh (tối đa 5 ô).",
+      global_tide_evade: "Tấn công toàn bộ địch, đồng thời tăng né tránh cho toàn bộ đồng minh hệ Thủy.",
       row_cleave: "Tấn công 5 ô hình hàng ngang.",
       self_atk_and_assist: "Tấn công 1 ô tiền tuyến, đồng thời tự cường hóa.",
       cone_smash: "Tấn công 3 ô hình nón trước mặt.",
@@ -6029,6 +6144,8 @@ export class PlanningScene extends Phaser.Scene {
       shield_cleanse: "Tạo khiên + thanh tẩy",
       team_rage: "Tăng nộ đồng minh",
       column_bless: "Cường hóa theo cột",
+      global_tide_evade: "Sóng thần + né tránh hệ Thủy",
+      column_bleed: "Xé cột + chảy máu",
       row_cleave: "Quét hàng",
       self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
       cone_smash: "Nện hình nón",
@@ -6201,6 +6318,8 @@ export class PlanningScene extends Phaser.Scene {
     if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
     if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
     if (bonus.healPct) unit.mods.healPct += bonus.healPct;
+    if (bonus.lifestealPct) unit.mods.lifestealPct += bonus.lifestealPct;
+    if (bonus.evadePct) unit.mods.evadePct += bonus.evadePct;
     if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
     if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
     if (bonus.critPct) unit.mods.critPct += bonus.critPct;
@@ -6249,14 +6368,16 @@ export class PlanningScene extends Phaser.Scene {
 
   buildOrderForSide(side) {
     const list = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      if (side === "LEFT") {
-        for (let col = 4; col >= 0; col -= 1) {
+    if (side === "LEFT") {
+      for (let col = PLAYER_COLS - 1; col >= 0; col -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
-      } else {
-        for (let col = 5; col <= 9; col += 1) {
+      }
+    } else {
+      for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
@@ -6473,8 +6594,11 @@ export class PlanningScene extends Phaser.Scene {
   async basicAttack(attacker, target) {
     const pattern = attacker.range >= 2 ? "RANGED_STATIC" : attacker.classType === "ASSASSIN" ? "ASSASSIN_BACK" : "MELEE_FRONT";
     await this.runActionPattern(attacker, target, pattern, async () => {
-      const raw = this.getEffectiveAtk(attacker) + Phaser.Math.Between(-5, 6);
-      this.resolveDamage(attacker, target, raw, "physical", "BASIC");
+      const basicScaleStat = attacker?.mods?.basicAttackScaleStat === "matk" ? "matk" : "atk";
+      const damageType = attacker?.mods?.basicAttackType === "magic" ? "magic" : "physical";
+      const baseStat = basicScaleStat === "matk" ? this.getEffectiveMatk(attacker) : this.getEffectiveAtk(attacker);
+      const raw = baseStat + Phaser.Math.Between(-5, 6);
+      this.resolveDamage(attacker, target, raw, damageType, "BASIC");
     });
     this.addLog(`${attacker.name} danh ${target.name}.`);
   }
@@ -6700,6 +6824,19 @@ export class PlanningScene extends Phaser.Scene {
         });
         break;
       }
+      case "global_tide_evade": {
+        enemies.forEach((enemy) => {
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
+        });
+        const evadeBuff = Phaser.Math.Clamp(Number(skill.evadeBuff ?? 0.15), 0, 0.6);
+        allies.forEach((ally) => {
+          if ((ally?.tribe ?? ally?.base?.tribe) !== "TIDE") return;
+          ally.mods.evadePct = Math.max(ally.mods.evadePct, evadeBuff);
+          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "THỦY ẢNH", "#7fd8ff");
+          this.updateCombatUnitUi(ally);
+        });
+        break;
+      }
       case "multi_disarm": {
         const victims = enemies.sort((a, b) => b.atk - a.atk).slice(0, 3);
         victims.forEach(e => {
@@ -6740,13 +6877,23 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "metamorphosis": {
-        attacker.name = "Bướm Chúa";
-        attacker.icon = "🦋";
-        attacker.atk = Math.round(attacker.atk * (skill.buffStats?.atk || 1.5));
-        attacker.matk = Math.round(attacker.matk * (skill.buffStats?.matk || 1.5));
-        attacker.maxHp = Math.round(attacker.maxHp * (skill.buffStats?.hp || 1.5));
-        attacker.hp = attacker.maxHp;
+        attacker.name = "Bướm Gió";
+        attacker.tribe = "WIND";
+        if (attacker.icon && typeof attacker.icon.setText === "function") attacker.icon.setText("🦋");
+        else attacker.icon = "🦋";
+        const matkMult = skill.buffStats?.matk || 1.5;
+        attacker.matk = Math.round(attacker.matk * matkMult);
+        attacker.mods.basicAttackType = "magic";
+        attacker.mods.basicAttackScaleStat = "matk";
         attacker.rage = 0;
+        if ((attacker.star ?? 1) >= 2) {
+          const agilityBuff = 0.12;
+          allies.forEach((ally) => {
+            ally.mods.evadePct = Math.max(ally.mods.evadePct, agilityBuff);
+            this.updateCombatUnitUi(ally);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 56, "NHANH NHẸN", "#9fe8ff");
+          });
+        }
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 60, "BIẾN HÌNH!", "#ff00ff");
         this.updateCombatUnitUi(attacker);
         break;
@@ -6909,6 +7056,22 @@ export class PlanningScene extends Phaser.Scene {
             this.resolveDamage(attacker, enemy, rawSkill * skill.splashRate, skill.damageType, "SPLASH", { isSplash: true });
           }
         });
+        break;
+      }
+      case "column_bleed": {
+        enemies
+          .filter((enemy) => enemy.col === target.col)
+          .forEach((enemy) => {
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+            if (enemy.alive) {
+              enemy.statuses.bleedTurns = Math.max(enemy.statuses.bleedTurns, skill.turns || 3);
+              const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.25);
+              enemy.statuses.bleedDamage = Math.max(enemy.statuses.bleedDamage || 0, bleedDmg);
+              this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHẢY MÁU", "#ff4444");
+              this.updateCombatUnitUi(enemy);
+            }
+          });
         break;
       }
       case "aoe_poison": {
@@ -7387,13 +7550,23 @@ export class PlanningScene extends Phaser.Scene {
   resolveCombat(winnerSide) {
     if (this.phase !== PHASE.COMBAT) return;
     this.phase = PHASE.PLANNING;
+    const rightTeamUnits = Array.isArray(this.combatUnits)
+      ? this.combatUnits.filter((u) => u?.side === "RIGHT")
+      : [];
+    const winGoldBase = rightTeamUnits.length;
+    const winGoldStarBonus = rightTeamUnits.reduce((sum, unit) => {
+      const star = Number.isFinite(unit?.star) ? Math.floor(unit.star) : 1;
+      return sum + Math.max(0, star - 1);
+    }, 0);
 
     if (winnerSide === "LEFT") {
       this.player.winStreak += 1;
       this.player.loseStreak = 0;
-      const bonus = 1 + (this.player.winStreak >= 3 ? 1 : 0);
+      const bonus = winGoldBase + winGoldStarBonus;
       this.player.gold += bonus;
-      this.addLog(`Thắng vòng ${this.player.round}. +${bonus} vàng.`);
+      this.addLog(
+        `Thắng vòng ${this.player.round}. +${bonus} vàng (${winGoldBase} theo số tướng địch +${winGoldStarBonus} thưởng sao).`
+      );
     } else {
       const enemySurvivors = Math.max(1, this.getCombatUnits("RIGHT").length);
       this.player.loseStreak += 1;
