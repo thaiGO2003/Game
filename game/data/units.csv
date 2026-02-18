@@ -1,0 +1,33 @@
+id,name,species,icon,tribe,tribeVi,classType,classVi,tier,hp,atk,def,matk,mdef,range,rageMax,skillId
+bear_ancient,Gấu Cổ Thụ,gau,🐻,STONE,Nham,TANKER,Đỡ đòn,1,340,42,30,10,24,1,4,thorn_bark
+rhino_quake,Tê Giác Địa Chấn,te-giac,🦏,STONE,Nham,TANKER,Đỡ đòn,2,380,48,33,10,24,1,4,earth_ram
+turtle_mire,Rùa Đầm Lầy,rua,🐢,TIDE,Thủy,TANKER,Đỡ đòn,3,410,50,36,16,30,1,5,shell_reflect
+buffalo_mist,Trâu Sương Mù,trau,�,WIND,Phong,TANKER,Đỡ đòn,4,450,55,38,18,31,1,4,mist_guard
+ant_guard,Kiến Hộ Vệ,kien,🐜,SWARM,Trùng,TANKER,Đỡ đòn,2,420,45,45,10,30,1,4,ant_shield_wall
+panther_void,Báo Hư Không,bao,�,NIGHT,Dạ,ASSASSIN,Sát thủ,1,240,69,14,14,12,1,2,void_execute
+fox_flame,Cáo Hỏa,cao,🦊,FIRE,Hỏa,ASSASSIN,Sát thủ,2,255,72,15,18,13,1,2,flame_combo
+bat_blood,Dơi Huyết,doi,�,NIGHT,Dạ,ASSASSIN,Sát thủ,3,275,78,16,20,15,1,3,blood_bite
+lynx_echo,Bọ Ngựa Gió,bo-ngua,�,WIND,Phong,ASSASSIN,Sát thủ,4,295,84,18,22,16,1,3,echo_slash
+mantis_blade,Bọ Ngựa Kiếm,bo-ngua,�,SWARM,Trùng,ASSASSIN,Sát thủ,3,310,88,20,15,18,1,3,mantis_slice
+eagle_marksman,Đại Bàng Xạ Thủ,dai-bang,🦅,WIND,Phong,ARCHER,Xạ thủ,1,230,62,12,10,11,4,3,cross_arrow
+monkey_spear,Khỉ Lao Cành,khi,🐒,WIND,Phong,ARCHER,Xạ thủ,2,250,68,12,12,12,4,3,row_pierce
+owl_nightshot,Cú Đêm,cu,🦉,NIGHT,Dạ,ARCHER,Xạ thủ,3,265,74,13,14,13,4,3,sleep_shot
+cat_goldbow,Ong Lửa,ong,�,FIRE,Hỏa,ARCHER,Xạ thủ,4,280,82,14,16,14,4,3,armor_break_arrow
+wasp_sting,Ong Bắp Cày,ong,🐝,SWARM,Trùng,ARCHER,Xạ thủ,2,260,65,15,12,14,4,3,poison_sting
+ice_mage,Chuồn Chuồn Băng,chuon-chuon,�,TIDE,Thủy,MAGE,Pháp sư,1,215,16,10,74,20,4,5,ice_column
+worm_ice,Sâu Băng,sau,🐛,TIDE,Thủy,MAGE,Pháp sư,2,230,18,10,80,21,4,5,snow_burst
+storm_mage,Rắn Lôi,ran,�,WIND,Phong,MAGE,Pháp sư,3,245,20,11,88,22,4,5,storm_column
+spore_mage,Nhện Bào Tử,nhen,�️,SWARM,Trùng,MAGE,Pháp sư,4,260,22,11,96,23,4,5,spore_rain
+deer_song,Nai Thần Ca,nai,�,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,245,22,14,62,25,3,4,life_song
+butterfly_mirror,Bướm Kính,buom,🦋,SPIRIT,Linh,SUPPORT,Hỗ trợ,2,260,24,15,68,26,3,4,mirror_shield
+parrot_roar,Vẹt Linh Hô,vet,🦜,WIND,Phong,SUPPORT,Hỗ trợ,3,280,26,16,72,27,3,4,rage_chant
+qilin_breeze,Kỳ Lân Gió,ky-lan,🦄,SPIRIT,Linh,SUPPORT,Hỗ trợ,4,300,28,17,82,28,3,5,wind_path
+tiger_fang,Hổ Nanh,ho,🐯,FIRE,Hỏa,FIGHTER,Đấu sĩ,1,305,58,20,14,16,1,3,cleave_fang
+wolf_alpha,Sói Thủ Lĩnh,soi,🐺,NIGHT,Dạ,FIGHTER,Đấu sĩ,2,325,64,21,16,17,1,3,alpha_howl
+hippo_maul,Hà Mã Nện,ha-ma,�,TIDE,Thủy,FIGHTER,Đấu sĩ,3,350,70,23,18,18,1,3,mud_slam
+beetle_drill,Bọ Khoan Giáp,bo,🪲,SWARM,Trùng,FIGHTER,Đấu sĩ,4,370,76,24,20,19,1,3,armor_drill
+lion_general,Sư Tử Chiến Tướng,su-tu,🦁,FIRE,Hỏa,FIGHTER,Đấu sĩ,5,550,95,40,30,35,1,4,lion_roar_stun
+scorpion_king,Vua Bọ Cạp,bo-cap,🦂,SWARM,Trùng,FIGHTER,Đấu sĩ,4,440,82,32,20,25,1,3,scorpion_venom
+worm_queen,Sâu Xanh,sau,🐛,SWARM,Trùng,MAGE,Pháp sư,3,280,20,12,85,22,4,2,worm_evolve
+mosquito_toxic,Muỗi Độc,muoi,🦟,SWARM,Trùng,ASSASSIN,Sát thủ,2,240,75,14,15,12,1,3,mosquito_drain
+bug_plague,Bọ Dịch Hạch,bo,�,SWARM,Trùng,MAGE,Pháp sư,4,260,22,13,92,24,4,4,global_poison

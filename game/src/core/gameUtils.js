@@ -81,8 +81,35 @@ export function starMultiplier(star) {
   return 2.5;
 }
 
-export function scaledBaseStats(baseStats, star) {
+const BASE_EVASION_BY_CLASS = {
+  ASSASSIN: 0.20, ARCHER: 0.12, FIGHTER: 0.08,
+  MAGE: 0.05, SUPPORT: 0.05, TANKER: 0.02
+};
+
+export function getBaseEvasion(classType) {
+  return BASE_EVASION_BY_CLASS[classType] ?? 0.05;
+}
+
+export function starEffectChanceMultiplier(star) {
+  if (star <= 1) return 1;
+  if (star === 2) return 1.4;
+  return 2.0;
+}
+
+export function starTargetBonus(star) {
+  if (star <= 1) return 0;
+  if (star === 2) return 1;
+  return 2;
+}
+
+export function starAreaBonus(star) {
+  return Math.max(0, star - 1);
+}
+
+export function scaledBaseStats(baseStats, star, classType) {
   const mult = starMultiplier(star);
+  const evasionBase = getBaseEvasion(classType);
+  const evasionBonus = star <= 1 ? 0 : star === 2 ? 0.05 : 0.10;
   return {
     hp: Math.round(baseStats.hp * mult),
     atk: Math.round(baseStats.atk * mult),
@@ -90,7 +117,8 @@ export function scaledBaseStats(baseStats, star) {
     matk: Math.round(baseStats.matk * mult),
     mdef: Math.round(baseStats.mdef * mult),
     range: baseStats.range,
-    rageMax: baseStats.rageMax
+    rageMax: baseStats.rageMax,
+    evasion: Math.min(0.60, evasionBase + evasionBonus)
   };
 }
 

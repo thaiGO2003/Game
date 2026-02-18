@@ -23,46 +23,122 @@ const UNIT_VISUALS = {
   bear_ancient: { nameVi: "Gấu Cổ Thụ", icon: "🐻" },
   rhino_quake: { nameVi: "Tê Giác Địa Chấn", icon: "🦏" },
   turtle_mire: { nameVi: "Rùa Đầm Lầy", icon: "🐢" },
-  buffalo_mist: { nameVi: "Trâu Sương", icon: "🐃" },
+  buffalo_mist: { nameVi: "Trâu Sương Mù", icon: "🐃" },
   panther_void: { nameVi: "Báo Hư Không", icon: "🐆" },
   fox_flame: { nameVi: "Cáo Hỏa", icon: "🦊" },
   bat_blood: { nameVi: "Dơi Huyết", icon: "🦇" },
-  lynx_echo: { nameVi: "Linh Miêu Ảnh", icon: "🐈" },
+  lynx_echo: { nameVi: "Bọ Ngựa Gió", icon: "🦗" },
   eagle_marksman: { nameVi: "Đại Bàng Xạ Thủ", icon: "🦅" },
   monkey_spear: { nameVi: "Khỉ Lao", icon: "🐒" },
   owl_nightshot: { nameVi: "Cú Đêm", icon: "🦉" },
-  cat_goldbow: { nameVi: "Miêu Kim Cung", icon: "🐱" },
-  ice_mage: { nameVi: "Cú Băng", icon: "🦉" },
-  snow_mage: { nameVi: "Cáo Tuyết", icon: "🦊" },
+  cat_goldbow: { nameVi: "Ong Lửa", icon: "🐝" },
+  ice_mage: { nameVi: "Chuồn Chuồn Băng", icon: "🪰" },
+  worm_ice: { nameVi: "Sâu Băng", icon: "🐛" },
   storm_mage: { nameVi: "Rắn Lôi", icon: "🐍" },
   spore_mage: { nameVi: "Nhện Bào Tử", icon: "🕷️" },
   deer_song: { nameVi: "Nai Thần Ca", icon: "🦌" },
-  fox_mirror: { nameVi: "Cáo Kính", icon: "🦊" },
+  butterfly_mirror: { nameVi: "Bướm Kính", icon: "🦋" },
+  lion_general: { nameVi: "Sư Tử Tướng", icon: "🦁" },
+  ant_guard: { nameVi: "Kiến Hộ Vệ", icon: "🐜" },
+  mantis_blade: { nameVi: "Bọ Ngựa Kiếm", icon: "🦗" },
+  wasp_sting: { nameVi: "Ong Bắp Cày", icon: "🐝" },
+  scorpion_king: { nameVi: "Vua Bọ Cạp", icon: "🦂" },
   parrot_roar: { nameVi: "Vẹt Linh Hô", icon: "🦜" },
   qilin_breeze: { nameVi: "Kỳ Lân Phong", icon: "🦄" },
-  tiger_fang: { nameVi: "Hổ Nanh", icon: "🐯" },
+  tiger_fang: { nameVi: "Hổ Răng Kiếm", icon: "🐯" },
   wolf_alpha: { nameVi: "Sói Thủ Lĩnh", icon: "🐺" },
   hippo_maul: { nameVi: "Hà Mã Nện", icon: "🦛" },
-  beetle_drill: { nameVi: "Bọ Khoan Giáp", icon: "🪲" }
+  beetle_drill: { nameVi: "Bọ Khoan Giáp", icon: "🪲" },
+  worm_queen: { nameVi: "Sâu Xanh", icon: "🐛" },
+  mosquito_toxic: { nameVi: "Muỗi Độc", icon: "🦟" },
+  bug_plague: { nameVi: "Bọ Dịch Hạch", icon: "🐞" }
 };
 
-const CLASS_ICON = {
-  TANKER: "🛡️",
-  ASSASSIN: "🗡️",
-  ARCHER: "🏹",
-  MAGE: "🔮",
-  SUPPORT: "✨",
-  FIGHTER: "🐾"
+const SPECIES_ICON_MAP = {
+  gau: "🐻",
+  te: "🦏",
+  "te-giac": "🦏",
+  rua: "🐢",
+  trau: "🐃",
+  nguu: "🦬",
+  bo: "🐂",
+  bao: "🐆",
+  cao: "🦊",
+  "ho-ly": "🦊",
+  doi: "🦇",
+  chim: "🐦",
+  hac: "🕊️",
+  "ha-ma": "🦛",
+  mieu: "🐱",
+  "linh-mieu": "🐈",
+  meo: "🐱",
+  ly: "🐈",
+  bang: "🦅",
+  "ky-lan": "🦄",
+  khi: "🐒",
+  hau: "🐒",
+  co: "🕊️",
+  cu: "🦉",
+  ran: "🐍",
+  nhen: "🕷️",
+  nai: "🦌",
+  huou: "🦌",
+  vet: "🦜",
+  lan: "🦄",
+  ho: "🐯",
+  soi: "🐺",
+  chon: "🦡",
+  buom: "🦋",
+  su: "🪼",
+  "su-tu": "🦁",
+  kien: "🐜",
+  "bo-ngua": "🦗",
+  "bo-cap": "🦂",
+  ong: "🐝",
+  sau: "🐛",
+  "cá-sấu": "🐊",
+  voi: "🐘",
+  "khủng-long": "🦖",
+  "cá-heo": "🐬",
+  "hải-cẩu": "🦭",
+  "sóc": "🐿️",
+  "thỏ": "🐇",
+  "cừu": "🐑",
+  "ngựa": "🐎",
+  coc: "🐸",
+  boi: "🐟",
+  lon: "🐗",
+  sao: "⭐",
+  "sao-bien": "⭐",
+  vit: "🦆",
+  moi: "🪳",
+  ca: "🐟",
+  muc: "🦑",
+  "bach-tuoc": "🐙",
+  oc: "🐌",
+  vuon: "🦍",
+  cong: "🦚",
+  phuong: "🐦‍🔥",
+  long: "🐉",
+  "tac-ke": "🦎",
+  "thien-nga": "🦢"
 };
 
-const CLASS_ICON_POOL = {
-  TANKER: ["🦬", "🦏", "🐢", "🐻", "🐘", "🦛"],
-  ASSASSIN: ["🐆", "🦊", "🐺", "🦇", "🐅", "🐈"],
-  ARCHER: ["🦅", "🦉", "🦜", "🕊️", "🦆", "🐒"],
-  MAGE: ["🦄", "🐍", "🦋", "🐙", "🪼", "🦂"],
-  SUPPORT: ["🦌", "🦢", "🦙", "🫎", "🕊️", "🐬"],
-  FIGHTER: ["🐯", "🐗", "🦬", "🪲", "🐺", "🦍"]
-};
+const SPECIES_PATTERN_ICON = [
+  { pattern: /\bho(\s|-)?ly\b/, icon: "🦊" },
+  { pattern: /\blinh(\s|-)?mieu\b/, icon: "🐈" },
+  { pattern: /\bha(\s|-)?ma\b/, icon: "🦛" },
+  { pattern: /\bky(\s|-)?lan\b/, icon: "🦄" },
+  { pattern: /\bhac\b|\bco\b/, icon: "🕊️" },
+  { pattern: /\bte(\s|-)?giac\b|\bte\b/, icon: "🦏" },
+  { pattern: /\bbuom\b/, icon: "🦋" },
+  { pattern: /\bdai(\s|-)?bang\b|\bbang\b/, icon: "🦅" },
+  { pattern: /\bbeetle\b|bọ|bo(\s|-)?thep|khoan|giap/, icon: "🪲" },
+  { pattern: /\bbo(\s|-)?cua\b|\bcua\b/, icon: "🦀" },
+  { pattern: /\bbo(\s|-)?cap\b|\bcap\b/, icon: "🦂" },
+  { pattern: /\bnhen\b/, icon: "🕷️" },
+  { pattern: /\bsua\b|\bsu\b/, icon: "🪼" }
+];
 
 const TRIBE_TITLE_POOL = {
   STONE: ["Nham", "Thạch", "Kiên", "Sơn"],
@@ -120,24 +196,35 @@ function buildFlavorName(baseId, classType, tribe, seed) {
   return shortName.length <= 20 ? shortName : `${root} ${classTitle}`.replace(/\s+/g, " ").trim();
 }
 
-function resolveFallbackIcon(classType, tribe, seed) {
-  const tribeSeed = hashString(tribe);
-  const pool = CLASS_ICON_POOL[classType] ?? [CLASS_ICON[classType] ?? "🐾"];
-  return pickBySeed(pool, seed + tribeSeed);
+function toAsciiLower(text) {
+  return String(text ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function resolveSpeciesIcon(unit) {
+  const speciesKey = toAsciiLower(unit?.species ?? "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (speciesKey && SPECIES_ICON_MAP[speciesKey]) return SPECIES_ICON_MAP[speciesKey];
+
+  const merged = `${toAsciiLower(unit?.name)} ${speciesKey} ${toAsciiLower(unit?.id)}`;
+  for (const item of SPECIES_PATTERN_ICON) {
+    if (item.pattern.test(merged)) return item.icon;
+  }
+
+  return "🐾";
 }
 
 export function getUnitVisual(baseId, classType = null) {
   if (UNIT_VISUALS[baseId]) return UNIT_VISUALS[baseId];
   const unit = UNIT_BY_ID[baseId];
-  const resolvedClass = classType ?? unit?.classType ?? "FIGHTER";
-  const resolvedTribe = unit?.tribe ?? "SPIRIT";
-  const seed = hashString(baseId);
   const catalogName = unit?.name;
-  const dynamicIcon = unit ? /** @type {any} */ (unit).icon : null;
-  const icon = dynamicIcon ?? resolveFallbackIcon(resolvedClass, resolvedTribe, seed);
+  const icon = resolveSpeciesIcon(unit);
   const nameVi = looksGenericName(catalogName)
-    ? buildFlavorName(baseId, resolvedClass, resolvedTribe, seed)
-    : catalogName || buildFlavorName(baseId, resolvedClass, resolvedTribe, seed) || "Linh thú";
+    ? buildFlavorName(baseId, classType ?? unit?.classType ?? "FIGHTER", unit?.tribe ?? "SPIRIT", hashString(baseId))
+    : catalogName || buildFlavorName(baseId, classType ?? unit?.classType ?? "FIGHTER", unit?.tribe ?? "SPIRIT", hashString(baseId)) || "Linh thú";
 
   return { nameVi, icon };
 }

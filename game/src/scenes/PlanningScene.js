@@ -10,6 +10,7 @@ import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
 import { loadUiSettings, saveUiSettings } from "../core/uiSettings.js";
+import { DEFAULT_LOSE_CONDITION, getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
 import { createDefaultRunState, hydrateRunState, serializeRunState } from "../core/runState.js";
 import {
   clamp,
@@ -44,30 +45,51 @@ const PHASE = {
 const AI_SETTINGS = {
   EASY: {
     label: "Dễ",
-    hpMult: 0.9,
-    atkMult: 0.88,
-    matkMult: 0.88,
+    hpMult: 0.84,
+    atkMult: 0.82,
+    matkMult: 0.82,
     rageGain: 1,
-    randomTargetChance: 0.45,
-    teamSizeBonus: -1
+    randomTargetChance: 0.58,
+    teamSizeBonus: 0,
+    teamGrowthEvery: 5,
+    teamGrowthCap: 1,
+    budgetMult: 0.9,
+    levelBonus: 0,
+    maxTierBonus: 0,
+    star2Bonus: -0.05,
+    star3Bonus: -0.02
   },
   MEDIUM: {
     label: "Trung bình",
-    hpMult: 1,
-    atkMult: 1,
-    matkMult: 1,
+    hpMult: 0.95,
+    atkMult: 0.93,
+    matkMult: 0.93,
     rageGain: 1,
-    randomTargetChance: 0.15,
-    teamSizeBonus: 0
+    randomTargetChance: 0.3,
+    teamSizeBonus: 1,
+    teamGrowthEvery: 4,
+    teamGrowthCap: 2,
+    budgetMult: 1,
+    levelBonus: 0,
+    maxTierBonus: 0,
+    star2Bonus: -0.01,
+    star3Bonus: -0.01
   },
   HARD: {
     label: "Khó",
-    hpMult: 1.2,
-    atkMult: 1.14,
-    matkMult: 1.14,
-    rageGain: 2,
-    randomTargetChance: 0.02,
-    teamSizeBonus: 1
+    hpMult: 1.05,
+    atkMult: 1.04,
+    matkMult: 1.04,
+    rageGain: 1,
+    randomTargetChance: 0.12,
+    teamSizeBonus: 2,
+    teamGrowthEvery: 3,
+    teamGrowthCap: 3,
+    budgetMult: 1.08,
+    levelBonus: 1,
+    maxTierBonus: 1,
+    star2Bonus: 0,
+    star3Bonus: 0.01
   }
 };
 
@@ -90,6 +112,39 @@ const ROLE_THEME = {
 };
 
 const LEVEL_LABEL = { EASY: "Dễ", MEDIUM: "TB", HARD: "Khó" };
+
+const CLASS_SKILL_VARIANTS = {
+  TANKER: [
+    { name: "Giáp Dày", bonus: { defFlat: 6, hpPct: 0.04 } },
+    { name: "Phản Chấn", bonus: { shieldStart: 18 } },
+    { name: "Thành Lũy", bonus: { mdefFlat: 6, hpPct: 0.03 } }
+  ],
+  ASSASSIN: [
+    { name: "Sát Ý", bonus: { atkPct: 0.09 } },
+    { name: "Đoạt Mệnh", bonus: { critPct: 0.1 } },
+    { name: "Lướt Ảnh", bonus: { startingRage: 1 } }
+  ],
+  ARCHER: [
+    { name: "Xuyên Tâm", bonus: { atkPct: 0.07 } },
+    { name: "Liên Xạ", bonus: { startingRage: 1 } },
+    { name: "Ưng Nhãn", bonus: { critPct: 0.08 } }
+  ],
+  MAGE: [
+    { name: "Cường Chú", bonus: { matkPct: 0.1 } },
+    { name: "Tụ Lực", bonus: { startingRage: 1 } },
+    { name: "Khuếch Tán", bonus: { matkPct: 0.06, mdefFlat: 5 } }
+  ],
+  SUPPORT: [
+    { name: "Thần Hộ", bonus: { shieldStart: 16 } },
+    { name: "Trị Liệu", bonus: { healPct: 0.08 } },
+    { name: "Cổ Vũ", bonus: { startingRage: 1 } }
+  ],
+  FIGHTER: [
+    { name: "Cuồng Nộ", bonus: { atkPct: 0.08 } },
+    { name: "Bền Bỉ", bonus: { hpPct: 0.05 } },
+    { name: "Chiến Ý", bonus: { critPct: 0.06, atkPct: 0.04 } }
+  ]
+};
 
 const UI_FONT = "Segoe UI";
 
@@ -203,21 +258,120 @@ export class PlanningScene extends Phaser.Scene {
     this.rightPanelScrollItems = [];
     this.rightPanelScrollOffset = 0;
     this.rightPanelMaxScroll = 0;
+    this.selectedInventoryItemId = null;
+    this.selectedInventoryItemType = null;
+    this.gamepadFocus = "BOARD";
+    this.gamepadCursor = { row: ROWS - 1, col: 0, shopIndex: 0, benchIndex: 0 };
+    this.gamepadActive = false;
+    this.gamepadLastDir = { x: 0, y: 0 };
+    this.gamepadNextMoveAt = 0;
+    this.gamepadButtonLatch = {};
+    this.gamepadHintText = null;
+    this.gamepadCursorLayer = null;
+  }
+
+  resetTransientSceneState() {
+    this.phase = PHASE.PLANNING;
+    this.aiMode = "MEDIUM";
+    this.tileLookup = new Map();
+    this.playerCellZones = [];
+    this.buttons = {};
+    this.benchSlots = [];
+    this.shopCards = [];
+    this.planningSprites = [];
+    this.combatSprites = [];
+    this.overlaySprites = [];
+    this.logs = [];
+    this.selectedBenchIndex = null;
+    this.turnQueue = [];
+    this.turnIndex = 0;
+    this.actionCount = 0;
+    this.globalDamageMult = 1;
+    this.isActing = false;
+    this.layout = null;
+    this.boardZoom = 1;
+    this.boardPanX = 0;
+    this.boardPanY = 0;
+    this.isBoardDragging = false;
+    this.lastDragPoint = null;
+    this.boardPointerDown = null;
+    this.boardDragConsumed = false;
+    this.gapMarkers = [];
+    this.boardEdgeLabels = [];
+    this.roundBackgroundImage = null;
+    this.roundBackgroundMask = null;
+    this.roundBackgroundKey = null;
+    this.logHistory = [];
+    this.historyFilter = "ALL";
+    this.historyModalVisible = false;
+    this.historyModalParts = [];
+    this.historyFilterButtons = [];
+    this.historyListItems = [];
+    this.historyScrollOffset = 0;
+    this.historyMaxScroll = 0;
+    this.historyListViewport = null;
+    this.historyButtonRect = null;
+    this.attackPreviewLayer = null;
+    this.attackPreviewSword = null;
+    this.previewHoverUnit = null;
+    this.headerStatChips = {};
+    this.headerMetaText = null;
+    this.enemyInfoExpanded = false;
+    this.inventoryCells = [];
+    this.storageSummaryText = null;
+    this.storageCraftText = null;
+    this.rightPanelContentWidth = 0;
+    this.rightPanelArea = null;
+    this.rightPanelMask = null;
+    this.rightPanelMaskShape = null;
+    this.rightPanelScrollItems = [];
+    this.rightPanelScrollOffset = 0;
+    this.rightPanelMaxScroll = 0;
+    this.selectedInventoryItemId = null;
+    this.selectedInventoryItemType = null;
+    this.gamepadFocus = "BOARD";
+    this.gamepadCursor = { row: ROWS - 1, col: 0, shopIndex: 0, benchIndex: 0 };
+    this.gamepadActive = false;
+    this.gamepadLastDir = { x: 0, y: 0 };
+    this.gamepadNextMoveAt = 0;
+    this.gamepadButtonLatch = {};
+    this.gamepadHintText = null;
+    this.gamepadCursorLayer = null;
+    this.settingsVisible = false;
+    this.settingsOverlay = [];
+    this.modalButtons = {};
+  }
+
+  resetBoardViewTransform(refresh = false) {
+    this.boardZoom = 1;
+    this.boardPanX = 0;
+    this.boardPanY = 0;
+    this.isBoardDragging = false;
+    this.lastDragPoint = null;
+    this.boardPointerDown = null;
+    this.boardDragConsumed = false;
+    if (refresh && this.tileLookup?.size && this.player?.board) {
+      this.refreshBoardGeometry();
+    }
   }
 
   init(data) {
+    this.resetTransientSceneState();
     this.incomingData = data ?? null;
   }
 
   create() {
     this.cameras.main.setBackgroundColor("#10141b");
     this.input.mouse?.disableContextMenu();
+    this.input.keyboard?.removeAllListeners();
+    this.input.removeAllListeners();
     this.layout = this.computeLayout();
     this.runtimeSettings = this.incomingData?.settings ?? loadUiSettings();
     this.gameMode = this.incomingData?.mode ?? this.gameMode;
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
+    this.audioFx.setVolumeLevel(this.runtimeSettings.volumeLevel ?? 10);
     this.audioFx.startBgm("bgm_planning", 0.2);
     this.drawBoard();
     this.createHud();
@@ -228,6 +382,7 @@ export class PlanningScene extends Phaser.Scene {
     this.createBenchSlots();
     this.setupBoardViewInput();
     this.setupInput();
+    this.setupGamepadInput();
 
     const forceNewRun = this.incomingData?.forceNewRun === true;
     if (forceNewRun) {
@@ -256,7 +411,11 @@ export class PlanningScene extends Phaser.Scene {
     if (!settings) return;
     this.runtimeSettings = { ...this.runtimeSettings, ...settings };
     if (settings.aiMode && AI_SETTINGS[settings.aiMode]) this.aiMode = settings.aiMode;
+    const loseCondition = normalizeLoseCondition(settings.loseCondition ?? this.player?.loseCondition ?? DEFAULT_LOSE_CONDITION);
+    this.runtimeSettings.loseCondition = loseCondition;
+    if (this.player) this.player.loseCondition = loseCondition;
     if (typeof settings.audioEnabled === "boolean") this.audioFx.setEnabled(settings.audioEnabled);
+    if (settings.volumeLevel != null) this.audioFx.setVolumeLevel(settings.volumeLevel);
     this.audioFx.startBgm("bgm_planning", 0.2);
     this.refreshPlanningUi();
   }
@@ -266,12 +425,13 @@ export class PlanningScene extends Phaser.Scene {
       if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.beginCombat();
     });
     this.input.keyboard.on("keydown-R", () => this.startNewRun());
-    this.input.keyboard.on("keydown-ONE", () => this.setAIMode("EASY"));
-    this.input.keyboard.on("keydown-TWO", () => this.setAIMode("MEDIUM"));
-    this.input.keyboard.on("keydown-THREE", () => this.setAIMode("HARD"));
-    this.input.keyboard.on("keydown-NUMPAD_ONE", () => this.setAIMode("EASY"));
-    this.input.keyboard.on("keydown-NUMPAD_TWO", () => this.setAIMode("MEDIUM"));
-    this.input.keyboard.on("keydown-NUMPAD_THREE", () => this.setAIMode("HARD"));
+
+    this.input.keyboard.on("keydown-S", () => {
+      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+    });
+    this.input.keyboard.on("keydown-DELETE", () => {
+      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+    });
     this.input.keyboard.on("keydown-ESC", () => {
       if (this.historyModalVisible) {
         this.toggleHistoryModal(false);
@@ -279,6 +439,188 @@ export class PlanningScene extends Phaser.Scene {
       }
       this.toggleSettingsOverlay();
     });
+  }
+
+  setupGamepadInput() {
+    this.gamepadCursorLayer = this.add.graphics();
+    this.gamepadCursorLayer.setDepth(3600);
+    this.input.gamepad?.on("connected", () => {
+      this.gamepadActive = true;
+      this.addLog("Đã kết nối tay cầm.");
+    });
+    this.input.gamepad?.on("disconnected", () => {
+      const hasPad = this.input.gamepad?.getAll()?.some((pad) => pad?.connected);
+      this.gamepadActive = !!hasPad;
+      if (!hasPad) {
+        this.gamepadFocus = "BOARD";
+        this.gamepadCursorLayer?.clear();
+      }
+      this.addLog("Tay cầm đã ngắt kết nối.");
+    });
+  }
+
+  getActivePad() {
+    const pads = this.input.gamepad?.getAll?.() ?? [];
+    return pads.find((pad) => pad?.connected) ?? null;
+  }
+
+  consumePadButton(pad, index) {
+    const pressed = !!pad?.buttons?.[index]?.pressed;
+    const key = String(index);
+    const wasPressed = !!this.gamepadButtonLatch[key];
+    if (pressed && !wasPressed) {
+      this.gamepadButtonLatch[key] = true;
+      return true;
+    }
+    if (!pressed && wasPressed) this.gamepadButtonLatch[key] = false;
+    return false;
+  }
+
+  readPadDirection(pad) {
+    const dpadLeft = !!pad?.buttons?.[14]?.pressed;
+    const dpadRight = !!pad?.buttons?.[15]?.pressed;
+    const dpadUp = !!pad?.buttons?.[12]?.pressed;
+    const dpadDown = !!pad?.buttons?.[13]?.pressed;
+    const axisX = Number.isFinite(pad?.axes?.[0]?.getValue?.()) ? pad.axes[0].getValue() : 0;
+    const axisY = Number.isFinite(pad?.axes?.[1]?.getValue?.()) ? pad.axes[1].getValue() : 0;
+    const left = dpadLeft || axisX < -0.55;
+    const right = dpadRight || axisX > 0.55;
+    const up = dpadUp || axisY < -0.55;
+    const down = dpadDown || axisY > 0.55;
+    const dx = left === right ? 0 : left ? -1 : 1;
+    const dy = up === down ? 0 : up ? -1 : 1;
+    return { dx, dy };
+  }
+
+  update(_time, _delta) {
+    const pad = this.getActivePad();
+    this.gamepadActive = !!pad;
+    if (!pad) {
+      this.gamepadCursorLayer?.clear();
+      return;
+    }
+
+    const now = this.time.now;
+    const { dx, dy } = this.readPadDirection(pad);
+    const moved = dx !== 0 || dy !== 0;
+    if (moved) {
+      const dirChanged = dx !== this.gamepadLastDir.x || dy !== this.gamepadLastDir.y;
+      if (dirChanged || now >= this.gamepadNextMoveAt) {
+        this.handleGamepadMove(dx, dy);
+        this.gamepadNextMoveAt = now + (dirChanged ? 170 : 120);
+        this.gamepadLastDir = { x: dx, y: dy };
+      }
+    } else {
+      this.gamepadLastDir = { x: 0, y: 0 };
+      this.gamepadNextMoveAt = 0;
+    }
+
+    if (this.consumePadButton(pad, 0)) this.handleGamepadConfirm();
+    if (this.consumePadButton(pad, 1)) this.handleGamepadCancel();
+    if (this.consumePadButton(pad, 2)) this.gamepadFocus = "SHOP";
+    if (this.consumePadButton(pad, 3)) this.gamepadFocus = "BOARD";
+    if (this.consumePadButton(pad, 4)) this.gamepadFocus = "BENCH";
+    if (this.consumePadButton(pad, 5)) this.gamepadFocus = "SHOP";
+    if (this.consumePadButton(pad, 8)) this.toggleSettingsOverlay();
+    if (this.consumePadButton(pad, 9) && this.phase === PHASE.PLANNING && !this.settingsVisible) this.beginCombat();
+
+    this.refreshGamepadCursorVisual();
+  }
+
+  handleGamepadMove(dx, dy) {
+    if (this.settingsVisible || this.historyModalVisible) return;
+    if (this.gamepadFocus === "SHOP") {
+      this.gamepadCursor.shopIndex = clamp(this.gamepadCursor.shopIndex + dx, 0, 4);
+      if (dy < 0) this.gamepadFocus = "BOARD";
+      if (dy > 0) this.gamepadFocus = "BENCH";
+      return;
+    }
+    if (this.gamepadFocus === "BENCH") {
+      const cap = Math.max(1, this.getBenchCap());
+      const cols = Math.max(1, this.layout?.benchCols ?? 5);
+      const index = this.gamepadCursor.benchIndex;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const maxRow = Math.floor((cap - 1) / cols);
+      const nextCol = clamp(col + dx, 0, cols - 1);
+      const nextRow = clamp(row + dy, 0, maxRow);
+      this.gamepadCursor.benchIndex = clamp(nextRow * cols + nextCol, 0, cap - 1);
+      if (dy < 0 && row === 0) this.gamepadFocus = "SHOP";
+      return;
+    }
+
+    this.gamepadFocus = "BOARD";
+    this.gamepadCursor.col = clamp(this.gamepadCursor.col + dx, 0, PLAYER_COLS - 1);
+    this.gamepadCursor.row = clamp(this.gamepadCursor.row + dy, 0, ROWS - 1);
+    if (dy > 0 && this.gamepadCursor.row >= ROWS - 1) this.gamepadFocus = "BENCH";
+  }
+
+  handleGamepadConfirm() {
+    if (this.historyModalVisible) {
+      this.toggleHistoryModal(false);
+      return;
+    }
+    if (this.settingsVisible) {
+      this.toggleSettingsOverlay(false);
+      return;
+    }
+    if (this.gamepadFocus === "SHOP") {
+      this.buyFromShop(this.gamepadCursor.shopIndex);
+      return;
+    }
+    if (this.gamepadFocus === "BENCH") {
+      this.onBenchClick(this.gamepadCursor.benchIndex);
+      if (this.selectedBenchIndex != null) this.gamepadFocus = "BOARD";
+      return;
+    }
+    if (this.phase === PHASE.PLANNING) {
+      this.onPlayerCellClick(this.gamepadCursor.row, this.gamepadCursor.col);
+    }
+  }
+
+  handleGamepadCancel() {
+    if (this.historyModalVisible) {
+      this.toggleHistoryModal(false);
+      return;
+    }
+    if (this.settingsVisible) {
+      this.toggleSettingsOverlay(false);
+      return;
+    }
+    if (this.selectedBenchIndex != null) {
+      this.selectedBenchIndex = null;
+      this.refreshBenchUi();
+      return;
+    }
+    this.gamepadFocus = "BOARD";
+  }
+
+  refreshGamepadCursorVisual() {
+    if (!this.gamepadCursorLayer) return;
+    this.gamepadCursorLayer.clear();
+    if (!this.gamepadActive || this.settingsVisible || this.historyModalVisible) return;
+
+    if (this.gamepadFocus === "SHOP") {
+      const card = this.shopCards?.[this.gamepadCursor.shopIndex];
+      if (!card?.bg) return;
+      this.gamepadCursorLayer.lineStyle(2, 0xfff3a1, 0.95);
+      this.gamepadCursorLayer.strokeRect(card.bg.x - card.bg.width / 2, card.bg.y - card.bg.height / 2, card.bg.width, card.bg.height);
+      return;
+    }
+
+    if (this.gamepadFocus === "BENCH") {
+      const slot = this.benchSlots?.[this.gamepadCursor.benchIndex];
+      if (!slot?.bg) return;
+      this.gamepadCursorLayer.lineStyle(2, 0xfff3a1, 0.95);
+      this.gamepadCursorLayer.strokeRect(slot.bg.x - slot.slotW / 2, slot.bg.y - slot.slotH / 2, slot.slotW, slot.slotH);
+      return;
+    }
+
+    const tile = this.tileLookup.get(gridKey(this.gamepadCursor.row, this.gamepadCursor.col));
+    if (!tile) return;
+    this.gamepadCursorLayer.lineStyle(3, 0xfff3a1, 0.95);
+    this.gamepadCursorLayer.fillStyle(0xffe99b, 0.12);
+    this.drawDiamond(this.gamepadCursorLayer, tile.center.x, tile.center.y);
   }
 
   setAIMode(mode) {
@@ -290,6 +632,31 @@ export class PlanningScene extends Phaser.Scene {
     this.addLog(`Độ khó AI -> ${AI_SETTINGS[mode].label}`);
     this.refreshHeader();
     this.persistProgress();
+  }
+
+  getLoseCondition() {
+    return normalizeLoseCondition(this.player?.loseCondition ?? this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
+  }
+
+  setLoseCondition(nextMode) {
+    const mode = normalizeLoseCondition(nextMode);
+    if (this.getLoseCondition() === mode) return;
+    this.runtimeSettings.loseCondition = mode;
+    if (this.player) {
+      this.player.loseCondition = mode;
+      if (mode === "NO_HEARTS" && this.player.hp <= 0) this.player.hp = 3;
+      if (mode === "NO_UNITS") this.player.hp = Math.max(1, this.player.hp);
+    }
+    saveUiSettings(this.runtimeSettings);
+    this.modalButtons?.loseMode?.setLabel(`Điều kiện thua: ${getLoseConditionLabel(mode)}`);
+    this.addLog(`Đã đổi ${getLoseConditionLabel(mode)}.`);
+    this.refreshHeader();
+    this.persistProgress();
+  }
+
+  toggleLoseCondition() {
+    const next = this.getLoseCondition() === "NO_UNITS" ? "NO_HEARTS" : "NO_UNITS";
+    this.setLoseCondition(next);
   }
 
   startNewRun() {
@@ -309,9 +676,12 @@ export class PlanningScene extends Phaser.Scene {
     this.logHistory = [];
     this.historyScrollOffset = 0;
     this.historyFilter = "ALL";
+    this.resetBoardViewTransform(true);
 
     this.applyRunState(createDefaultRunState());
     this.player.gameMode = this.gameMode;
+    this.player.loseCondition = normalizeLoseCondition(this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
+    this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
     this.applyRuntimeSettings(this.runtimeSettings);
     this.enterPlanning(false);
     this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
@@ -323,13 +693,94 @@ export class PlanningScene extends Phaser.Scene {
     this.audioFx.setEnabled(state.audioEnabled !== false);
     this.player = state.player;
     this.ensurePlayerStateFields();
+    this.runtimeSettings.loseCondition = normalizeLoseCondition(this.player.loseCondition ?? this.runtimeSettings?.loseCondition);
     this.refreshPlanningUi();
   }
 
+  normalizeOwnedUnit(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const baseId = raw.baseId ?? raw.base?.id;
+    const base = UNIT_BY_ID[baseId];
+    if (!base) return null;
+    const starRaw = Number.isFinite(raw.star) ? Math.round(raw.star) : 1;
+    return {
+      uid: raw.uid ?? createUnitUid(),
+      baseId: base.id,
+      star: clamp(starRaw, 1, 3),
+      base,
+      equips: Array.isArray(raw.equips) ? raw.equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
+    };
+  }
+
+  normalizeBoard(rawBoard) {
+    const board = this.createEmptyBoard();
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < PLAYER_COLS; col += 1) {
+        board[row][col] = this.normalizeOwnedUnit(rawBoard?.[row]?.[col]);
+      }
+    }
+    return board;
+  }
+
   ensurePlayerStateFields() {
+    this.player.board = this.normalizeBoard(this.player.board);
+    this.player.bench = (Array.isArray(this.player.bench) ? this.player.bench : [])
+      .map((unit) => this.normalizeOwnedUnit(unit))
+      .filter(Boolean);
+
+    if (!Array.isArray(this.player.shop)) this.player.shop = [];
+    this.player.level = clamp(Number.isFinite(this.player.level) ? Math.floor(this.player.level) : 1, 1, 9);
+    this.player.round = Math.max(1, Number.isFinite(this.player.round) ? Math.floor(this.player.round) : 1);
+    this.player.hp = Math.max(0, Number.isFinite(this.player.hp) ? Math.round(this.player.hp) : 1);
+    this.player.loseCondition = normalizeLoseCondition(this.player.loseCondition ?? this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
+    if (this.player.loseCondition === "NO_HEARTS") {
+      if (!Number.isFinite(this.player.hp) || this.player.hp <= 0) this.player.hp = 3;
+    } else {
+      this.player.hp = Math.max(this.player.hp, 1);
+    }
+    this.player.gold = Math.max(0, Number.isFinite(this.player.gold) ? Math.floor(this.player.gold) : 10);
+    this.player.xp = Math.max(0, Number.isFinite(this.player.xp) ? Math.floor(this.player.xp) : 0);
+    const xpNeed = getXpToLevelUp(this.player.level);
+    if (xpNeed !== Number.POSITIVE_INFINITY) {
+      this.player.xp = Math.min(this.player.xp, Math.max(0, xpNeed - 1));
+    }
+    if (!Number.isFinite(this.player.winStreak)) this.player.winStreak = 0;
+    if (!Number.isFinite(this.player.loseStreak)) this.player.loseStreak = 0;
+    if (!Number.isFinite(this.player.deployCapBonus)) this.player.deployCapBonus = 0;
+    if (!Number.isFinite(this.player.benchBonus)) this.player.benchBonus = 0;
+    if (!Number.isFinite(this.player.interestCapBonus)) this.player.interestCapBonus = 0;
+    if (!Number.isFinite(this.player.rollCostDelta)) this.player.rollCostDelta = 0;
+    if (!Number.isFinite(this.player.startingRage)) this.player.startingRage = 0;
+    if (!Number.isFinite(this.player.startingShield)) this.player.startingShield = 0;
+    if (!Number.isFinite(this.player.teamAtkPct)) this.player.teamAtkPct = 0;
+    if (!Number.isFinite(this.player.teamMatkPct)) this.player.teamMatkPct = 0;
+    if (!Number.isFinite(this.player.teamHpPct)) this.player.teamHpPct = 0;
+    if (!Number.isFinite(this.player.lifestealPct)) this.player.lifestealPct = 0;
+    if (!Number.isFinite(this.player.hpLossReduce)) this.player.hpLossReduce = 0;
+    if (!Number.isFinite(this.player.extraClassCount)) this.player.extraClassCount = 0;
+    if (!Number.isFinite(this.player.extraTribeCount)) this.player.extraTribeCount = 0;
+    if (typeof this.player.shopLocked !== "boolean") this.player.shopLocked = false;
+
     if (!Array.isArray(this.player.itemBag)) this.player.itemBag = [];
     if (!Array.isArray(this.player.craftedItems)) this.player.craftedItems = [];
-    if (!Array.isArray(this.player.enemyPreview)) this.player.enemyPreview = [];
+    if (!Array.isArray(this.player.enemyPreview)) {
+      this.player.enemyPreview = [];
+    } else {
+      this.player.enemyPreview = this.player.enemyPreview
+        .map((entry) => {
+          if (!entry || !UNIT_BY_ID[entry.baseId]) return null;
+          const starRaw = Number.isFinite(entry.star) ? Math.round(entry.star) : 1;
+          const rowRaw = Number.isFinite(entry.row) ? Math.round(entry.row) : 0;
+          const colRaw = Number.isFinite(entry.col) ? Math.round(entry.col) : RIGHT_COL_START;
+          return {
+            baseId: entry.baseId,
+            star: clamp(starRaw, 1, 3),
+            row: clamp(rowRaw, 0, ROWS - 1),
+            col: clamp(colRaw, RIGHT_COL_START, RIGHT_COL_END)
+          };
+        })
+        .filter(Boolean);
+    }
     if (!Number.isInteger(this.player.enemyPreviewRound)) this.player.enemyPreviewRound = 0;
     if (!Number.isFinite(this.player.enemyBudget)) this.player.enemyBudget = 0;
     if (!this.player.gameMode) this.player.gameMode = this.gameMode;
@@ -362,16 +813,23 @@ export class PlanningScene extends Phaser.Scene {
     } else {
       this.player.loseStreak += 1;
       this.player.winStreak = 0;
-      this.player.hp -= result.hpLoss ?? 0;
-      this.addLog(`Thua vòng ${result.round}. -${result.hpLoss ?? 0} máu.`);
-    }
-
-    if (this.player.hp <= 0) {
-      this.handleTotalDefeat();
-      return;
+      if (this.getLoseCondition() === "NO_HEARTS") {
+        const damage = Math.max(1, Math.min(4, Number.isFinite(result.damage) ? Math.floor(result.damage) : 1));
+        this.player.hp = Math.max(0, this.player.hp - damage);
+        this.addLog(`Thua vòng ${result.round}. -${damage} tim (${this.player.hp} tim còn lại).`);
+        if (this.player.hp <= 0) {
+          this.handleTotalDefeat();
+          return;
+        }
+      } else {
+        this.addLog(`Thua vòng ${result.round}. Toàn đội đã bị hạ gục.`);
+        this.handleTotalDefeat();
+        return;
+      }
     }
 
     this.player.round = (result.round ?? this.player.round) + 1;
+    this.resetBoardViewTransform(true);
     this.enterPlanning(true);
     this.showRoundResultBanner(won ? "CHIẾN THẮNG" : "THẤT BẠI", won);
     this.persistProgress();
@@ -401,14 +859,15 @@ export class PlanningScene extends Phaser.Scene {
     });
   }
 
-  createOwnedUnit(baseId, star = 1) {
+  createOwnedUnit(baseId, star = 1, equips = []) {
     const base = UNIT_BY_ID[baseId];
     if (!base) return null;
     return {
       uid: createUnitUid(),
       baseId: base.id,
       star,
-      base
+      base,
+      equips: Array.isArray(equips) ? equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
     };
   }
 
@@ -542,21 +1001,39 @@ export class PlanningScene extends Phaser.Scene {
     this.originY = this.layout.boardOriginY;
     this.createBoardBackground();
 
+    // Decorative elements
+    if (!this.decorationsCreated) {
+      this.decorationsCreated = true;
+      const random = new Phaser.Math.RandomDataGenerator([123]);
+      const decoOptions = ["🌲", "🌳", "🪨", "🍄", "🌿", "🌺", "🌾"];
+      for (let i = 0; i < 18; i++) {
+        const angle = random.angle();
+        const dist = random.between(this.layout.boardPanelW * 0.6, this.layout.boardPanelW * 0.9);
+        const x = this.layout.boardPanelX + this.layout.boardPanelW / 2 + Math.cos(angle) * dist;
+        const y = this.layout.boardPanelY + this.layout.boardPanelH / 2 + Math.sin(angle) * dist * 0.6;
+        if (this.pointInBoardPanel(x, y)) continue;
+
+        const text = this.add.text(x, y, random.pick(decoOptions), {
+          fontSize: random.pick(["20px", "24px", "28px"]),
+          color: "#ffffff"
+        });
+        text.setAlpha(0.6 + random.realInRange(0, 0.4));
+        text.setDepth(y);
+        this.overlaySprites.push(text); // Add to overlay so they get cleared/managed or just leave them? 
+        // Actually overlaySprites is cleared often. Using planningSprites or a separate list.
+        // Let's attach to nothing for now, just let them be background. 
+        // Or better, check if they persist. They are Phaser GameObjects.
+        // I should probably track them to destroy on restart maybe?
+      }
+    }
+
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < COLS; col += 1) {
         const center = this.gridToScreen(col, row);
         const tile = this.add.graphics();
         this.paintGrassTile(tile, center.x, center.y, row, col);
-        const label = this.add.text(center.x - 14, center.y - 10, "", {
-          fontFamily: UI_FONT,
-          fontSize: "11px",
-          color: UI_COLORS.textSecondary
-        });
-        label.setAlpha(0);
-        label.setVisible(false);
-        label.setDepth(center.y + 1);
-
-        this.tileLookup.set(gridKey(row, col), { tile, center, label });
+        // Removed per-tile label for cleaner UX
+        this.tileLookup.set(gridKey(row, col), { tile, center });
       }
     }
     this.createBoardEdgeLabels();
@@ -662,8 +1139,8 @@ export class PlanningScene extends Phaser.Scene {
 
   paintRiverTile(graphics, x, y, row) {
     const { tileW, tileH } = this.getTileSize();
-    const w = tileW * 0.42;
-    const h = tileH * 0.42;
+    const w = tileW * 0.95;
+    const h = tileH * 0.95;
     const even = row % 2 === 0;
     const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
     const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
@@ -739,6 +1216,7 @@ export class PlanningScene extends Phaser.Scene {
     );
     rightPanel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.72);
     rightPanel.setDepth(1800);
+    rightPanel.setInteractive();
     this.rightPanelArea = {
       x: l.rightPanelX + 2,
       y: l.sidePanelY + 2,
@@ -785,7 +1263,6 @@ export class PlanningScene extends Phaser.Scene {
 
     const statDefs = [
       { key: "round", icon: "🧭", label: "Vòng" },
-      { key: "hp", icon: "❤", label: "Máu" },
       { key: "gold", icon: "🪙", label: "Vàng" },
       { key: "level", icon: "⬆", label: "Cấp" },
       { key: "xp", icon: "✦", label: "XP" },
@@ -925,9 +1402,9 @@ export class PlanningScene extends Phaser.Scene {
       color: UI_COLORS.textPrimary,
       lineSpacing: 4
     }).setDepth(2000);
-    this.storageSummaryText.setFixedSize(rightW, 38);
+    this.storageSummaryText.setFixedSize(rightW, 56);
     this.registerRightPanelScrollItem(this.storageSummaryText);
-    y += 62;
+    y += 78;
 
     const invCols = 4;
     const invRows = 2;
@@ -962,12 +1439,14 @@ export class PlanningScene extends Phaser.Scene {
         .setDepth(2001);
 
       const cell = { bg, icon, count, itemId: null, amount: 0 };
+      bg.on("pointerdown", () => this.onInventoryCellClick(cell));
       this.tooltip.attach(bg, () => {
         if (!cell.itemId) return { title: "Ô vật phẩm", body: "Trống." };
         const item = ITEM_BY_ID[cell.itemId];
+        const itemType = item?.kind === "equipment" ? "Trang bị" : "Nguyên liệu";
         return {
           title: `${item?.icon ?? "❔"} ${item?.name ?? cell.itemId}`,
-          body: `Số lượng: ${cell.amount}`
+          body: `Loại: ${itemType}\nSố lượng: ${cell.amount}${item?.kind === "equipment" ? "\nNhấn vào thú để trang bị." : "\nDùng để ghép đồ."}`
         };
       });
       this.registerRightPanelScrollItem(bg);
@@ -1012,6 +1491,35 @@ export class PlanningScene extends Phaser.Scene {
       w: 146,
       h: 26
     };
+    y += 50;
+
+    this.craftTitleText = this.add.text(rightX, y, "🛠 CÔNG THỨC CHẾ TẠO", {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textSecondary,
+      fontStyle: "bold"
+    }).setDepth(2000);
+    this.registerRightPanelScrollItem(this.craftTitleText);
+    y += 24;
+
+    const craftW = rightW;
+    const craftH = 32;
+    CRAFT_RECIPES.forEach((recipe) => {
+      const reqIcons = recipe.requires.map((id) => ITEM_BY_ID[id]?.icon ?? "?").join(" + ");
+      const labelText = `${recipe.icon} = ${reqIcons}`;
+      const btn = this.createButton(rightX, y, craftW, craftH, labelText, () => this.craftItem(recipe.id), {
+        variant: "subtle",
+        fontSize: 13,
+        align: "left"
+      });
+      this.tooltip.attach(btn.bg, () => ({
+        title: `${recipe.icon} ${recipe.name}`,
+        body: `${recipe.description}\nNguyên liệu: ${recipe.requires.map((id) => ITEM_BY_ID[id]?.name).join(" + ")}`
+      }));
+      this.registerRightPanelButton(btn);
+      y += craftH + 4;
+    });
+
     this.refreshRightPanelScrollMetrics();
   }
 
@@ -1076,7 +1584,10 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.roll = this.createButton(x, y1, smallW, 44, "Đổi tướng", () => this.rollShop());
     this.buttons.xp = this.createButton(x + smallW + gap, y1, smallW, 44, "Mua XP", () => this.buyXp());
     this.buttons.lock = this.createButton(x + (smallW + gap) * 2, y1, smallW, 44, "Khóa: Tắt", () => this.toggleLock());
-    this.buttons.reset = this.createButton(x + (smallW + gap) * 3, y1, mediumW, 44, "Ván mới", () => this.startNewRun(), {
+    this.buttons.sell = this.createButton(x + (smallW + gap) * 3, y1, smallW, 44, "Bán (S)", () => this.sellSelectedUnit(), {
+      variant: "ghost"
+    });
+    this.buttons.reset = this.createButton(x + (smallW + gap) * 4, y1, mediumW, 44, "Ván mới", () => this.startNewRun(), {
       variant: "ghost"
     });
     this.buttons.start = this.createButton(
@@ -1112,34 +1623,16 @@ export class PlanningScene extends Phaser.Scene {
       this.registerRightPanelButton(this.buttons.history);
     }
 
-    const craftY = l.sidePanelY + l.sidePanelH - 40;
-    const craftGap = UI_SPACING.XS;
-    const craftW = Math.floor((l.sidePanelW - UI_SPACING.SM * 2 - craftGap * 2) / 3);
-    const craftX = l.rightPanelX + UI_SPACING.SM;
-    this.buttons.craft1 = this.createButton(craftX, craftY, craftW, 30, "Ghép Móng", () => this.craftItem("claw_bark"), {
-      variant: "subtle"
-    });
-    this.buttons.craft2 = this.createButton(craftX + craftW + craftGap, craftY, craftW, 30, "Ghép Cung", () => this.craftItem("crystal_feather"), {
-      variant: "subtle"
-    });
-    this.buttons.craft3 = this.createButton(
-      craftX + (craftW + craftGap) * 2,
-      craftY,
-      craftW,
-      30,
-      "Ghép Khiên",
-      () => this.craftItem("bark_crystal"),
-      { variant: "subtle" }
-    );
+
 
     this.controlsText = this.add.text(
       l.boardPanelX,
       l.controlsY,
-      "[SPACE] Giao tranh • [R] Ván mới • [ESC] Cài đặt • Lăn chuột: Zoom • Giữ chuột/mid/right để kéo bản đồ",
+      "[SPACE] Giao tranh • [S] Bán thú • [R] Ván mới • [ESC] Cài đặt • Chuột: Zoom/Kéo bản đồ • Tay cầm: A chọn, B hủy, X shop, LB dự bị",
       {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: UI_COLORS.textMuted
+        fontFamily: UI_FONT,
+        fontSize: "13px",
+        color: UI_COLORS.textMuted
       }
     );
     this.controlsText.setDepth(2000);
@@ -1239,13 +1732,13 @@ export class PlanningScene extends Phaser.Scene {
     shade.setInteractive();
     this.settingsOverlay.push(shade);
 
-    const panel = this.add.rectangle(cx, cy, 520, 370, 0x102035, 0.98);
+    const panel = this.add.rectangle(cx, cy, 540, 488, 0x102035, 0.98);
     panel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.9);
     panel.setDepth(5001);
     panel.setVisible(false);
     this.settingsOverlay.push(panel);
 
-    const title = this.add.text(cx, cy - 150, "Cài đặt trong trận", {
+    const title = this.add.text(cx, cy - 180, "Cài đặt trong trận", {
       fontFamily: UI_FONT,
       fontSize: "26px",
       color: "#ffeab0"
@@ -1266,12 +1759,13 @@ export class PlanningScene extends Phaser.Scene {
     };
 
     this.modalButtons = {};
-    this.modalButtons.save = makeModalBtn(0, -70, 230, 44, "Lưu tiến trình", () => this.onSaveClick());
-    this.modalButtons.load = makeModalBtn(0, -18, 230, 44, "Tải tiến trình", () => this.onLoadClick());
-    this.modalButtons.clear = makeModalBtn(0, 34, 230, 44, "Xóa tiến trình lưu", () => this.onClearClick());
-    this.modalButtons.audio = makeModalBtn(0, 86, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.menu = makeModalBtn(-126, 146, 220, 44, "Về trang chủ", () => this.goMainMenu());
-    this.modalButtons.close = makeModalBtn(126, 146, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
+    this.modalButtons.save = makeModalBtn(0, -102, 260, 44, "Lưu tiến trình", () => this.onSaveClick());
+    this.modalButtons.load = makeModalBtn(0, -50, 260, 44, "Tải tiến trình", () => this.onLoadClick());
+    this.modalButtons.clear = makeModalBtn(0, 2, 260, 44, "Xóa tiến trình lưu", () => this.onClearClick());
+    this.modalButtons.audio = makeModalBtn(0, 54, 260, 44, "Âm thanh: Bật", () => this.toggleAudio());
+    this.modalButtons.volume = makeModalBtn(0, 106, 260, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
+    this.modalButtons.menu = makeModalBtn(-136, 158, 230, 44, "Về trang chủ", () => this.goMainMenu());
+    this.modalButtons.close = makeModalBtn(136, 158, 230, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
   toggleSettingsOverlay(force = null) {
@@ -1280,6 +1774,12 @@ export class PlanningScene extends Phaser.Scene {
     this.settingsVisible = next;
     if (this.modalButtons?.audio) {
       this.modalButtons.audio.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
+    }
+    if (this.modalButtons?.volume) {
+      this.modalButtons.volume.setLabel(`Âm lượng: ${this.audioFx.getVolumeLevel()}/10`);
+    }
+    if (this.modalButtons?.loseMode) {
+      this.modalButtons.loseMode.setLabel(`Điều kiện thua: ${getLoseConditionLabel(this.getLoseCondition())}`);
     }
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
@@ -1469,8 +1969,12 @@ export class PlanningScene extends Phaser.Scene {
     this.audioFx.setEnabled(loaded.audioEnabled !== false);
     this.runtimeSettings.audioEnabled = this.audioFx.enabled;
     this.runtimeSettings.aiMode = this.aiMode;
+    this.runtimeSettings.loseCondition = this.getLoseCondition();
+    this.runtimeSettings.volumeLevel = this.audioFx.getVolumeLevel();
     saveUiSettings(this.runtimeSettings);
     this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
+    this.modalButtons?.volume?.setLabel(`Âm lượng: ${this.audioFx.getVolumeLevel()}/10`);
+    this.modalButtons?.loseMode?.setLabel(`Điều kiện thua: ${getLoseConditionLabel(this.getLoseCondition())}`);
     this.prepareEnemyPreview();
     this.addLog("Đã tải tiến trình.");
   }
@@ -1484,9 +1988,22 @@ export class PlanningScene extends Phaser.Scene {
   toggleAudio() {
     this.audioFx.setEnabled(!this.audioFx.enabled);
     this.runtimeSettings.audioEnabled = this.audioFx.enabled;
+    this.runtimeSettings.volumeLevel = this.audioFx.getVolumeLevel();
     saveUiSettings(this.runtimeSettings);
     this.modalButtons?.audio?.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
+    this.modalButtons?.volume?.setLabel(`Âm lượng: ${this.audioFx.getVolumeLevel()}/10`);
     this.addLog(`Âm thanh ${this.audioFx.enabled ? "Bật" : "Tắt"}.`);
+    this.persistProgress();
+  }
+
+  changeVolumeLevel(step = 1) {
+    const current = this.audioFx.getVolumeLevel();
+    const next = current + step > 10 ? 1 : current + step;
+    this.audioFx.setVolumeLevel(next);
+    this.runtimeSettings.volumeLevel = next;
+    saveUiSettings(this.runtimeSettings);
+    this.modalButtons?.volume?.setLabel(`Âm lượng: ${next}/10`);
+    this.addLog(`Âm lượng: ${next}/10.`);
     this.persistProgress();
   }
 
@@ -1506,8 +2023,8 @@ export class PlanningScene extends Phaser.Scene {
         zone.setInteractive({ useHandCursor: true });
         this.tooltip.attach(zone, () => {
           const unit = this.player?.board?.[row]?.[col];
-          if (!unit) return { title: `Ô ${BOARD_FILES[col]}${row + 1}`, body: "Ô trống." };
-          return this.getUnitTooltip(unit.baseId, unit.star);
+          if (!unit) return { title: `Ô ${this.toChessCoord(row, col)}`, body: "Ô trống." };
+          return this.getUnitTooltip(unit.baseId, unit.star, unit);
         });
         zone.on("pointerover", () => {
           const unit = this.player?.board?.[row]?.[col];
@@ -1553,11 +2070,17 @@ export class PlanningScene extends Phaser.Scene {
       const label = this.createBenchSlotLabel(x, yy, slotW);
       const icon = this.createBenchSlotIcon(x, yy, slotH);
       bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => this.onBenchClick(i));
+      bg.on("pointerdown", (pointer) => {
+        if (pointer?.rightButtonDown?.()) {
+          this.sellBenchIndex(i);
+          return;
+        }
+        this.onBenchClick(i);
+      });
       this.tooltip.attach(bg, () => {
         const unit = this.player?.bench?.[i];
         if (!unit) return { title: `Dự bị ${i + 1}`, body: "Ô trống." };
-        return this.getUnitTooltip(unit.baseId, unit.star);
+        return this.getUnitTooltip(unit.baseId, unit.star, unit);
       });
       this.benchSlots.push({ x, y: yy, slotW, slotH, bg, label, icon });
     }
@@ -1687,7 +2210,8 @@ export class PlanningScene extends Phaser.Scene {
         const dy0 = pointer.y - this.boardPointerDown.y;
         const moved = Math.hypot(dx0, dy0);
         const buttons = pointer.event?.buttons ?? 0;
-        const allowLeftDrag = (buttons & 1) !== 0;
+        const isPointerDown = pointer.isDown || buttons !== 0;
+        const allowLeftDrag = (buttons & 1) !== 0 || (isPointerDown && (pointer.button === 0 || pointer.primaryDown));
         const allowRightOrMiddle = (buttons & 2) !== 0 || (buttons & 4) !== 0;
         if (!this.isPanPointer(pointer) && !allowLeftDrag && !allowRightOrMiddle) return;
         if (moved < 6) return;
@@ -1758,7 +2282,8 @@ export class PlanningScene extends Phaser.Scene {
         data.center = center;
         data.tile.clear();
         this.paintGrassTile(data.tile, center.x, center.y, row, col);
-        if (data.label?.visible) data.label.setPosition(center.x - 14, center.y - 10);
+        // Label update removed
+
       }
     }
     this.refreshBoardEdgeLabels();
@@ -1806,11 +2331,27 @@ export class PlanningScene extends Phaser.Scene {
 
     const occupant = this.player.board[row][col];
     const selected = this.selectedBenchIndex != null ? this.player.bench[this.selectedBenchIndex] : null;
+    if (this.selectedInventoryItemId) {
+      if (!occupant) {
+        this.addLog("Hãy chọn ô có thú để trang bị.");
+        return;
+      }
+      this.tryEquipSelectedItem(occupant);
+      return;
+    }
 
     if (selected) {
+      // Check for duplicate unit type on board
+      if (this.checkDuplicateUnit(selected.baseId, row, col)) {
+        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        return;
+      }
+
       if (!occupant) {
         if (this.getDeployCount() >= this.getDeployCap()) {
-          this.addLog("Đã đạt giới hạn triển khai.");
+          this.addLog(
+            `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
+          );
           return;
         }
         this.player.board[row][col] = selected;
@@ -1843,6 +2384,17 @@ export class PlanningScene extends Phaser.Scene {
     }
   }
 
+  checkDuplicateUnit(baseId, ignoreRow = -1, ignoreCol = -1) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < PLAYER_COLS; c++) {
+        if (r === ignoreRow && c === ignoreCol) continue;
+        const u = this.player.board[r][c];
+        if (u && u.baseId === baseId) return true;
+      }
+    }
+    return false;
+  }
+
   onBenchClick(index) {
     if (this.settingsVisible) return;
     if (!this.canInteractFormation()) {
@@ -1851,6 +2403,11 @@ export class PlanningScene extends Phaser.Scene {
     }
     if (this.overlaySprites.length) return;
     if (index >= this.getBenchCap()) return;
+    const unit = this.player.bench[index];
+    if (unit && this.selectedInventoryItemId) {
+      this.tryEquipSelectedItem(unit);
+      return;
+    }
     if (index >= this.player.bench.length) {
       this.selectedBenchIndex = null;
       this.refreshBenchUi();
@@ -1862,11 +2419,109 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getBenchCap() {
-    return 9 + this.player.benchBonus;
+    const bonus = Number.isFinite(this.player?.benchBonus) ? Math.floor(this.player.benchBonus) : 0;
+    return Math.max(0, 9 + bonus);
+  }
+
+  sellBenchIndex(index) {
+    const unit = this.player?.bench?.[index];
+    if (!unit) return false;
+    const salePrice = Math.max(1, Math.floor(unit.base.tier * (unit.star === 3 ? 5 : unit.star === 2 ? 3 : 1)));
+    this.player.gold += salePrice;
+    this.player.bench.splice(index, 1);
+    if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
+    if (this.selectedBenchIndex != null && this.selectedBenchIndex > index) this.selectedBenchIndex -= 1;
+    this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
+    this.refreshPlanningUi();
+    this.persistProgress();
+    return true;
+  }
+
+  sellSelectedUnit() {
+    if (this.selectedBenchIndex == null) {
+      this.addLog("Hãy chọn một thú ở dự bị để bán.");
+      return;
+    }
+    if (!this.sellBenchIndex(this.selectedBenchIndex)) {
+      this.addLog("Không có thú hợp lệ để bán.");
+    }
+  }
+
+  isEquipmentItem(itemId) {
+    return ITEM_BY_ID[itemId]?.kind === "equipment";
+  }
+
+  getItemCount(itemId) {
+    if (!itemId) return 0;
+    return this.player.itemBag.reduce((sum, id) => sum + (id === itemId ? 1 : 0), 0);
+  }
+
+  consumeItem(itemId, amount = 1) {
+    if (!itemId || amount <= 0) return false;
+    let remain = amount;
+    const next = [];
+    for (let i = 0; i < this.player.itemBag.length; i += 1) {
+      const id = this.player.itemBag[i];
+      if (id === itemId && remain > 0) {
+        remain -= 1;
+        continue;
+      }
+      next.push(id);
+    }
+    if (remain > 0) return false;
+    this.player.itemBag = next;
+    return true;
+  }
+
+  onInventoryCellClick(cell) {
+    if (!cell) return;
+    if (!cell.itemId) {
+      this.selectedInventoryItemId = null;
+      this.refreshStorageUi();
+      return;
+    }
+    if (!this.isEquipmentItem(cell.itemId)) {
+      this.addLog("Vật phẩm nguyên liệu chưa thể trang bị trực tiếp. Hãy ghép trước.");
+      return;
+    }
+    this.selectedInventoryItemId = this.selectedInventoryItemId === cell.itemId ? null : cell.itemId;
+    this.refreshStorageUi();
+  }
+
+  tryEquipSelectedItem(unit) {
+    const itemId = this.selectedInventoryItemId;
+    if (!itemId || !unit) return false;
+    if (!this.isEquipmentItem(itemId)) {
+      this.addLog("Vật phẩm này không thể trang bị.");
+      this.selectedInventoryItemId = null;
+      this.refreshStorageUi();
+      return false;
+    }
+    const equips = Array.isArray(unit.equips) ? unit.equips : [];
+    if (equips.length >= 3) {
+      this.addLog(`${unit.base.name} đã đủ 3 trang bị.`);
+      return false;
+    }
+    if (!this.consumeItem(itemId, 1)) {
+      this.addLog("Không đủ vật phẩm để trang bị.");
+      this.selectedInventoryItemId = null;
+      this.refreshStorageUi();
+      return false;
+    }
+    unit.equips = [...equips, itemId];
+    const item = ITEM_BY_ID[itemId];
+    this.audioFx.play("buy");
+    this.addLog(`Trang bị ${item?.icon ?? "✨"} ${item?.name ?? itemId} cho ${unit.base.name}.`);
+    if (this.getItemCount(itemId) <= 0) this.selectedInventoryItemId = null;
+    this.refreshPlanningUi();
+    this.persistProgress();
+    return true;
   }
 
   getDeployCap() {
-    return getDeployCapByLevel(this.player.level) + this.player.deployCapBonus;
+    const level = Number.isFinite(this.player?.level) ? Math.floor(this.player.level) : 1;
+    const bonus = Number.isFinite(this.player?.deployCapBonus) ? Math.floor(this.player.deployCapBonus) : 0;
+    return getDeployCapByLevel(level) + bonus;
   }
 
   getDeployCount() {
@@ -1975,6 +2630,22 @@ export class PlanningScene extends Phaser.Scene {
     this.persistProgress();
   }
 
+  getMergeSpeciesKey(unit) {
+    const raw = unit?.base?.species ?? unit?.base?.name ?? unit?.baseId ?? "linh-thu";
+    const normalized = String(raw)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return normalized || String(unit?.baseId ?? "linh-thu");
+  }
+
+  getMergeSpeciesLabel(unit) {
+    const baseName = String(unit?.base?.name ?? unit?.baseId ?? "Linh thú").trim();
+    return baseName.replace(/\s+\d+\s*$/u, "");
+  }
+
   tryAutoMerge() {
     let merged = true;
     while (merged) {
@@ -1982,7 +2653,7 @@ export class PlanningScene extends Phaser.Scene {
       const refs = this.collectOwnedUnitRefs();
       const groups = new Map();
       refs.forEach((ref) => {
-        const key = `${ref.unit.baseId}:${ref.unit.star}`;
+        const key = `${this.getMergeSpeciesKey(ref.unit)}:${ref.unit.star}`;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(ref);
       });
@@ -1991,16 +2662,37 @@ export class PlanningScene extends Phaser.Scene {
         if (group.length < 3) continue;
         const picked = group.slice(0, 3);
         const star = picked[0].unit.star;
-        const baseId = picked[0].unit.baseId;
-        picked.forEach((ref) => this.removeOwnedUnitRef(ref));
-        const upgraded = this.createOwnedUnit(baseId, Math.min(3, star + 1));
+        const baseId = picked
+          .map((ref) => ref.unit.baseId)
+          .sort((a, b) => (UNIT_BY_ID[b]?.tier ?? 0) - (UNIT_BY_ID[a]?.tier ?? 0))[0];
+        const mergedEquip = this.collectMergeEquips(picked);
+        this.removeOwnedUnitRefs(picked);
+        const upgraded = this.createOwnedUnit(baseId, Math.min(3, star + 1), mergedEquip.kept);
         if (!upgraded) continue;
         this.placeMergedUnit(upgraded, picked[0]);
-        this.addLog(`Nâng sao: ${UNIT_BY_ID[baseId].name} -> ${upgraded.star}★`);
+        if (mergedEquip.overflow.length) {
+          this.player.itemBag.push(...mergedEquip.overflow);
+          this.addLog(`Nâng sao hoàn trả ${mergedEquip.overflow.length} trang bị dư vào túi đồ.`);
+        }
+        this.addLog(`Nâng sao: ${this.getMergeSpeciesLabel(picked[0].unit)} -> ${upgraded.star}★`);
         merged = true;
         break;
       }
     }
+  }
+
+  collectMergeEquips(refs) {
+    const all = [];
+    refs.forEach((ref) => {
+      const equips = Array.isArray(ref?.unit?.equips) ? ref.unit.equips : [];
+      equips.forEach((itemId) => {
+        if (ITEM_BY_ID[itemId]?.kind === "equipment") all.push(itemId);
+      });
+    });
+    return {
+      kept: all.slice(0, 3),
+      overflow: all.slice(3)
+    };
   }
 
   collectOwnedUnitRefs() {
@@ -2017,12 +2709,36 @@ export class PlanningScene extends Phaser.Scene {
     return refs;
   }
 
-  removeOwnedUnitRef(ref) {
-    if (ref.location === "BENCH") {
-      this.player.bench.splice(ref.index, 1);
-      return;
+  removeOwnedUnitRefs(refs) {
+    if (!Array.isArray(refs) || !refs.length) return;
+
+    const benchUidSet = new Set();
+    const benchIndexFallback = [];
+
+    refs.forEach((ref) => {
+      if (!ref) return;
+      if (ref.location === "BOARD") {
+        this.player.board[ref.row][ref.col] = null;
+        return;
+      }
+      const uid = ref.unit?.uid;
+      if (uid) {
+        benchUidSet.add(uid);
+      } else if (Number.isInteger(ref.index)) {
+        benchIndexFallback.push(ref.index);
+      }
+    });
+
+    if (benchUidSet.size) {
+      this.player.bench = this.player.bench.filter((unit) => !benchUidSet.has(unit?.uid));
     }
-    this.player.board[ref.row][ref.col] = null;
+
+    // Fallback path for legacy units without uid.
+    benchIndexFallback
+      .sort((a, b) => b - a)
+      .forEach((index) => {
+        if (index >= 0 && index < this.player.bench.length) this.player.bench.splice(index, 1);
+      });
   }
 
   placeMergedUnit(unit, preferredRef) {
@@ -2099,20 +2815,26 @@ export class PlanningScene extends Phaser.Scene {
 
   generateEnemyPreviewPlan() {
     const sandbox = this.player.gameMode === "PVE_SANDBOX";
-    const modeFactor = this.aiMode === "EASY" ? 0.92 : this.aiMode === "HARD" ? 1.15 : 1;
-    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (this.aiMode === "HARD" ? 1 : 0), 1, 9);
-    const teamSize = clamp(
-      getDeployCapByLevel(estLevel) + (this.aiMode === "EASY" ? -1 : this.aiMode === "HARD" ? 1 : 0) - (sandbox ? 1 : 0),
-      2,
-      12
-    );
+    const ai = AI_SETTINGS[this.aiMode] ?? AI_SETTINGS.MEDIUM;
+    const modeFactor = ai.budgetMult ?? 1;
+    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 9);
+    const teamSize = this.computeEnemyTeamSize(ai, estLevel, sandbox);
     const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
-    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (this.aiMode === "HARD" ? 1 : 0), 1, 5);
+    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
     const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
 
     const picks = [];
     let coins = budget;
     let frontCount = 0;
+    const roleCounts = {
+      TANKER: 0,
+      FIGHTER: 0,
+      ASSASSIN: 0,
+      ARCHER: 0,
+      MAGE: 0,
+      SUPPORT: 0
+    };
+    const roleProfile = this.getAiRoleProfile(this.aiMode);
     let guard = 0;
     while (picks.length < teamSize && guard < 260) {
       guard += 1;
@@ -2121,19 +2843,33 @@ export class PlanningScene extends Phaser.Scene {
       if (!candidates.length) break;
 
       let pick = null;
-      if (frontCount < Math.ceil(teamSize * 0.33)) {
+      const targetClass = this.pickClassByWeights(roleProfile.weights);
+      const byClass = candidates.filter((u) => u.classType === targetClass);
+      if (byClass.length) {
+        const minRoleCount = Math.min(...Object.values(roleCounts));
+        const diversityPool = byClass.filter((u) => roleCounts[u.classType] <= minRoleCount + 1);
+        pick = randomItem(diversityPool.length ? diversityPool : byClass);
+      }
+      if (!pick && frontCount < Math.ceil(teamSize * roleProfile.minFrontRatio)) {
         const frontPool = candidates.filter((u) => u.classType === "TANKER" || u.classType === "FIGHTER");
         if (frontPool.length) pick = randomItem(frontPool);
+      }
+      if (!pick && Math.random() < roleProfile.nonFrontBias) {
+        const nonFrontPool = candidates.filter((u) => u.classType !== "TANKER" && u.classType !== "FIGHTER");
+        if (nonFrontPool.length) pick = randomItem(nonFrontPool);
       }
       if (!pick) pick = randomItem(candidates);
 
       let star = 1;
       const starRoll = Math.random();
-      if (this.player.round >= 10 && starRoll < 0.08 + (this.aiMode === "HARD" ? 0.04 : 0)) star = 3;
-      else if (this.player.round >= 5 && starRoll < 0.24 + (this.aiMode === "HARD" ? 0.06 : 0)) star = 2;
+      const twoStarChance = clamp((this.player.round - 6) * 0.045 + (ai.star2Bonus ?? 0), 0, 0.38);
+      const threeStarChance = clamp((this.player.round - 11) * 0.018 + (ai.star3Bonus ?? 0), 0, 0.08);
+      if (starRoll < threeStarChance) star = 3;
+      else if (starRoll < threeStarChance + twoStarChance) star = 2;
 
       picks.push({ baseId: pick.id, classType: pick.classType, tier: pick.tier, star });
       if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
+      roleCounts[pick.classType] = (roleCounts[pick.classType] ?? 0) + 1;
       coins -= Math.max(1, pick.tier - (star - 1));
       if (coins <= 0 && picks.length >= Math.ceil(teamSize * 0.7)) break;
     }
@@ -2219,7 +2955,7 @@ export class PlanningScene extends Phaser.Scene {
       card.on("pointerover", () => card.setFillStyle(0x2b3d57, 0.98));
       card.on("pointerout", () => card.setFillStyle(0x1f2b3d, 0.98));
 
-      const text = this.add.text(x - 146, y - 106, `${choice.name}\n\n[${choice.group}]\n${choice.description}`, {
+      const text = this.add.text(x - 146, y - 106, `${choice.name}\n\n[${this.translateAugmentGroup(choice.group)}]\n${choice.description}`, {
         fontFamily: UI_FONT,
         fontSize: "18px",
         color: UI_COLORS.textPrimary,
@@ -2328,9 +3064,9 @@ export class PlanningScene extends Phaser.Scene {
 
   spawnEnemyCombatUnits() {
     const ai = this.getAI();
-    const estimateLevel = clamp(1 + Math.floor(this.player.round / 2), 1, 9);
-    const count = clamp(getDeployCapByLevel(estimateLevel) + ai.teamSizeBonus, 2, 12);
-    const maxTier = clamp(1 + Math.floor(this.player.round / 2), 1, 4);
+    const estimateLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 9);
+    const count = this.computeEnemyTeamSize(ai, estimateLevel, this.player?.gameMode === "PVE_SANDBOX");
+    const maxTier = clamp(1 + Math.floor(this.player.round / 2) + (ai.maxTierBonus ?? 0), 1, 4);
     const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
 
     const positions = [];
@@ -2348,11 +3084,11 @@ export class PlanningScene extends Phaser.Scene {
       const base = randomItem(tierPool.length ? tierPool : pool);
 
       let star = 1;
-      const twoStarChance = clamp((this.player.round - 3) * 0.07 + (this.aiMode === "HARD" ? 0.1 : 0), 0, 0.65);
-      const threeStarChance = clamp((this.player.round - 8) * 0.03 + (this.aiMode === "HARD" ? 0.03 : 0), 0, 0.18);
+      const twoStarChance = clamp((this.player.round - 6) * 0.05 + (ai.star2Bonus ?? 0), 0, 0.42);
+      const threeStarChance = clamp((this.player.round - 11) * 0.02 + (ai.star3Bonus ?? 0), 0, 0.1);
       const roll = Math.random();
       if (roll < threeStarChance) star = 3;
-      else if (roll < twoStarChance) star = 2;
+      else if (roll < threeStarChance + twoStarChance) star = 2;
 
       const owned = this.createOwnedUnit(base.id, star);
       if (!owned) return;
@@ -2416,6 +3152,7 @@ export class PlanningScene extends Phaser.Scene {
       baseId: owned.baseId,
       name: owned.base.name,
       star: owned.star,
+      equips: Array.isArray(owned.equips) ? [...owned.equips] : [],
       side,
       row,
       col,
@@ -2475,8 +3212,14 @@ export class PlanningScene extends Phaser.Scene {
         mdefBuffValue: 0
       }
     };
+    this.applyOwnedEquipmentBonuses(unit, owned);
+    const styleVariant = this.getUnitSkillVariant(owned);
+    if (styleVariant?.bonus) {
+      unit.skillVariant = styleVariant.name;
+      this.applyBonusToUnit(unit, styleVariant.bonus);
+    }
 
-    this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star));
+    this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star, owned));
     sprite.on("pointerover", () => this.showAttackPreviewForUnit(unit));
     sprite.on("pointerout", () => this.clearAttackPreview(unit));
     this.syncCombatLabels(unit);
@@ -2500,12 +3243,12 @@ export class PlanningScene extends Phaser.Scene {
   canPreviewAttack(unit) {
     return Boolean(
       unit &&
-        unit.alive &&
-        (this.phase === PHASE.COMBAT || this.phase === PHASE.PLANNING) &&
-        !this.settingsVisible &&
-        !this.isActing &&
-        (this.phase !== PHASE.COMBAT ||
-          (unit.statuses?.freeze <= 0 && unit.statuses?.stun <= 0 && unit.statuses?.sleep <= 0))
+      unit.alive &&
+      (this.phase === PHASE.COMBAT || this.phase === PHASE.PLANNING) &&
+      !this.settingsVisible &&
+      !this.isActing &&
+      (this.phase !== PHASE.COMBAT ||
+        (unit.statuses?.freeze <= 0 && unit.statuses?.stun <= 0 && unit.statuses?.sleep <= 0))
     );
   }
 
@@ -2748,6 +3491,7 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshSynergyPreview();
     this.refreshQueuePreview();
     this.refreshStorageUi();
+    this.refreshGamepadCursorVisual();
   }
 
   refreshHeader() {
@@ -2755,13 +3499,14 @@ export class PlanningScene extends Phaser.Scene {
     const xpText = xpNeed === Number.POSITIVE_INFINITY ? "TỐI ĐA" : `${this.player.xp}/${xpNeed}`;
     const deployText = `${this.getDeployCount()}/${this.getDeployCap()}`;
     const modeLabel = this.player.gameMode === "PVE_SANDBOX" ? "Sandbox" : "Hành trình";
+    const loseCondition = this.getLoseCondition();
+    const loseLabel = loseCondition === "NO_HEARTS" ? `${getLoseConditionLabel(loseCondition)} (${this.player.hp} tim)` : getLoseConditionLabel(loseCondition);
     this.setHeaderStatValue("round", `${this.player.round}`);
-    this.setHeaderStatValue("hp", `${this.player.hp}`);
     this.setHeaderStatValue("gold", `${this.player.gold}`);
     this.setHeaderStatValue("level", `${this.player.level}`);
     this.setHeaderStatValue("xp", xpText);
     this.setHeaderStatValue("deploy", deployText);
-    this.headerMetaText?.setText(`Pha ${this.getPhaseLabel(this.phase)} • AI ${AI_SETTINGS[this.aiMode].label} • ${modeLabel}`);
+    this.headerMetaText?.setText(`Pha ${this.getPhaseLabel(this.phase)} • AI ${AI_SETTINGS[this.aiMode].label} • ${modeLabel} • ${loseLabel}`);
     this.phaseText.setText(this.getPhaseLabel(this.phase));
     this.updateLogText();
   }
@@ -2788,6 +3533,7 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.roll.setLabel(`Đổi tướng (${rollCost})`);
     this.buttons.xp.setLabel("Mua XP (4)");
     this.buttons.lock.setLabel(`Khóa: ${lock}`);
+    this.buttons.sell.setLabel(this.selectedBenchIndex != null ? "Bán đã chọn" : "Bán (S)");
     this.buttons.start.setLabel("BẮT ĐẦU GIAO TRANH");
     this.buttons.settings.setLabel("Cài đặt");
     this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
@@ -2795,13 +3541,12 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.roll.setEnabled(planning);
     this.buttons.xp.setEnabled(planning);
     this.buttons.lock.setEnabled(planning);
+    this.buttons.sell.setEnabled(planning && this.selectedBenchIndex != null && !!this.player?.bench?.[this.selectedBenchIndex]);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);
     this.buttons.reset.setEnabled(true);
     this.buttons.settings.setEnabled(true);
     this.buttons.history?.setEnabled(true);
-    this.buttons.craft1.setEnabled(planning);
-    this.buttons.craft2.setEnabled(planning);
-    this.buttons.craft3.setEnabled(planning);
+    // Craft buttons removed to fix undefined error
   }
 
   refreshShopUi() {
@@ -2954,9 +3699,10 @@ export class PlanningScene extends Phaser.Scene {
         slot.bg.setFillStyle(selected ? roleTheme.cardHover : roleTheme.bench, selected ? 0.95 : 0.9);
         const visual = getUnitVisual(unit.baseId, unit.base.classType);
         const nameShort = visual.nameVi.length > 13 ? `${visual.nameVi.slice(0, 12)}…` : visual.nameVi;
+        const equipCount = Array.isArray(unit.equips) ? unit.equips.length : 0;
         this.safeUpdateBenchSlotText(
           slot,
-          `${nameShort}\n${unit.star}★ • ${getClassLabelVi(unit.base.classType)}`,
+          `${nameShort}\n${unit.star}★ • ${getClassLabelVi(unit.base.classType)}\nTrang bị:${equipCount}/3`,
           UI_COLORS.textPrimary,
           visual.icon
         );
@@ -2967,6 +3713,7 @@ export class PlanningScene extends Phaser.Scene {
   refreshBoardUi() {
     this.clearPlanningSprites();
     if (this.phase !== PHASE.PLANNING && this.phase !== PHASE.AUGMENT) return;
+    if (!this.player?.board) return;
 
     const enemyPreview = Array.isArray(this.player.enemyPreview) ? this.player.enemyPreview : [];
     enemyPreview.forEach((preview) => {
@@ -3031,7 +3778,7 @@ export class PlanningScene extends Phaser.Scene {
         sprite.setStrokeStyle(2, roleTheme.stroke, 1);
         sprite.setDepth(point.y + 15);
         sprite.setInteractive({ useHandCursor: true });
-        this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star));
+        this.tooltip.attach(sprite, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
         sprite.on("pointerup", (pointer) => {
           if (this.boardDragConsumed) return;
           if (this.isPanPointer(pointer)) return;
@@ -3097,8 +3844,7 @@ export class PlanningScene extends Phaser.Scene {
         );
       } else {
         this.queueText.setText(
-          `• Đội hình địch vòng ${this.player.round}\n• Ngân sách AI: ${this.player.enemyBudget ?? 0}\n• Số linh thú: ${
-            this.player.enemyPreview?.length ?? 0
+          `• Đội hình địch vòng ${this.player.round}\n• Ngân sách AI: ${this.player.enemyBudget ?? 0}\n• Số linh thú: ${this.player.enemyPreview?.length ?? 0
           }`
         );
       }
@@ -3128,6 +3874,9 @@ export class PlanningScene extends Phaser.Scene {
     this.player.itemBag.forEach((id) => {
       bagCounts[id] = (bagCounts[id] ?? 0) + 1;
     });
+    if (this.selectedInventoryItemId && !bagCounts[this.selectedInventoryItemId]) {
+      this.selectedInventoryItemId = null;
+    }
 
     const craftedText = this.player.craftedItems
       .slice(-3)
@@ -3137,7 +3886,10 @@ export class PlanningScene extends Phaser.Scene {
       })
       .join(", ");
 
-    this.storageSummaryText.setText(`• Kho thú: ${this.player.bench.length}/${this.getBenchCap()}\n• Ô vật phẩm: ${this.player.itemBag.length}`);
+    const selectedItem = this.selectedInventoryItemId ? ITEM_BY_ID[this.selectedInventoryItemId] : null;
+    this.storageSummaryText.setText(
+      `• Kho thú: ${this.player.bench.length}/${this.getBenchCap()}\n• Ô vật phẩm: ${this.player.itemBag.length}${selectedItem ? `\n• Đang chọn: ${selectedItem.icon} ${selectedItem.name}` : ""}`
+    );
     this.storageCraftText?.setText(`• Đồ ghép gần đây: ${craftedText || "Chưa có"}`);
 
     const bagEntries = Object.entries(bagCounts).sort((a, b) => b[1] - a[1]);
@@ -3146,8 +3898,9 @@ export class PlanningScene extends Phaser.Scene {
       if (!pair) {
         cell.itemId = null;
         cell.amount = 0;
-        cell.bg.setFillStyle(0x162639, 0.95);
-        cell.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
+        const isSelected = this.selectedInventoryItemId && this.selectedInventoryItemId === cell.itemId;
+        cell.bg.setFillStyle(0x162639, isSelected ? 1 : 0.95);
+        cell.bg.setStrokeStyle(1, isSelected ? UI_COLORS.accent : UI_COLORS.panelEdgeSoft, isSelected ? 0.95 : 0.78);
         cell.icon.setText("＋");
         cell.icon.setColor(UI_COLORS.textMuted);
         cell.count.setText("");
@@ -3157,8 +3910,9 @@ export class PlanningScene extends Phaser.Scene {
       const item = ITEM_BY_ID[itemId];
       cell.itemId = itemId;
       cell.amount = amount;
+      const isSelected = this.selectedInventoryItemId === itemId;
       cell.bg.setFillStyle(0x203450, 0.96);
-      cell.bg.setStrokeStyle(1, UI_COLORS.panelEdge, 0.85);
+      cell.bg.setStrokeStyle(1, isSelected ? UI_COLORS.accent : UI_COLORS.panelEdge, isSelected ? 1 : 0.85);
       cell.icon.setText(item?.icon ?? "❔");
       cell.icon.setColor("#ffffff");
       cell.count.setText(`x${amount}`);
@@ -3171,6 +3925,12 @@ export class PlanningScene extends Phaser.Scene {
     if (this.settingsVisible || this.phase !== PHASE.PLANNING) return;
     const recipe = RECIPE_BY_ID[recipeId];
     if (!recipe) return;
+    const equipmentId = `eq_${recipe.id}`;
+    const equipment = ITEM_BY_ID[equipmentId];
+    if (!equipment) {
+      this.addLog(`Không thể ghép ${recipe.name}: thiếu dữ liệu trang bị.`);
+      return;
+    }
 
     const bagCopy = [...this.player.itemBag];
     for (let i = 0; i < recipe.requires.length; i += 1) {
@@ -3182,11 +3942,12 @@ export class PlanningScene extends Phaser.Scene {
       bagCopy.splice(idx, 1);
     }
 
+    bagCopy.push(equipmentId);
     this.player.itemBag = bagCopy;
     this.player.craftedItems.push(recipe.id);
-    this.applyCraftBonus(recipe);
     this.audioFx.play("buy");
-    this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}.`);
+    this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}. Chọn ô vật phẩm rồi nhấn vào thú để trang bị.`);
+    this.applyCraftBonus(recipe);
     this.refreshStorageUi();
     this.persistProgress();
   }
@@ -3248,7 +4009,7 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshRightPanelScrollMetrics();
   }
 
-  getUnitTooltip(baseId, star = 1) {
+  getUnitTooltip(baseId, star = 1, ownedUnit = null) {
     const base = UNIT_BY_ID[baseId];
     if (!base) return { title: "Không rõ", body: "Không có dữ liệu linh thú." };
     const visual = getUnitVisual(baseId, base.classType);
@@ -3257,25 +4018,40 @@ export class PlanningScene extends Phaser.Scene {
     const tribeDef = TRIBE_SYNERGY[base.tribe];
     const classMarks = classDef ? classDef.thresholds.join("/") : "-";
     const tribeMarks = tribeDef ? tribeDef.thresholds.join("/") : "-";
-    const skillDesc = this.describeSkill(skill);
+    const statScale = star === 1 ? 1 : star === 2 ? 1.6 : 2.5;
+    const variant = ownedUnit ? this.getUnitSkillVariant(ownedUnit) : null;
+    const equippedItems = Array.isArray(ownedUnit?.equips)
+      ? ownedUnit.equips.map((id) => ITEM_BY_ID[id]).filter((x) => x?.kind === "equipment")
+      : [];
+    const rightLines = [
+      "⚔️ Đánh thường",
+      ...this.describeBasicAttack(base.classType, base.stats.range).map((line) => `• ${line}`),
+      "",
+      `✨ Chiêu thức: ${skill?.name ?? "Không có"}`,
+      ...this.describeSkillLines(skill).map((line) => `• ${line}`),
+      ...(variant ? ["", `◆ Biến thể: ${variant.name}`] : [])
+    ];
+    const equipmentLine = equippedItems.length
+      ? `Trang bị: ${equippedItems.map((item) => `${item.icon} ${item.name}`).join(", ")}`
+      : "Trang bị: Chưa có";
     return {
       title: `${visual.icon} ${visual.nameVi} (${star}★)`,
       body: [
         `Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
-        `HP:${Math.round(base.stats.hp * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}  ATK:${Math.round(base.stats.atk * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}`,
-        `DEF:${base.stats.def}  MATK:${Math.round(base.stats.matk * (star === 1 ? 1 : star === 2 ? 1.6 : 2.5))}  Tầm:${base.stats.range}`,
+        `HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
+        `MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range}`,
         `Nộ tối đa:${base.stats.rageMax}`,
-        `Kỹ năng: ${skill?.name ?? "Đánh thường"}`,
-        skillDesc,
+        equipmentLine,
         `Mốc nghề: ${classMarks}`,
         `Mốc tộc: ${tribeMarks}`
-      ].join("\n")
+      ].join("\n"),
+      rightBody: rightLines.join("\n")
     };
   }
 
   getAugmentTooltip(augment) {
     return {
-      title: `${augment.name} [${augment.group}]`,
+      title: `${augment.name} [${this.translateAugmentGroup(augment.group)}]`,
       body: `${augment.description}\n\nHiệu ứng: ${this.translateAugmentEffect(augment.effect.type)}${augment.effect.value != null ? ` (${augment.effect.value})` : ""}`
     };
   }
@@ -3312,7 +4088,7 @@ export class PlanningScene extends Phaser.Scene {
         lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
       });
 
-    if (!lines.length) lines.push("Chua co synergy nao dang kich hoat.");
+    if (!lines.length) lines.push("Chưa có cộng hưởng nào đang kích hoạt.");
 
     if (this.player?.augments?.length) {
       lines.push("");
@@ -3325,7 +4101,7 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     return {
-      title: "Chi tiết synergy / pháp ấn",
+      title: "Chi tiết cộng hưởng / pháp ấn",
       body: lines.join("\n")
     };
   }
@@ -3339,24 +4115,89 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   formatBonusSet(bonus) {
-    if (!bonus) return "no bonus";
+    if (!bonus) return "chưa có hiệu ứng";
     return Object.entries(bonus)
       .map(([k, v]) => `${k}:${typeof v === "number" && v < 1 ? `${Math.round(v * 100)}%` : v}`)
       .join(", ");
   }
 
-  describeSkill(skill) {
-    if (!skill) return "Không có kỹ năng chủ động.";
-    const lines = [`Mẫu thi triển: ${skill.actionPattern}`];
+  inferBasicActionPattern(classType, range) {
+    if (range >= 2) return "RANGED_STATIC";
+    if (classType === "ASSASSIN") return "ASSASSIN_BACK";
+    return "MELEE_FRONT";
+  }
+
+  describeBasicAttack(classType, range) {
+    const pattern = this.inferBasicActionPattern(classType, range);
+    const lines = [`Thi triển: ${this.translateActionPattern(pattern)}`, `Tầm đánh: ${range} ô`, "Loại sát thương: Vật lý"];
+    if (classType === "ASSASSIN") {
+      lines.push("Ưu tiên mục tiêu hậu phương thấp máu.");
+    } else if (classType === "ARCHER" || classType === "MAGE") {
+      lines.push("Ưu tiên mục tiêu cùng hàng, sau đó gần tiền tuyến.");
+    } else {
+      lines.push("Ưu tiên tiền tuyến gần nhất.");
+    }
+    lines.push("Công thức cơ bản: ATK và giáp mục tiêu.");
+    return lines;
+  }
+
+  describeSkillLines(skill) {
+    if (!skill) return ["Không có kỹ năng chủ động."];
+    if (skill.descriptionVi) {
+      return [skill.descriptionVi];
+    }
+    const lines = [`Thi triển: ${this.translateActionPattern(skill.actionPattern)}`];
     if (skill.effect) lines.push(`Hiệu ứng: ${this.translateSkillEffect(skill.effect)}`);
+    const areaText = this.describeSkillArea(skill);
+    if (areaText) lines.push(`Vùng tác động: ${areaText}`);
     if (skill.damageType) lines.push(`Loại sát thương: ${this.translateDamageType(skill.damageType)}`);
-    if (skill.base != null && skill.scale != null) lines.push(`Công thức: ${skill.base} + chỉ số * ${skill.scale}`);
-    if (skill.freezeChance != null) lines.push(`Đóng băng: ${(skill.freezeChance * 100).toFixed(0)}%`);
-    if (skill.stunChance != null) lines.push(`Choáng: ${(skill.stunChance * 100).toFixed(0)}%`);
-    if (skill.sleepChance != null) lines.push(`Ngủ: ${(skill.sleepChance * 100).toFixed(0)}%`);
-    if (skill.maxHits != null) lines.push(`Số mục tiêu: ${skill.maxHits}`);
-    if (skill.shieldBase != null) lines.push(`Khiên cơ bản: ${skill.shieldBase}`);
-    return lines.join(" | ");
+    return lines;
+  }
+
+  describeSkill(skill) {
+    return this.describeSkillLines(skill).join(" | ");
+  }
+
+  describeSkillArea(skill) {
+    if (!skill) return "";
+    const maxHits = Number.isFinite(skill.maxHits) ? Math.max(1, Math.floor(skill.maxHits)) : null;
+    const maxTargets = Number.isFinite(skill.maxTargets) ? Math.max(1, Math.floor(skill.maxTargets)) : null;
+    const map = {
+      damage_shield_taunt: "Tấn công 1 ô hình điểm tiền tuyến.",
+      damage_stun: "Tấn công 1 ô hình điểm tiền tuyến.",
+      damage_shield_reflect: "Tấn công 1 ô hình điểm tiền tuyến.",
+      ally_row_def_buff: "Không tấn công. Cường hóa 1 hàng đồng minh (tối đa 5 ô).",
+      single_burst: "Tấn công 1 ô hình điểm.",
+      double_hit: "Tấn công 1 ô hình điểm (2 đòn liên tiếp).",
+      single_burst_lifesteal: "Tấn công 1 ô hình điểm và hút máu.",
+      single_delayed_echo: "Tấn công 1 ô hình điểm, sau đó nổ dội cùng ô.",
+      cross_5: "Tấn công 5 ô hình chữ thập.",
+      row_multi: `Tấn công ${maxHits ?? 3} ô hình hàng ngang.`,
+      single_sleep: "Tấn công 1 ô hình điểm, có thể gây ngủ.",
+      single_armor_break: "Tấn công 1 ô hình điểm và giảm giáp.",
+      column_freeze: "Tấn công 5 ô hình cột dọc.",
+      aoe_circle: "Tấn công 5 ô hình vòng tròn nhỏ.",
+      column_plus_splash: "Tấn công 5 ô hình cột và lan 2 ô cạnh mục tiêu.",
+      aoe_poison: "Tấn công vùng 3x3 (tối đa 9 ô).",
+      dual_heal: "Không tấn công. Hồi máu 2 ô đồng minh.",
+      shield_cleanse: "Không tấn công. Tạo khiên + thanh tẩy cho đồng minh.",
+      team_rage: `Không tấn công. Tăng nộ tối đa ${maxTargets ?? 3} đồng minh.`,
+      column_bless: "Không tấn công. Cường hóa 1 cột đồng minh (tối đa 5 ô).",
+      row_cleave: "Tấn công 5 ô hình hàng ngang.",
+      self_atk_and_assist: "Tấn công 1 ô tiền tuyến, đồng thời tự cường hóa.",
+      cone_smash: "Tấn công 3 ô hình nón trước mặt.",
+      true_single: "Tấn công 1 ô hình điểm (sát thương chuẩn)."
+    };
+    const text = map[skill.effect];
+    if (text) return text;
+
+    if (skill.actionPattern === "SELF") return "Không tấn công trực tiếp; hiệu ứng tự thân/hỗ trợ.";
+    if (String(skill.effect ?? "").includes("single")) return "Tấn công 1 ô hình điểm.";
+    if (String(skill.effect ?? "").includes("row")) return "Tấn công nhiều ô hình hàng ngang.";
+    if (String(skill.effect ?? "").includes("column")) return "Tấn công nhiều ô hình cột dọc.";
+    if (String(skill.effect ?? "").includes("aoe")) return "Tấn công nhiều ô theo vùng.";
+    if (String(skill.effect ?? "").includes("cone")) return "Tấn công nhiều ô hình nón.";
+    return "Tấn công theo mẫu kỹ năng đặc thù.";
   }
 
   translateDamageType(type) {
@@ -3364,6 +4205,24 @@ export class PlanningScene extends Phaser.Scene {
     if (type === "magic") return "Phép";
     if (type === "true") return "Chuẩn";
     return type ?? "-";
+  }
+
+  translateScaleStat(stat) {
+    if (stat === "matk") return "MATK";
+    if (stat === "atk") return "ATK";
+    if (stat === "def") return "DEF";
+    if (stat === "mdef") return "MDEF";
+    return String(stat ?? "chỉ số");
+  }
+
+  translateActionPattern(pattern) {
+    const map = {
+      MELEE_FRONT: "Cận chiến áp sát tiền tuyến",
+      ASSASSIN_BACK: "Lao ra hậu phương rồi quay về",
+      RANGED_STATIC: "Đứng yên và bắn từ xa",
+      SELF: "Tự cường hóa hoặc hỗ trợ"
+    };
+    return map[pattern] ?? pattern;
   }
 
   translateSkillEffect(effect) {
@@ -3417,8 +4276,63 @@ export class PlanningScene extends Phaser.Scene {
     return map[effectType] ?? effectType;
   }
 
+  translateAugmentGroup(group) {
+    const map = {
+      ECONOMY: "Kinh tế",
+      FORMATION: "Đội hình",
+      COMBAT: "Giao tranh",
+      SYNERGY: "Cộng hưởng"
+    };
+    return map[group] ?? group;
+  }
+
   getAI() {
     return AI_SETTINGS[this.aiMode];
+  }
+
+  computeEnemyTeamSize(ai, estimateLevel, sandbox = false) {
+    const base = getDeployCapByLevel(estimateLevel);
+    const flatBonus = ai?.teamSizeBonus ?? 0;
+    const growthEvery = Math.max(1, ai?.teamGrowthEvery ?? 4);
+    const growthCap = Math.max(0, ai?.teamGrowthCap ?? 2);
+    const roundGrowth = clamp(Math.floor((this.player.round - 1) / growthEvery), 0, growthCap);
+    const sandboxPenalty = sandbox ? 1 : 0;
+    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 12);
+  }
+
+  getAiRoleProfile(mode) {
+    if (mode === "EASY") {
+      return {
+        minFrontRatio: 0.55,
+        nonFrontBias: 0.18,
+        weights: { TANKER: 0.36, FIGHTER: 0.28, ARCHER: 0.14, SUPPORT: 0.1, MAGE: 0.07, ASSASSIN: 0.05 }
+      };
+    }
+    if (mode === "HARD") {
+      return {
+        minFrontRatio: 0.34,
+        nonFrontBias: 0.45,
+        weights: { TANKER: 0.19, FIGHTER: 0.19, ARCHER: 0.18, SUPPORT: 0.15, MAGE: 0.16, ASSASSIN: 0.13 }
+      };
+    }
+    return {
+      minFrontRatio: 0.42,
+      nonFrontBias: 0.32,
+      weights: { TANKER: 0.24, FIGHTER: 0.24, ARCHER: 0.17, SUPPORT: 0.13, MAGE: 0.13, ASSASSIN: 0.09 }
+    };
+  }
+
+  pickClassByWeights(weights) {
+    const entries = Object.entries(weights ?? {}).filter(([, weight]) => Number.isFinite(weight) && weight > 0);
+    if (!entries.length) return "FIGHTER";
+    const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+    let needle = Math.random() * total;
+    for (let i = 0; i < entries.length; i += 1) {
+      const [classType, weight] = entries[i];
+      needle -= weight;
+      if (needle <= 0) return classType;
+    }
+    return entries[entries.length - 1][0];
   }
 
   computeSynergyCounts(units, side) {
@@ -3489,6 +4403,32 @@ export class PlanningScene extends Phaser.Scene {
     if (bonus.critPct) unit.mods.critPct += bonus.critPct;
     if (bonus.burnOnHit) unit.mods.burnOnHit += bonus.burnOnHit;
     if (bonus.poisonOnHit) unit.mods.poisonOnHit += bonus.poisonOnHit;
+  }
+
+  applyOwnedEquipmentBonuses(unit, owned) {
+    const equips = Array.isArray(owned?.equips) ? owned.equips : [];
+    equips.forEach((itemId) => {
+      const item = ITEM_BY_ID[itemId];
+      if (!item || item.kind !== "equipment" || !item.bonus) return;
+      this.applyBonusToUnit(unit, item.bonus);
+    });
+  }
+
+  hashUnitSeed(unit) {
+    const text = `${unit?.uid ?? ""}:${unit?.baseId ?? ""}`;
+    let h = 0;
+    for (let i = 0; i < text.length; i += 1) {
+      h = (h * 33 + text.charCodeAt(i)) >>> 0;
+    }
+    return h;
+  }
+
+  getUnitSkillVariant(unit) {
+    const classType = unit?.base?.classType ?? unit?.classType ?? "FIGHTER";
+    const variants = CLASS_SKILL_VARIANTS[classType] ?? CLASS_SKILL_VARIANTS.FIGHTER;
+    if (!variants.length) return null;
+    const seed = this.hashUnitSeed(unit);
+    return variants[seed % variants.length];
   }
 
   buildTurnQueue() {
@@ -3663,7 +4603,8 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     const ai = this.getAI();
-    if (attacker.side === "RIGHT" && !options.deterministic && Math.random() < ai.randomTargetChance) {
+    const keepFrontline = attacker.range <= 1 && attacker.classType !== "ASSASSIN";
+    if (attacker.side === "RIGHT" && !keepFrontline && !options.deterministic && Math.random() < ai.randomTargetChance) {
       return randomItem(enemies);
     }
 
@@ -3683,6 +4624,8 @@ export class PlanningScene extends Phaser.Scene {
   scoreTarget(attacker, target) {
     const sameRow = target.row === attacker.row ? 0 : 1;
     const lineDist = manhattan(attacker, target);
+    const lateralDist = Math.abs(target.row - attacker.row);
+    const forwardDist = attacker.side === "LEFT" ? Math.max(0, target.col - attacker.col) : Math.max(0, attacker.col - target.col);
     const frontlineDist = this.distanceToFrontline(target);
     const backlineDist = this.distanceToBackline(target);
     const hpRatio = Math.round((target.hp / target.maxHp) * 1000);
@@ -3694,7 +4637,7 @@ export class PlanningScene extends Phaser.Scene {
     if (attacker.classType === "ARCHER" || attacker.classType === "MAGE") {
       return [sameRow, lineDist, frontlineDist, hpRatio, hpRaw];
     }
-    return [frontlineDist, lineDist, sameRow, hpRatio, hpRaw];
+    return [frontlineDist, forwardDist, lateralDist, hpRatio, hpRaw];
   }
 
   distanceToFrontline(unit) {
@@ -4248,23 +5191,33 @@ export class PlanningScene extends Phaser.Scene {
   resolveCombat(winnerSide) {
     if (this.phase !== PHASE.COMBAT) return;
     this.phase = PHASE.PLANNING;
-    const rightSurvivors = this.getCombatUnits("RIGHT").length;
 
     if (winnerSide === "LEFT") {
       this.player.winStreak += 1;
       this.player.loseStreak = 0;
       const bonus = 1 + (this.player.winStreak >= 3 ? 1 : 0);
       this.player.gold += bonus;
-      this.addLog(`Thang round ${this.player.round}. +${bonus} gold.`);
+      this.addLog(`Thắng vòng ${this.player.round}. +${bonus} vàng.`);
     } else {
+      const enemySurvivors = Math.max(1, this.getCombatUnits("RIGHT").length);
       this.player.loseStreak += 1;
       this.player.winStreak = 0;
-      const damage = Math.max(1, rightSurvivors + Math.floor(this.player.round / 2) - this.player.hpLossReduce);
-      this.player.hp -= damage;
-      this.addLog(`Thua round ${this.player.round}. -${damage} HP.`);
-    }
-
-    if (this.player.hp <= 0) {
+      if (this.getLoseCondition() === "NO_HEARTS") {
+        const damage = Math.max(1, Math.min(4, enemySurvivors));
+        this.player.hp = Math.max(0, this.player.hp - damage);
+        this.addLog(`Thua vòng ${this.player.round}. -${damage} tim (${this.player.hp} tim còn lại).`);
+        this.clearCombatSprites();
+        if (this.player.hp <= 0) {
+          this.handleTotalDefeat();
+          return;
+        }
+        this.player.round += 1;
+        this.enterPlanning(true);
+        this.showRoundResultBanner("THẤT BẠI", false);
+        this.persistProgress();
+        return;
+      }
+      this.addLog(`Thua vòng ${this.player.round}. Toàn đội đã bị hạ gục.`);
       this.clearCombatSprites();
       this.handleTotalDefeat();
       return;

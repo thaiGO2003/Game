@@ -1,0 +1,25 @@
+id,name,actionPattern,effect,damageType,base,scaleStat,scale,armorBreak,armorBuff,assistRate,atkBuff,echoBase,echoScale,evadeBuff,freezeChance,freezeTurns,hit1,hit2,lifesteal,maxHits,maxTargets,mdefBuff,poisonPerTurn,poisonTurns,rageGain,reflectPct,reflectTurns,selfAtkBuff,shieldBase,shieldScale,shieldScaleStat,sleepChance,sleepTurns,slowTurns,splashRate,stunChance,stunTurns,tauntTurns,turns
+alpha_howl,Alpha Howl,MELEE_FRONT,self_atk_and_assist,,,,,,,0.55,,,,,,,,,,,,,,,,,,15,,,,,,,,,,,2
+armor_break_arrow,Armor Break Arrow,RANGED_STATIC,single_armor_break,physical,28,atk,1.2,10,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,2
+armor_drill,Armor Drill,MELEE_FRONT,true_single,true,46,atk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+blood_bite,Blood Bite,ASSASSIN_BACK,single_burst_lifesteal,physical,34,atk,1.7,,,,,,,,,,,,0.45,,,,,,,,,,,,,,,,,,,,
+cleave_fang,Cleave Fang,MELEE_FRONT,row_cleave,physical,24,atk,1.08,6,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1
+cross_arrow,Cross Arrow,RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+earth_ram,Earth Ram,MELEE_FRONT,damage_stun,physical,36,atk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.45,1,,
+echo_slash,Echo Slash,ASSASSIN_BACK,single_delayed_echo,physical,32,atk,1.45,,,,,20,0.9,,,,,,,,,,,,,,,,,,,,,,,,,,
+flame_combo,Flame Combo,ASSASSIN_BACK,double_hit,physical,,,,,,,,,,,,,"{""base"":26,""scale"":1.45}","{""base"":22,""scale"":1.25}",,,,,,,,,,,,,,,,,,,,,
+ice_column,Ice Column,RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,0.5,1,,,,,,,,,,,,,,,,,,,,,,,
+life_song,Life Song,SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+mirror_shield,Mirror Shield,SELF,shield_cleanse,,,,,,,,,,,,,,,,,,,,,,,,,,70,0.8,matk,,,,,,,,
+mist_guard,Mist Guard,SELF,ally_row_def_buff,,,,,,10,,,,,,,,,,,,,10,,,,,,,,,,,,,,,,,2
+mud_slam,Mud Slam,MELEE_FRONT,cone_smash,physical,26,atk,1.18,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+rage_chant,Rage Chant,SELF,team_rage,,,,,,,,,,,,,,,,,,3,,,,1,,,,,,,,,,,,,,
+row_pierce,Row Pierce,RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,
+shell_reflect,Shell Reflect,MELEE_FRONT,damage_shield_reflect,physical,32,atk,1.1,,,,,,,,,,,,,,,,,,,0.3,2,,90,,,,,,,,,,
+sleep_shot,Sleep Shot,RANGED_STATIC,single_sleep,physical,30,atk,1.25,,,,,,,,,,,,,,,,,,,,,,,,,0.35,1,,,,,,
+snow_burst,Snow Burst,RANGED_STATIC,aoe_circle,magic,38,matk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,1,,,,,
+spore_rain,Spore Rain,RANGED_STATIC,aoe_poison,magic,34,matk,1.05,,,,,,,,,,,,,,,,16,2,,,,,,,,,,,,,,,
+storm_column,Storm Column,RANGED_STATIC,column_plus_splash,magic,40,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.55,,,,
+thorn_bark,Thorn Bark,MELEE_FRONT,damage_shield_taunt,physical,28,atk,1.05,,,,,,,,,,,,,,,,,,,,,,72,,,,,,,,,1,
+void_execute,Void Execute,ASSASSIN_BACK,single_burst,physical,56,atk,2.45,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+wind_path,Wind Path,SELF,column_bless,,,,,,,,10,,,0.1,,,,,,,,,,,,,,,,,,,,,,,,,2

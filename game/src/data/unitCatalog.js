@@ -64,7 +64,7 @@ const CORE_UNITS = [
   },
   {
     id: "lynx_echo",
-    name: "Linh Miêu Dội Ảnh",
+    name: "Bọ Ngựa Gió",
     tribe: "WIND",
     classType: "ASSASSIN",
     tier: 4,
@@ -100,7 +100,7 @@ const CORE_UNITS = [
   },
   {
     id: "cat_goldbow",
-    name: "Miêu Kim Cung",
+    name: "Ong Lửa",
     tribe: "FIRE",
     classType: "ARCHER",
     tier: 4,
@@ -109,7 +109,7 @@ const CORE_UNITS = [
   },
   {
     id: "ice_mage",
-    name: "Cú Băng",
+    name: "Chuồn Chuồn Băng",
     tribe: "TIDE",
     classType: "MAGE",
     tier: 1,
@@ -117,8 +117,8 @@ const CORE_UNITS = [
     skillId: "ice_column"
   },
   {
-    id: "snow_mage",
-    name: "Cáo Tuyết",
+    id: "worm_ice",
+    name: "Sâu Băng",
     tribe: "TIDE",
     classType: "MAGE",
     tier: 2,
@@ -153,8 +153,8 @@ const CORE_UNITS = [
     skillId: "life_song"
   },
   {
-    id: "fox_mirror",
-    name: "Cáo Kính",
+    id: "butterfly_mirror",
+    name: "Bướm Kính",
     tribe: "SPIRIT",
     classType: "SUPPORT",
     tier: 2,
@@ -214,18 +214,90 @@ const CORE_UNITS = [
     tier: 4,
     stats: { hp: 370, atk: 76, def: 24, matk: 20, mdef: 19, range: 1, rageMax: 3 },
     skillId: "armor_drill"
+  },
+  {
+    id: "worm_queen",
+    name: "Sâu Xanh",
+    tribe: "SWARM",
+    classType: "MAGE",
+    tier: 3,
+    stats: { hp: 280, atk: 20, def: 12, matk: 85, mdef: 22, range: 4, rageMax: 2 },
+    skillId: "worm_evolve"
+  },
+  {
+    id: "mosquito_toxic",
+    name: "Muỗi Độc",
+    tribe: "SWARM",
+    classType: "ASSASSIN",
+    tier: 2,
+    stats: { hp: 240, atk: 75, def: 14, matk: 15, mdef: 12, range: 1, rageMax: 3 },
+    skillId: "mosquito_drain"
+  },
+  {
+    id: "bug_plague",
+    name: "Bọ Dịch Hạch",
+    tribe: "SWARM",
+    classType: "MAGE",
+    tier: 4,
+    stats: { hp: 260, atk: 22, def: 13, matk: 92, mdef: 24, range: 4, rageMax: 4 },
+    skillId: "global_poison"
+  },
+  {
+    id: "lion_general",
+    name: "Sư Tử Chiến Tướng",
+    tribe: "FIRE",
+    classType: "FIGHTER",
+    tier: 5,
+    stats: { hp: 550, atk: 95, def: 40, matk: 30, mdef: 35, range: 1, rageMax: 4 },
+    skillId: "lion_roar_stun"
+  },
+  {
+    id: "ant_guard",
+    name: "Kiến Hộ Vệ",
+    tribe: "SWARM",
+    classType: "TANKER",
+    tier: 2,
+    stats: { hp: 420, atk: 45, def: 45, matk: 10, mdef: 30, range: 1, rageMax: 4 },
+    skillId: "ant_shield_wall"
+  },
+  {
+    id: "mantis_blade",
+    name: "Bọ Ngựa Kiếm",
+    tribe: "SWARM",
+    classType: "ASSASSIN",
+    tier: 3,
+    stats: { hp: 310, atk: 88, def: 20, matk: 15, mdef: 18, range: 1, rageMax: 3 },
+    skillId: "mantis_slice"
+  },
+  {
+    id: "wasp_sting",
+    name: "Ong Bắp Cày",
+    tribe: "SWARM",
+    classType: "ARCHER",
+    tier: 2,
+    stats: { hp: 260, atk: 65, def: 15, matk: 12, mdef: 14, range: 4, rageMax: 3 },
+    skillId: "poison_sting"
+  },
+  {
+    id: "scorpion_king",
+    name: "Vua Bọ Cạp",
+    tribe: "SWARM",
+    classType: "FIGHTER",
+    tier: 4,
+    stats: { hp: 440, atk: 82, def: 32, matk: 20, mdef: 25, range: 1, rageMax: 3 },
+    skillId: "scorpion_venom"
   }
 ];
 
-const TARGET_UNIT_COUNT = 100;
+const TARGET_UNIT_COUNT = 40;
 
 const CLASS_SKILLS = {
-  TANKER: ["thorn_bark", "earth_ram", "shell_reflect", "mist_guard"],
-  ASSASSIN: ["void_execute", "flame_combo", "blood_bite", "echo_slash"],
-  ARCHER: ["cross_arrow", "row_pierce", "sleep_shot", "armor_break_arrow"],
+  TANKER: ["thorn_bark", "earth_ram", "shell_reflect", "mist_guard", "ant_shield_wall"],
+  ASSASSIN: ["void_execute", "flame_combo", "blood_bite", "echo_slash", "mantis_slice"],
+  ARCHER: ["cross_arrow", "row_pierce", "sleep_shot", "armor_break_arrow", "poison_sting"],
   MAGE: ["ice_column", "snow_burst", "storm_column", "spore_rain"],
   SUPPORT: ["life_song", "mirror_shield", "rage_chant", "wind_path"],
-  FIGHTER: ["cleave_fang", "alpha_howl", "mud_slam", "armor_drill"]
+  FIGHTER: ["cleave_fang", "alpha_howl", "mud_slam", "armor_drill", "lion_roar_stun", "scorpion_venom"]
 };
 
 const CLASS_BASE_STATS = {
@@ -238,12 +310,12 @@ const CLASS_BASE_STATS = {
 };
 
 const NAME_POOL = {
-  TANKER: ["Trâu Mộc", "Tê Sắt", "Rùa Nham", "Gấu Đá", "Bò Rừng", "Linh Quy", "Đại Hùng", "Mãng Tê", "Ngưu Cổ", "Rùa Mai"],
-  ASSASSIN: ["Báo Đêm", "Miêu Ảnh", "Lang Săn", "Dơi Sát", "Cáo Ma", "Bóng Chồn", "Hắc Ly", "Hổ Vệt", "Sói Lẩn", "Ảnh Báo"],
-  ARCHER: ["Đại Bàng", "Khỉ Cung", "Cú Săn", "Miêu Tiễn", "Hạc Gió", "Diều Sấm", "Tước Xạ", "Chim Lửa", "Hầu Xạ", "Cò Linh"],
-  MAGE: ["Cú Băng", "Cáo Tuyết", "Rắn Lôi", "Nhện Độc", "Cóc Mưa", "Sứa Lam", "Bướm Sương", "Quạ Đêm", "Dơi Sấm", "Tắc Kè Lửa"],
-  SUPPORT: ["Nai Thần", "Hồ Ly", "Vẹt Linh", "Kỳ Lân", "Hươu Ngọc", "Sáo Gió", "Chim Sứ", "Hạc Trị", "Cáo Linh", "Nai Ca"],
-  FIGHTER: ["Hổ Nanh", "Sói Đầu", "Hà Mã", "Bọ Thép", "Báo Vồ", "Gấu Chiến", "Ngưu Đấu", "Tê Chiến", "Lang Cước", "Hổ Trảm"]
+  TANKER: ["Trâu Mộc", "Tê Sắt", "Rùa Nham", "Bọ Cứng", "Kiến Đá", "Cua Sắt", "Ốc Nham", "Tê Mãng", "Ngưu Cổ", "Rùa Mai", "Voi Đá", "Hà Mã Tăng", "Gấu Chiến", "Vá Đất", "Lợn Rừng", "Tê Giác Húc"],
+  ASSASSIN: ["Báo Đêm", "Miêu Ảnh", "Bọ Ngựa", "Dơi Sát", "Nhện Sát", "Rết Độc", "Muỗi Đêm", "Hổ Vệt", "Sói Lẩn", "Báo Ảnh", "Rắn Hổ", "Bọ Cạp", "Ong Sát", "Mantis Hư", "Cáo Bóng", "Chồn Đèn"],
+  ARCHER: ["Đại Bàng", "Ong Bắp Cày", "Chuồn Chuồn", "Kiến Lửa", "Châu Chấu", "Diều Sấm", "Tước Xạ", "Chim Lửa", "Hầu Xạ", "Cò Linh", "Sáo Đá", "Vịt Trời", "Thiên Nga", "Cú Mèo", "Vẹt Mỏ", "Mối Thợ"],
+  MAGE: ["Bướm Đêm", "Nhện Ma", "Đom Đóm", "Sâu Băng", "Cóc Mưa", "Sứa Lam", "Bướm Sương", "Quạ Đêm", "Dơi Sấm", "Tắc Kè Lửa", "Rắn Lục", "Cá Điện", "Bạch Tuộc", "Mực Ống", "Sao Biển", "Ốc Sên"],
+  SUPPORT: ["Nai Thần", "Bướm Phấn", "Ong Mật", "Tằm Tơ", "Sên Ngọc", "Sáo Gió", "Chim Sứ", "Hạc Trị", "Cáo Linh", "Nai Ca", "Ngựa Tiên", "Cừu Bông", "Thỏ Ngọc", "Sóc Bay", "Hải Cẩu", "Cá Heo"],
+  FIGHTER: ["Hổ Nanh", "Bọ Hung", "Kiến Vương", "Bọ Thép", "Gián Chiến", "Mối Chúa", "Ngưu Đấu", "Tê Chiến", "Lang Cước", "Hổ Trảm", "Sư Tử Vàng", "Gấu Nâu", "Cá Sấu", "Khủng Long", "Vượn Cáo", "Chó Săn"]
 };
 
 const CLASS_ORDER = ["TANKER", "ASSASSIN", "ARCHER", "MAGE", "SUPPORT", "FIGHTER"];
@@ -269,12 +341,12 @@ const CLASS_TITLE_POOL = {
 };
 
 const CLASS_ICON_POOL = {
-  TANKER: ["🦬", "🦏", "🐢", "🐻", "🐘", "🦛"],
-  ASSASSIN: ["🐆", "🦊", "🐺", "🦇", "🐅", "🐈"],
-  ARCHER: ["🦅", "🦉", "🦜", "🕊️", "🦆", "🐒"],
-  MAGE: ["🦄", "🐍", "🦋", "🐙", "🪼", "🦂"],
-  SUPPORT: ["🦌", "🦢", "🦙", "🫎", "🕊️", "🐬"],
-  FIGHTER: ["🐯", "🐗", "🦬", "🪲", "🐺", "🦍"]
+  TANKER: ["🦬", "🦏", "🐢", "🦀", "🐌", "🐞", "🐘", "🦕", "🐊", "🐄", "🦍", "🐎"],
+  ASSASSIN: ["🐆", "🦊", "🕷️", "🦇", "🦟", "🦗", "🦂", "🐍", "🦑", "🐈‍⬛", "🐀", "🦡"],
+  ARCHER: ["🦅", "🐝", "🐜", "🕊️", "🦆", "🦗", "🦃", "🦩", "🐓", "🦜", "🦢", "🦉"],
+  MAGE: ["🦋", "🐍", "🕷️", "🐙", "🪼", "🦂", "🦎", "🐡", "🐠", "🐉", "⛈️", "🦠"],
+  SUPPORT: ["🦌", "🦋", "🐝", "🐌", "🕊️", "🐬", "🐇", "🐿️", "🐑", "🦘", "🦭", "🦄"],
+  FIGHTER: ["🐯", "🐗", "🪲", "🐜", "🐺", "🦗", "🦁", "🐻", "🦖", "🦈", "🦍", "🐕"]
 };
 
 function roundStat(value) {
@@ -307,6 +379,116 @@ function generateIcon(classType, tribe, idx) {
   return pickBySeed(CLASS_ICON_POOL[classType], idx + tribeSeed * 3) || "🐾";
 }
 
+function toAsciiLower(text) {
+  return String(text ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function inferSpeciesKey(name, fallbackId = "linh-thu") {
+  const text = toAsciiLower(name).replace(/[^a-z0-9\s]/g, " ");
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const phraseRules = [
+    ["te giac", "te-giac"],
+    ["ky lan", "ky-lan"],
+    ["ha ma", "ha-ma"],
+    ["dai bang", "dai-bang"],
+    ["linh mieu", "linh-mieu"],
+    ["ho ly", "ho-ly"],
+    ["su tu", "su-tu"],
+    ["bo ngua", "bo-ngua"],
+    ["bo cap", "bo-cap"],
+    ["khung long", "khung-long"],
+    ["hai cau", "hai-cau"],
+    ["thien nga", "thien-nga"],
+    ["bach tuoc", "bach-tuoc"],
+    ["sao bien", "sao-bien"],
+    ["tac ke", "tac-ke"],
+    ["ca heo", "ca-heo"],
+    ["ca sau", "ca-sau"]
+  ];
+  for (const [phrase, key] of phraseRules) {
+    if (normalized.includes(phrase)) return key;
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  const animalTokens = new Set([
+    "gau",
+    "te",
+    "rua",
+    "trau",
+    "nguu",
+    "bo",
+    "bao",
+    "cao",
+    "cho",
+    "doi",
+    "mieu",
+    "meo",
+    "ly",
+    "quy",
+    "hung",
+    "voi",
+    "lon",
+    "ran",
+    "ong",
+    "sao",
+    "vit",
+    "moi",
+    "ca",
+    "muc",
+    "oc",
+    "ngua",
+    "cuu",
+    "tho",
+    "soc",
+    "vuon",
+    "cong",
+    "phuong",
+    "long",
+    "lan",
+    "bang",
+    "khi",
+    "hau",
+    "cu",
+    "nai",
+    "vet",
+    "lan",
+    "ho",
+    "soi",
+    "cho",
+    "chon",
+    "huou",
+    "chim",
+    "co",
+    "diet",
+    "buom",
+    "coc",
+    "su",
+    "bo",
+    "ong",
+    "chuon",
+    "kien",
+    "sau",
+    "oc",
+    "ret",
+    "muoi",
+    "gian",
+    "moi",
+    "de",
+    "chau"
+  ]);
+
+  for (const token of tokens) {
+    if (animalTokens.has(token)) return token;
+  }
+
+  if (tokens.length) return tokens[0];
+  const idRoot = String(fallbackId ?? "linh-thu").split("_")[0];
+  return idRoot || "linh-thu";
+}
+
 function generateExtraUnits(totalCount) {
   const extra = [];
   let idx = 0;
@@ -325,6 +507,7 @@ function generateExtraUnits(totalCount) {
     extra.push({
       id,
       name,
+      species: inferSpeciesKey(name, id),
       icon,
       tribe,
       classType,
@@ -345,5 +528,11 @@ function generateExtraUnits(totalCount) {
   return extra;
 }
 
-export const UNIT_CATALOG = [...CORE_UNITS, ...generateExtraUnits(TARGET_UNIT_COUNT)];
+export const UNIT_CATALOG = [...CORE_UNITS, ...generateExtraUnits(TARGET_UNIT_COUNT)].map((unit) => {
+  const existingSpecies = /** @type {any} */ (unit).species;
+  return {
+    ...unit,
+    species: existingSpecies ?? inferSpeciesKey(unit.name, unit.id)
+  };
+});
 export const UNIT_BY_ID = Object.fromEntries(UNIT_CATALOG.map((u) => [u.id, u]));
