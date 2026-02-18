@@ -254,6 +254,7 @@ export class PlanningScene extends Phaser.Scene {
     this.historyButtonRect = null;
     this.attackPreviewLayer = null;
     this.attackPreviewSword = null;
+    this.attackPreviewIcons = [];
     this.previewHoverUnit = null;
     this.headerStatChips = {};
     this.headerMetaText = null;
@@ -263,8 +264,9 @@ export class PlanningScene extends Phaser.Scene {
     this.storageCraftText = null;
     this.craftInputSlots = [];
     this.craftOutputSlot = null;
-    this.craftGridItems = [null, null, null, null];
+    this.craftGridItems = Array.from({ length: 9 }, () => null);
     this.craftHintText = null;
+    this.craftTitleText = null;
     this.rightPanelContentWidth = 0;
     this.rightPanelArea = null;
     this.rightPanelMask = null;
@@ -331,6 +333,7 @@ export class PlanningScene extends Phaser.Scene {
     this.historyButtonRect = null;
     this.attackPreviewLayer = null;
     this.attackPreviewSword = null;
+    this.attackPreviewIcons = [];
     this.previewHoverUnit = null;
     this.headerStatChips = {};
     this.headerMetaText = null;
@@ -340,8 +343,9 @@ export class PlanningScene extends Phaser.Scene {
     this.storageCraftText = null;
     this.craftInputSlots = [];
     this.craftOutputSlot = null;
-    this.craftGridItems = [null, null, null, null];
+    this.craftGridItems = Array.from({ length: 9 }, () => null);
     this.craftHintText = null;
+    this.craftTitleText = null;
     this.rightPanelContentWidth = 0;
     this.rightPanelArea = null;
     this.rightPanelMask = null;
@@ -404,8 +408,7 @@ export class PlanningScene extends Phaser.Scene {
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
     this.audioFx.setVolumeLevel(this.runtimeSettings.volumeLevel ?? 10);
-    const playlist = ["bgm_planning", "bgm_nature_1", "bgm_nature_2", "bgm_nature_3", "bgm_nature_4", "bgm_nature_5"];
-    this.audioFx.playPlaylist(playlist, 0.2, true);
+    this.startPlanningMusic();
     this.drawBoard();
     this.createHud();
     this.createButtons();
@@ -440,6 +443,20 @@ export class PlanningScene extends Phaser.Scene {
     }
   }
 
+  startPlanningMusic() {
+    const weights = {
+      bgm_warrior: 40,
+      bgm_gunny: 5,
+      bgm_planning: 10,
+      bgm_nature_1: 9,
+      bgm_nature_2: 9,
+      bgm_nature_3: 9,
+      bgm_nature_4: 9,
+      bgm_nature_5: 9
+    };
+    this.audioFx.playWeightedPlaylist(weights, 0.2);
+  }
+
   applyRuntimeSettings(settings) {
     if (!settings) return;
     this.runtimeSettings = { ...this.runtimeSettings, ...settings };
@@ -449,8 +466,7 @@ export class PlanningScene extends Phaser.Scene {
     if (this.player) this.player.loseCondition = loseCondition;
     if (typeof settings.audioEnabled === "boolean") this.audioFx.setEnabled(settings.audioEnabled);
     if (settings.volumeLevel != null) this.audioFx.setVolumeLevel(settings.volumeLevel);
-    const playlist = ["bgm_planning", "bgm_nature_1", "bgm_nature_2", "bgm_nature_3", "bgm_nature_4", "bgm_nature_5"];
-    this.audioFx.playPlaylist(playlist, 0.2, true);
+    this.startPlanningMusic();
     this.refreshPlanningUi();
   }
 
@@ -824,6 +840,8 @@ export class PlanningScene extends Phaser.Scene {
     if (!Number.isFinite(this.player.hpLossReduce)) this.player.hpLossReduce = 0;
     if (!Number.isFinite(this.player.extraClassCount)) this.player.extraClassCount = 0;
     if (!Number.isFinite(this.player.extraTribeCount)) this.player.extraTribeCount = 0;
+    if (!Number.isFinite(this.player.craftTableLevel)) this.player.craftTableLevel = 0;
+    this.player.craftTableLevel = clamp(Math.floor(this.player.craftTableLevel), 0, 1);
     if (typeof this.player.shopLocked !== "boolean") this.player.shopLocked = false;
 
     if (!Array.isArray(this.player.itemBag)) this.player.itemBag = [];
@@ -849,9 +867,13 @@ export class PlanningScene extends Phaser.Scene {
     if (!Number.isInteger(this.player.enemyPreviewRound)) this.player.enemyPreviewRound = 0;
     if (!Number.isFinite(this.player.enemyBudget)) this.player.enemyBudget = 0;
     if (!this.player.gameMode) this.player.gameMode = this.gameMode;
-    if (!this.player.itemBag.length) {
-      this.player.itemBag.push(randomItem(BASE_ITEMS).id, randomItem(BASE_ITEMS).id);
+    if (!Array.isArray(this.craftGridItems) || this.craftGridItems.length !== 9) {
+      this.craftGridItems = Array.from({ length: 9 }, (_, idx) => this.craftGridItems?.[idx] ?? null);
     }
+    this.getCraftActiveIndices().forEach((idx) => {
+      const id = this.craftGridItems[idx];
+      if (id && ITEM_BY_ID[id]?.kind !== "base") this.craftGridItems[idx] = null;
+    });
   }
 
   exportRunState() {
@@ -867,10 +889,30 @@ export class PlanningScene extends Phaser.Scene {
     saveProgress(this.exportRunState());
   }
 
+  applyLootDrops(result) {
+    const lootDrops = Array.isArray(result?.lootDrops)
+      ? result.lootDrops.filter((id) => ITEM_BY_ID[id]?.kind === "base")
+      : [];
+    if (!lootDrops.length) return;
+    this.player.itemBag.push(...lootDrops);
+    const lootCounts = {};
+    lootDrops.forEach((id) => {
+      lootCounts[id] = (lootCounts[id] ?? 0) + 1;
+    });
+    const lootLabel = Object.entries(lootCounts)
+      .map(([id, amount]) => {
+        const item = ITEM_BY_ID[id];
+        return `${item?.icon ?? "❔"} ${item?.name ?? id} x${amount}`;
+      })
+      .join(", ");
+    this.addLog(`Nhặt chiến lợi phẩm: ${lootLabel}.`);
+  }
+
   applyCombatResult(result) {
     if (!result) return;
     const won = result.winnerSide === "LEFT";
     if (result.winnerSide === "DRAW") {
+      this.applyLootDrops(result);
       this.player.winStreak = 0;
       this.player.loseStreak = 0;
       this.addLog(`Hòa vòng ${result.round}. Hai bên vẫn còn quân.`);
@@ -903,6 +945,7 @@ export class PlanningScene extends Phaser.Scene {
         return;
       }
     }
+    this.applyLootDrops(result);
 
     this.player.round = (result.round ?? this.player.round) + 1;
     this.resetBoardViewTransform(true);
@@ -975,10 +1018,15 @@ export class PlanningScene extends Phaser.Scene {
     const lowerSplitGap = UI_SPACING.LG;
 
     // Bottom layout
-    const benchRegionW = Math.floor(contentW * 0.35);
+    const benchRegionW = Math.floor(contentW * 0.42);
     const shopRegionW = contentW - benchRegionW - lowerSplitGap;
     const benchRegionX = boardPanelX;
     const shopRegionX = benchRegionX + benchRegionW + lowerSplitGap;
+    const benchRegionInnerGap = UI_SPACING.XS;
+    const craftRegionW = Math.max(172, Math.floor(benchRegionW * 0.34));
+    const benchSlotsRegionX = benchRegionX;
+    const benchSlotsRegionW = Math.max(220, benchRegionW - craftRegionW - benchRegionInnerGap);
+    const craftRegionX = benchSlotsRegionX + benchSlotsRegionW + benchRegionInnerGap;
 
     const shopCardH = 154;
     const benchCols = this.benchUpgradeLevel > 0 ? 7 : 4;
@@ -1003,7 +1051,7 @@ export class PlanningScene extends Phaser.Scene {
     const shopGap = UI_SPACING.SM;
     const shopCardW = Math.floor((shopRegionW - shopGap * 4) / 5);
     const benchGap = UI_SPACING.XS;
-    const benchSlotW = Math.max(68, Math.floor((benchRegionW - benchGap * (benchCols - 1)) / benchCols));
+    const benchSlotW = Math.max(68, Math.floor((benchSlotsRegionW - benchGap * (benchCols - 1)) / benchCols));
 
     return {
       width: w,
@@ -1027,6 +1075,10 @@ export class PlanningScene extends Phaser.Scene {
       sidePanelH,
       benchRegionX,
       benchRegionW,
+      benchSlotsRegionX,
+      benchSlotsRegionW,
+      craftRegionX,
+      craftRegionW,
       shopRegionX,
       shopRegionW,
       actionsY,
@@ -1428,19 +1480,12 @@ export class PlanningScene extends Phaser.Scene {
     this.tooltip.attach(this.synergyText, () => this.getSynergyTooltip());
 
 
-    // Inventory + Craft - Above Bench
-    const invX = l.benchRegionX;
+    // Inventory - Above Bench (left)
+    const invX = l.benchSlotsRegionX ?? l.benchRegionX;
     const invY = l.invY;
     const invCell = l.invCellSize;
     const invGap = UI_SPACING.XS;
-    const craftGridW = invCell * 2 + invGap;
-    const craftGridH = invCell * 2 + invGap;
-    const craftArrowGap = 30;
-    const craftPanelW = craftGridW + craftArrowGap + invCell;
-    const craftMinX = invX + invCell * 4;
-    const craftMaxX = l.boardPanelX + l.boardPanelW - craftPanelW - 8;
-    const craftX = clamp(invX + l.benchRegionW - craftPanelW - 8, craftMinX, craftMaxX);
-    const invAreaW = Math.max(invCell * 4, craftX - invX - 12);
+    const invAreaW = l.benchSlotsRegionW ?? l.benchRegionW;
     const invCols = clamp(Math.floor((invAreaW + invGap) / (invCell + invGap)), 4, 10);
 
     this.storageTitleText = this.add.text(invX, invY - 20, "◆ KHO ĐỒ", {
@@ -1455,7 +1500,6 @@ export class PlanningScene extends Phaser.Scene {
       fontSize: "11px",
       color: UI_COLORS.textPrimary
     }).setDepth(2000);
-    this.storageSummaryText.setFixedSize(Math.max(180, invAreaW - 96), 14);
 
     this.inventoryCells = [];
     for (let i = 0; i < invCols; i += 1) {
@@ -1498,7 +1542,21 @@ export class PlanningScene extends Phaser.Scene {
       this.inventoryCells.push(cell);
     }
 
-    const craftTitle = this.add.text(craftX, invY - 20, "⚒ Chế tạo 2x2", {
+    // Craft panel - Right side of bench
+    const craftX = l.craftRegionX ?? (l.benchRegionX + l.benchRegionW - 170);
+    const craftY = l.benchY + 2;
+    const craftW = l.craftRegionW ?? 170;
+    const craftCellGap = 5;
+    const craftCell = clamp(Math.floor((craftW - 30) / 5), 26, 32);
+    const craftGridW = craftCell * 3 + craftCellGap * 2;
+    const craftGridH = craftGridW;
+    const craftArrowGap = 18;
+    const gridX0 = craftX + 6;
+    const gridY0 = craftY + 18;
+    const outputX = gridX0 + craftGridW + craftArrowGap;
+    const outputY = gridY0 + Math.floor((craftGridH - craftCell) * 0.5);
+
+    this.craftTitleText = this.add.text(craftX, l.benchY - 24, "⚒ Bàn chế tạo", {
       fontFamily: UI_FONT,
       fontSize: "12px",
       color: UI_COLORS.textSecondary,
@@ -1506,18 +1564,18 @@ export class PlanningScene extends Phaser.Scene {
     }).setDepth(2000);
 
     this.craftInputSlots = [];
-    for (let idx = 0; idx < 4; idx += 1) {
-      const col = idx % 2;
-      const row = Math.floor(idx / 2);
-      const x = craftX + col * (invCell + invGap);
-      const y = invY + row * (invCell + invGap);
-      const bg = this.add.rectangle(x + invCell / 2, y + invCell / 2, invCell, invCell, 0x162639, 0.96);
+    for (let idx = 0; idx < 9; idx += 1) {
+      const col = idx % 3;
+      const row = Math.floor(idx / 3);
+      const x = gridX0 + col * (craftCell + craftCellGap);
+      const y = gridY0 + row * (craftCell + craftCellGap);
+      const bg = this.add.rectangle(x + craftCell / 2, y + craftCell / 2, craftCell, craftCell, 0x162639, 0.96);
       bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
       bg.setDepth(2000);
       bg.setInteractive({ useHandCursor: true });
-      const icon = this.add.text(x + invCell / 2, y + invCell / 2, "·", {
+      const icon = this.add.text(x + craftCell / 2, y + craftCell / 2, "·", {
         fontFamily: UI_FONT,
-        fontSize: "18px",
+        fontSize: "16px",
         color: UI_COLORS.textMuted
       }).setOrigin(0.5).setDepth(2001);
       const slot = { index: idx, bg, icon };
@@ -1525,6 +1583,13 @@ export class PlanningScene extends Phaser.Scene {
         if (pointer?.rightButtonDown?.() || pointer?.leftButtonDown?.()) this.clearCraftGridSlot(idx);
       });
       this.tooltip.attach(bg, () => {
+        const active = this.getCraftActiveIndices().includes(idx);
+        if (!active) {
+          return {
+            title: "Ô chế tạo (khóa)",
+            body: "Ô này chỉ mở khi nâng bàn chế lên 3x3 (15 vàng)."
+          };
+        }
         const itemId = this.craftGridItems[idx];
         if (!itemId) return { title: "Ô chế tạo", body: "Ô trống. Nhấn nguyên liệu trong kho để đưa vào." };
         const item = ITEM_BY_ID[itemId];
@@ -1533,8 +1598,8 @@ export class PlanningScene extends Phaser.Scene {
       this.craftInputSlots.push(slot);
     }
 
-    const arrowX = craftX + craftGridW + 10;
-    const arrowY = invY + Math.floor(craftGridH * 0.5);
+    const arrowX = gridX0 + craftGridW + Math.floor(craftArrowGap * 0.5);
+    const arrowY = gridY0 + Math.floor(craftGridH * 0.5);
     this.add.text(arrowX, arrowY, "→", {
       fontFamily: UI_FONT,
       fontSize: "22px",
@@ -1542,29 +1607,28 @@ export class PlanningScene extends Phaser.Scene {
       fontStyle: "bold"
     }).setOrigin(0.5).setDepth(2001);
 
-    const outX = craftX + craftGridW + craftArrowGap;
-    const outY = invY + Math.floor((craftGridH - invCell) * 0.5);
-    const outBg = this.add.rectangle(outX + invCell / 2, outY + invCell / 2, invCell, invCell, 0x1e2f42, 0.95);
+    const outBg = this.add.rectangle(outputX + craftCell / 2, outputY + craftCell / 2, craftCell, craftCell, 0x1e2f42, 0.95);
     outBg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.8);
     outBg.setDepth(2000);
     outBg.setInteractive({ useHandCursor: true });
-    const outIcon = this.add.text(outX + invCell / 2, outY + invCell / 2, "?", {
+    const outIcon = this.add.text(outputX + craftCell / 2, outputY + craftCell / 2, "?", {
       fontFamily: "Segoe UI Emoji",
-      fontSize: "20px",
+      fontSize: "18px",
       color: UI_COLORS.textMuted
     }).setOrigin(0.5).setDepth(2001);
     outBg.on("pointerdown", () => this.craftFromGrid());
     this.craftOutputSlot = { bg: outBg, icon: outIcon };
     this.tooltip.attach(outBg, () => {
       const recipeId = this.getCraftResultRecipeId();
-      if (!recipeId) return { title: "Đầu ra", body: "Chưa có công thức khớp. Sắp nguyên liệu theo mẫu 2x2." };
+      const size = this.getCraftGridSize();
+      if (!recipeId) return { title: "Đầu ra", body: `Chưa có công thức khớp. Sắp nguyên liệu theo mẫu ${size}x${size}.` };
       const recipe = RECIPE_BY_ID[recipeId];
       return {
         title: `${recipe?.icon ?? "✨"} ${recipe?.name ?? recipeId}`,
         body: `${recipe?.description ?? "Trang bị chế tạo"}\n\nNhấn để chế tạo và đưa vào kho đồ.`
       };
     });
-    this.craftHintText = this.add.text(craftX, invY - 6, "Nhấn nguyên liệu để đưa vào ô chế tạo.", {
+    this.craftHintText = this.add.text(craftX, craftY + craftGridH + 8, "Nhấn nguyên liệu để đưa vào ô chế tạo.", {
       fontFamily: UI_FONT,
       fontSize: "10px",
       color: UI_COLORS.textMuted
@@ -1598,24 +1662,31 @@ export class PlanningScene extends Phaser.Scene {
     strip.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.7);
     strip.setDepth(1888);
 
-    const smallW = 120;
     const gap = UI_SPACING.SM;
     const ctaW = 240;
 
-    this.buttons.roll = this.createButton(x, y1, smallW, 44, "Đổi tướng (2v)", () => this.rollShop());
-    this.buttons.xp = this.createButton(x + smallW + gap, y1, smallW, 44, "Mua XP (4v)", () => this.buyXp());
-    this.buttons.lock = this.createButton(x + (smallW + gap) * 2, y1, smallW, 44, "Khóa: Tắt", () => this.toggleLock());
+    let curX = x;
+    const btnH = 44;
 
-    // Nâng cấp dự bị button
-    this.buttons.upgradeBench = this.createButton(x + (smallW + gap) * 3, y1, smallW + 40, 44, "Nâng dự bị (10v)", () => this.upgradeBench());
+    this.buttons.roll = this.createButton(curX, y1, 130, btnH, "Đổi tướng (2 vàng)", () => this.rollShop());
+    curX += 130 + gap;
 
-    this.buttons.sell = this.createButton(x + (smallW + gap) * 4 + 40, y1, smallW - 20, 44, "Bán (S)", () => this.sellSelectedUnit(), {
-      variant: "ghost"
-    });
+    this.buttons.xp = this.createButton(curX, y1, 130, btnH, "Mua XP (4 vàng)", () => this.buyXp());
+    curX += 130 + gap;
 
-    this.buttons.reset = this.createButton(x + (smallW + gap) * 5 + 20, y1, smallW - 20, 44, "Ván mới", () => this.startNewRun(), {
-      variant: "ghost"
-    });
+    this.buttons.lock = this.createButton(curX, y1, 100, btnH, "Khóa: Tắt", () => this.toggleLock());
+    curX += 100 + gap;
+
+    this.buttons.upgradeBench = this.createButton(curX, y1, 160, btnH, "Nâng dự bị (10 vàng)", () => this.upgradeBench());
+    curX += 160 + gap;
+
+    this.buttons.upgradeCraft = this.createButton(curX, y1, 160, btnH, "Nâng bàn chế (15 vàng)", () => this.upgradeCraftTable());
+    curX += 160 + gap;
+
+    this.buttons.sell = this.createButton(curX, y1, 85, btnH, "Bán (S)", () => this.sellSelectedUnit(), { variant: "ghost" });
+    curX += 85 + gap;
+
+    this.buttons.reset = this.createButton(curX, y1, 85, btnH, "Ván mới", () => this.startNewRun(), { variant: "ghost" });
 
     this.buttons.start = this.createButton(
       l.boardPanelX + l.boardPanelW - ctaW,
@@ -2016,14 +2087,20 @@ export class PlanningScene extends Phaser.Scene {
     // Prepare craft recipes with base item lookups (lazy)
     if (!this._wikiCraftRecipes) {
       const baseById = Object.fromEntries(BASE_ITEMS.map((b) => [b.id, b]));
-      this._wikiCraftRecipes = CRAFT_RECIPES.map((r) => ({
-        ...r,
-        _pattern: this.getRecipePattern(r).map((id) => (id ? baseById[id] ?? { icon: "?", name: id } : null)),
-        _requiredLabel: this.getRecipeRequiredList(r)
-          .map((id) => baseById[id] ?? { icon: "?", name: id })
-          .map((item) => `${item.icon} ${item.name}`)
-          .join(" + ")
-      }));
+      this._wikiCraftRecipes = [...CRAFT_RECIPES]
+        .map((r) => {
+          const gridSize = this.getRecipeGridSize(r);
+          return {
+            ...r,
+            _gridSize: gridSize,
+            _pattern: this.getRecipePattern(r).map((id) => (id ? baseById[id] ?? { icon: "?", name: id } : null)),
+            _requiredLabel: this.getRecipeRequiredList(r)
+              .map((id) => baseById[id] ?? { icon: "?", name: id })
+              .map((item) => `${item.icon} ${item.name}`)
+              .join(" + ")
+          };
+        })
+        .sort((a, b) => (a._gridSize ?? 2) - (b._gridSize ?? 2));
     }
 
     const w = this.scale.width;
@@ -2229,7 +2306,7 @@ export class PlanningScene extends Phaser.Scene {
       this.wikiListContainer.add(recipeTitle);
       y += recipeTitle.height + 8;
 
-      const hint = this.add.text(0, y, "Khung chế tạo theo mẫu 2x2. Công thức có thể cần 2, 3 hoặc 4 nguyên liệu.", {
+      const hint = this.add.text(0, y, "Bàn chế mặc định 2x2. Nâng cấp 15 vàng sẽ mở 3x3 và thêm công thức xịn.", {
         fontFamily: UI_FONT, fontSize: "14px", color: "#9ec4e8", wordWrap: { width: viewportW - 14 }
       });
       this.wikiListContainer.add(hint);
@@ -2238,7 +2315,7 @@ export class PlanningScene extends Phaser.Scene {
       const rcols = viewportW > 700 ? 2 : 1;
       const rgap = 12;
       const rcardW = Math.floor((viewportW - rgap * (rcols - 1)) / rcols);
-      const rcardH = 136;
+      const rcardH = 196;
 
       this._wikiCraftRecipes.forEach((recipe, idx) => {
         const col = idx % rcols;
@@ -2254,14 +2331,17 @@ export class PlanningScene extends Phaser.Scene {
           fontStyle: "bold"
         });
 
-        const slotSize = 22;
-        const slotGap = 6;
+        const gridSize = recipe._gridSize ?? 2;
+        const slotSize = gridSize >= 3 ? 18 : 22;
+        const slotGap = 5;
         const gridX = cardX + 10;
         const gridY = cardY + 34;
+        const gridW = gridSize * slotSize + (gridSize - 1) * slotGap;
+        const gridCenterY = gridY + gridW * 0.5;
         const patternSlots = [];
-        for (let s = 0; s < 4; s += 1) {
-          const sx = gridX + (s % 2) * (slotSize + slotGap);
-          const sy = gridY + Math.floor(s / 2) * (slotSize + slotGap);
+        for (let s = 0; s < gridSize * gridSize; s += 1) {
+          const sx = gridX + (s % gridSize) * (slotSize + slotGap);
+          const sy = gridY + Math.floor(s / gridSize) * (slotSize + slotGap);
           const cellBg = this.add.rectangle(sx + slotSize / 2, sy + slotSize / 2, slotSize, slotSize, 0x112235, 0.98);
           cellBg.setStrokeStyle(1, 0x5a8ab0, 0.7);
           const item = recipe._pattern?.[s] ?? null;
@@ -2273,34 +2353,41 @@ export class PlanningScene extends Phaser.Scene {
           patternSlots.push(cellBg, icon);
         }
 
-        const arrow = this.add.text(gridX + slotSize * 2 + slotGap + 10, gridY + slotSize, "→", {
+        const sizeTag = this.add.text(cardX + rcardW - 10, cardY + 10, `Khung ${gridSize}x${gridSize}`, {
+          fontFamily: UI_FONT,
+          fontSize: "11px",
+          color: "#9ec4e8"
+        }).setOrigin(1, 0);
+
+        const arrow = this.add.text(gridX + gridW + 10, gridCenterY, "→", {
           fontFamily: UI_FONT,
           fontSize: "18px",
           color: "#a6cff1",
           fontStyle: "bold"
         }).setOrigin(0.5);
-        const outX = gridX + slotSize * 2 + slotGap + 24;
-        const outBg = this.add.rectangle(outX + slotSize / 2, gridY + slotSize, slotSize, slotSize, 0x2a4563, 0.96);
+        const outX = gridX + gridW + 24;
+        const outBg = this.add.rectangle(outX + slotSize / 2, gridCenterY, slotSize, slotSize, 0x2a4563, 0.96);
         outBg.setStrokeStyle(1, 0x82c2ff, 0.9);
-        const outIcon = this.add.text(outX + slotSize / 2, gridY + slotSize, recipe.icon, {
+        const outIcon = this.add.text(outX + slotSize / 2, gridCenterY, recipe.icon, {
           fontFamily: "Segoe UI Emoji",
           fontSize: "15px",
           color: "#ffffff"
         }).setOrigin(0.5);
 
-        const reqText = this.add.text(cardX + 10, cardY + 88, `Nguyên liệu: ${recipe._requiredLabel || "?"}`, {
+        const reqTextY = gridY + gridW + 8;
+        const reqText = this.add.text(cardX + 10, reqTextY, `Nguyên liệu: ${recipe._requiredLabel || "?"}`, {
           fontFamily: UI_FONT,
           fontSize: "12px",
           color: "#b9d8f2",
           wordWrap: { width: rcardW - 20 }
         });
-        const desc = this.add.text(cardX + 10, cardY + 106, recipe.description, {
+        const desc = this.add.text(cardX + 10, reqTextY + reqText.height + 4, recipe.description, {
           fontFamily: UI_FONT,
           fontSize: "12px",
           color: "#d7ecff",
           wordWrap: { width: rcardW - 20 }
         });
-        this.wikiListContainer.add([bg, title, ...patternSlots, arrow, outBg, outIcon, reqText, desc]);
+        this.wikiListContainer.add([bg, title, sizeTag, ...patternSlots, arrow, outBg, outIcon, reqText, desc]);
       });
 
       const totalRRows = Math.ceil(this._wikiCraftRecipes.length / rcols);
@@ -2737,7 +2824,7 @@ export class PlanningScene extends Phaser.Scene {
 
     const l = this.layout;
     const maxSlots = l.benchCols * l.benchRows;
-    const startX = l.benchRegionX;
+    const startX = l.benchSlotsRegionX ?? l.benchRegionX;
     const y = l.benchY;
     const slotW = l.benchSlotW;
     const slotH = l.benchSlotH;
@@ -2781,7 +2868,7 @@ export class PlanningScene extends Phaser.Scene {
     this.shopTitle.setDepth(2000);
 
     if (this.benchTitle) this.benchTitle.destroy();
-    this.benchTitle = this.add.text(l.benchRegionX, l.benchY - 24, "Dự bị", {
+    this.benchTitle = this.add.text(l.benchSlotsRegionX ?? l.benchRegionX, l.benchY - 24, "Dự bị", {
       fontFamily: UI_FONT,
       fontSize: "17px",
       color: UI_COLORS.textSecondary,
@@ -3352,6 +3439,25 @@ export class PlanningScene extends Phaser.Scene {
     this.persistProgress();
   }
 
+  upgradeCraftTable() {
+    if (this.settingsVisible || this.phase !== PHASE.PLANNING) return;
+    if ((this.player?.craftTableLevel ?? 0) >= 1) {
+      this.addLog("Bàn chế tạo đã đạt cấp tối đa (3x3).");
+      return;
+    }
+    const cost = 15;
+    if (this.player.gold < cost) {
+      this.addLog("Không đủ vàng để nâng bàn chế tạo.");
+      return;
+    }
+    this.player.gold -= cost;
+    this.player.craftTableLevel = 1;
+    this.addLog("Đã nâng bàn chế tạo lên 3x3.");
+    this.audioFx.play("buy");
+    this.refreshPlanningUi();
+    this.persistProgress();
+  }
+
   moveUnit(from, to, allowSwap = true) {
     if (!from || !to) return false;
     if (this.settingsVisible || !this.canInteractFormation() || this.overlaySprites.length) return false;
@@ -3525,15 +3631,32 @@ export class PlanningScene extends Phaser.Scene {
     return true;
   }
 
+  getCraftGridSize() {
+    return (this.player?.craftTableLevel ?? 0) >= 1 ? 3 : 2;
+  }
+
+  getCraftActiveIndices() {
+    const size = this.getCraftGridSize();
+    if (size >= 3) return [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    return [0, 1, 3, 4];
+  }
+
+  getRecipeGridSize(recipe) {
+    const sizeRaw = Number.isFinite(recipe?.gridSize) ? Math.floor(recipe.gridSize) : null;
+    if (sizeRaw === 3 || sizeRaw === 2) return sizeRaw;
+    return Array.isArray(recipe?.pattern) && recipe.pattern.length >= 9 ? 3 : 2;
+  }
+
   getRecipePattern(recipe) {
-    const out = Array.from({ length: 4 }, () => null);
+    const size = this.getRecipeGridSize(recipe);
+    const out = Array.from({ length: size * size }, () => null);
     if (!recipe || typeof recipe !== "object") return out;
     if (Array.isArray(recipe.pattern) && recipe.pattern.length) {
-      for (let i = 0; i < 4; i += 1) out[i] = recipe.pattern[i] ?? null;
+      for (let i = 0; i < out.length; i += 1) out[i] = recipe.pattern[i] ?? null;
       return out;
     }
     const req = Array.isArray(recipe.requires) ? recipe.requires : [];
-    for (let i = 0; i < Math.min(4, req.length); i += 1) out[i] = req[i] ?? null;
+    for (let i = 0; i < Math.min(out.length, req.length); i += 1) out[i] = req[i] ?? null;
     return out;
   }
 
@@ -3541,9 +3664,54 @@ export class PlanningScene extends Phaser.Scene {
     return this.getRecipePattern(recipe).filter(Boolean);
   }
 
+  getCraftGridState(tableSize = this.getCraftGridSize()) {
+    const grid = Array.from({ length: tableSize * tableSize }, () => null);
+    if (tableSize <= 2) {
+      const src = [0, 1, 3, 4];
+      src.forEach((sourceIdx, i) => {
+        grid[i] = this.craftGridItems[sourceIdx] ?? null;
+      });
+      return grid;
+    }
+    for (let i = 0; i < 9; i += 1) grid[i] = this.craftGridItems[i] ?? null;
+    return grid;
+  }
+
+  matchPatternInGrid(grid, gridSize, pattern, patternSize) {
+    if (gridSize === patternSize) {
+      for (let i = 0; i < grid.length; i += 1) {
+        if ((grid[i] ?? null) !== (pattern[i] ?? null)) return false;
+      }
+      return true;
+    }
+    if (gridSize < patternSize) return false;
+    const maxOff = gridSize - patternSize;
+    for (let offRow = 0; offRow <= maxOff; offRow += 1) {
+      for (let offCol = 0; offCol <= maxOff; offCol += 1) {
+        let ok = true;
+        for (let r = 0; r < gridSize && ok; r += 1) {
+          for (let c = 0; c < gridSize; c += 1) {
+            const gIdx = r * gridSize + c;
+            const localR = r - offRow;
+            const localC = c - offCol;
+            const inPattern = localR >= 0 && localR < patternSize && localC >= 0 && localC < patternSize;
+            const expected = inPattern ? pattern[localR * patternSize + localC] ?? null : null;
+            if ((grid[gIdx] ?? null) !== expected) {
+              ok = false;
+              break;
+            }
+          }
+        }
+        if (ok) return true;
+      }
+    }
+    return false;
+  }
+
   getCraftReservedCounts() {
     const counts = {};
-    (this.craftGridItems ?? []).forEach((id) => {
+    this.getCraftActiveIndices().forEach((idx) => {
+      const id = this.craftGridItems[idx];
       if (!id) return;
       counts[id] = (counts[id] ?? 0) + 1;
     });
@@ -3551,32 +3719,30 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getCraftResultRecipeId() {
-    const grid = (this.craftGridItems ?? []).slice(0, 4).map((id) => id ?? null);
+    const tableSize = this.getCraftGridSize();
+    const grid = this.getCraftGridState(tableSize);
     if (!grid.some(Boolean)) return null;
     for (let i = 0; i < CRAFT_RECIPES.length; i += 1) {
       const recipe = CRAFT_RECIPES[i];
+      const recipeSize = this.getRecipeGridSize(recipe);
+      if (recipeSize > tableSize) continue;
       const pattern = this.getRecipePattern(recipe);
-      let matched = true;
-      for (let j = 0; j < 4; j += 1) {
-        if ((grid[j] ?? null) !== (pattern[j] ?? null)) {
-          matched = false;
-          break;
-        }
-      }
-      if (matched) return recipe.id;
+      if (this.matchPatternInGrid(grid, tableSize, pattern, recipeSize)) return recipe.id;
     }
     return null;
   }
 
   clearCraftGridSlot(index) {
-    if (!Number.isInteger(index) || index < 0 || index >= 4) return;
+    if (!Number.isInteger(index) || index < 0 || index >= 9) return;
+    const active = new Set(this.getCraftActiveIndices());
+    if (!active.has(index)) return;
     if (!this.craftGridItems[index]) return;
     this.craftGridItems[index] = null;
     this.refreshStorageUi();
   }
 
   clearCraftGrid() {
-    this.craftGridItems = [null, null, null, null];
+    this.craftGridItems = Array.from({ length: 9 }, () => null);
     this.refreshStorageUi();
   }
 
@@ -3584,9 +3750,10 @@ export class PlanningScene extends Phaser.Scene {
     if (!itemId) return false;
     const item = ITEM_BY_ID[itemId];
     if (!item || item.kind !== "base") return false;
-    const slotIndex = this.craftGridItems.findIndex((id) => !id);
-    if (slotIndex < 0) {
-      this.addLog("Ô chế tạo 2x2 đã đầy.");
+    const active = this.getCraftActiveIndices();
+    const slotIndex = active.find((idx) => !this.craftGridItems[idx]);
+    if (slotIndex == null) {
+      this.addLog(`Ô chế tạo ${this.getCraftGridSize()}x${this.getCraftGridSize()} đã đầy.`);
       return false;
     }
     const totalOwned = this.getItemCount(itemId);
@@ -3604,7 +3771,7 @@ export class PlanningScene extends Phaser.Scene {
     if (this.settingsVisible || this.phase !== PHASE.PLANNING) return false;
     const recipeId = this.getCraftResultRecipeId();
     if (!recipeId) {
-      this.addLog("Chưa khớp công thức 2x2.");
+      this.addLog(`Chưa khớp công thức ${this.getCraftGridSize()}x${this.getCraftGridSize()}.`);
       return false;
     }
     const recipe = RECIPE_BY_ID[recipeId];
@@ -3630,7 +3797,7 @@ export class PlanningScene extends Phaser.Scene {
     bagCopy.push(equipmentId);
     this.player.itemBag = bagCopy;
     this.player.craftedItems.push(recipe.id);
-    this.craftGridItems = [null, null, null, null];
+    this.clearCraftGrid();
     this.audioFx.play("buy");
     this.addLog(`Đã ghép: ${recipe.icon} ${recipe.name}. Chọn ô vật phẩm rồi nhấn vào thú để trang bị.`);
     this.refreshStorageUi();
@@ -3961,14 +4128,7 @@ export class PlanningScene extends Phaser.Scene {
     const gain = base + interest + streak;
     this.player.gold += gain;
     this.addLog(`Vòng ${this.player.round}: +${gain} vàng (cơ bản ${base} + lãi ${interest} + chuỗi ${streak}).`);
-    if (this.player.round % 2 === 0) this.grantRoundItemDrop();
     this.persistProgress();
-  }
-
-  grantRoundItemDrop() {
-    const item = randomItem(BASE_ITEMS);
-    this.player.itemBag.push(item.id);
-    this.addLog(`Nhặt được vật phẩm: ${item.icon} ${item.name}.`);
   }
 
   prepareEnemyPreview(force = false) {
@@ -4441,7 +4601,9 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     this.previewHoverUnit = unit;
+    const skill = SKILL_LIBRARY[unit.skillId];
     this.attackPreviewLayer?.clear();
+    this.clearAttackPreviewIcons();
     impact.cells.forEach((cell) => {
       const tile = this.tileLookup.get(gridKey(cell.row, cell.col));
       if (!tile) return;
@@ -4450,17 +4612,53 @@ export class PlanningScene extends Phaser.Scene {
       this.attackPreviewLayer?.lineStyle(isPrimary ? 3 : 2, isPrimary ? 0xffefb5 : 0xb8ebff, 0.95);
       this.drawDiamond(this.attackPreviewLayer, tile.center.x, tile.center.y);
     });
-    this.drawAttackPreviewSword(impact.primary.row, impact.primary.col, unit);
+    const primaryIcon = this.getPreviewPrimaryIcon(unit, skill);
+    this.drawAttackPreviewPrimaryIcon(impact.primary.row, impact.primary.col, primaryIcon);
   }
 
   clearAttackPreview(unit = null) {
     if (unit && this.previewHoverUnit && this.previewHoverUnit.uid !== unit.uid) return;
     this.previewHoverUnit = null;
     this.attackPreviewLayer?.clear();
+    this.clearAttackPreviewIcons();
     if (this.attackPreviewSword) {
       this.attackPreviewSword.clear();
       this.attackPreviewSword.setVisible(false);
     }
+  }
+
+  clearAttackPreviewIcons() {
+    if (!Array.isArray(this.attackPreviewIcons)) this.attackPreviewIcons = [];
+    this.attackPreviewIcons.forEach((obj) => obj?.destroy?.());
+    this.attackPreviewIcons = [];
+  }
+
+  getPreviewPrimaryIcon(attacker, skill) {
+    const effect = skill?.effect ?? null;
+    const shieldEffects = new Set(["shield_immune", "team_buff_def", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
+    const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
+
+    if (shieldEffects.has(effect)) return "🛡️";
+    if (healBuffEffects.has(effect)) return "💚";
+    if (attacker?.classType === "ARCHER") return "🏹";
+    if (attacker?.classType === "ASSASSIN") return "🗡️";
+    return "👊";
+  }
+
+  drawAttackPreviewPrimaryIcon(row, col, iconText = "👊") {
+    const tile = this.tileLookup.get(gridKey(row, col));
+    if (!tile) return;
+    const topDepth = 3300;
+    const badgeBg = this.add.circle(tile.center.x, tile.center.y - 11, 12, 0x0b1724, 0.9);
+    badgeBg.setStrokeStyle(1.4, 0xe6f5ff, 0.95);
+    badgeBg.setDepth(topDepth);
+    const badgeIcon = this.add.text(tile.center.x, tile.center.y - 11, iconText, {
+      fontFamily: "Segoe UI Emoji",
+      fontSize: "13px",
+      color: "#ffffff"
+    }).setOrigin(0.5);
+    badgeIcon.setDepth(topDepth + 1);
+    this.attackPreviewIcons.push(badgeBg, badgeIcon);
   }
 
   drawAttackPreviewSword(row, col, attacker) {
@@ -4512,7 +4710,9 @@ export class PlanningScene extends Phaser.Scene {
     const skill = SKILL_LIBRARY[attacker.skillId];
     const impactCells = this.collectSkillPreviewCells(attacker, target, skill, allies, enemies);
     const hasTarget = impactCells.some((cell) => cell.row === target.row && cell.col === target.col);
-    const primary = hasTarget ? { row: target.row, col: target.col } : impactCells[0] ?? { row: target.row, col: target.col };
+    const primary = hasTarget
+      ? { row: target.row, col: target.col }
+      : [...impactCells].sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))[0] ?? { row: target.row, col: target.col };
     return { primary, cells: impactCells };
   }
 
@@ -4572,11 +4772,20 @@ export class PlanningScene extends Phaser.Scene {
 
 
       case "cross_5":
-        pushCell(target.row, target.col);
-        pushCell(target.row - 1, target.col);
-        pushCell(target.row + 1, target.col);
-        pushCell(target.row, target.col - 1);
-        pushCell(target.row, target.col + 1);
+        {
+          const targetOnRight = target.col >= RIGHT_COL_START;
+          const minCol = targetOnRight ? RIGHT_COL_START : 0;
+          const maxCol = targetOnRight ? RIGHT_COL_END : PLAYER_COLS - 1;
+          const pushCross = (row, col) => {
+            if (col < minCol || col > maxCol) return;
+            pushCell(row, col);
+          };
+          pushCross(target.row, target.col);
+          pushCross(target.row - 1, target.col);
+          pushCross(target.row + 1, target.col);
+          pushCross(target.row, target.col - 1);
+          pushCross(target.row, target.col + 1);
+        }
         break;
       case "row_multi":
         pushUnits(
@@ -4890,9 +5099,12 @@ export class PlanningScene extends Phaser.Scene {
     const lock = this.player.shopLocked ? "Bật" : "Tắt";
     const rollCost = Math.max(1, 2 + this.player.rollCostDelta);
 
-    this.buttons.roll.setLabel(`Đổi tướng (${rollCost})`);
-    this.buttons.xp.setLabel("Mua XP (4)");
+    this.buttons.roll.setLabel(`Đổi tướng (${rollCost} vàng)`);
+    this.buttons.xp.setLabel("Mua XP (4 vàng)");
     this.buttons.lock.setLabel(`Khóa: ${lock}`);
+    const craftLevel = this.player?.craftTableLevel ?? 0;
+    this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10 vàng)`);
+    this.buttons.upgradeCraft?.setLabel(craftLevel >= 1 ? "Bàn chế: 3x3" : "Nâng bàn chế (15 vàng)");
     this.buttons.sell.setLabel(this.selectedBenchIndex != null ? "Bán đã chọn" : "Bán (S)");
     this.buttons.start.setLabel("BẮT ĐẦU GIAO TRANH");
     this.buttons.settings.setLabel("Cài đặt");
@@ -4901,6 +5113,7 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.roll.setEnabled(planning);
     this.buttons.xp.setEnabled(planning);
     this.buttons.lock.setEnabled(planning);
+    this.buttons.upgradeCraft?.setEnabled(planning && craftLevel < 1);
     this.buttons.sell.setEnabled(planning && this.selectedBenchIndex != null && !!this.player?.bench?.[this.selectedBenchIndex]);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);
     this.buttons.reset.setEnabled(true);
@@ -5268,10 +5481,14 @@ export class PlanningScene extends Phaser.Scene {
       .join(", ");
 
     const selectedItem = this.selectedInventoryItemId ? ITEM_BY_ID[this.selectedInventoryItemId] : null;
-    this.storageSummaryText.setText(`• Kho thú ${this.player.bench.length}/${this.getBenchCap()} • Ô vật phẩm ${this.player.itemBag.length}`);
+    const tableSize = this.getCraftGridSize();
+    const activeCraftSlots = new Set(this.getCraftActiveIndices());
+
+    this.storageSummaryText.setText(`Kho thú ${this.player.bench.length}/${this.getBenchCap()} | Kho đồ ${this.player.itemBag.length}`);
     this.storageCraftText?.setText(
       `• Đồ ghép gần đây: ${craftedText || "Chưa có"}${selectedItem ? ` • Đang chọn: ${selectedItem.icon} ${selectedItem.name}` : ""}`
     );
+    this.craftTitleText?.setText(`⚒ Bàn chế tạo ${tableSize}x${tableSize}`);
 
     const bagEntries = Object.entries(bagCounts).sort((a, b) => b[1] - a[1]);
     this.inventoryCells.forEach((cell, idx) => {
@@ -5300,6 +5517,14 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.craftInputSlots.forEach((slot) => {
+      const enabled = activeCraftSlots.has(slot.index);
+      if (!enabled) {
+        slot.bg.setFillStyle(0x0f1b2a, 0.65);
+        slot.bg.setStrokeStyle(1, 0x2a3b4d, 0.55);
+        slot.icon.setText("🔒");
+        slot.icon.setColor("#5d7084");
+        return;
+      }
       const itemId = this.craftGridItems?.[slot.index] ?? null;
       if (!itemId) {
         slot.bg.setFillStyle(0x162639, 0.96);
@@ -5323,13 +5548,18 @@ export class PlanningScene extends Phaser.Scene {
         this.craftOutputSlot.bg.setStrokeStyle(1, UI_COLORS.accent, 0.95);
         this.craftOutputSlot.icon.setText(recipe?.icon ?? "✨");
         this.craftOutputSlot.icon.setColor("#ffffff");
-        this.craftHintText?.setText(`Công thức khớp: ${recipe?.name ?? resultRecipeId}. Nhấn ô đầu ra để chế tạo.`);
+        this.craftHintText?.setText(`Khớp: ${recipe?.name ?? resultRecipeId}. Nhấn ô đầu ra để chế tạo.`);
       } else {
         this.craftOutputSlot.bg.setFillStyle(0x1e2f42, 0.95);
         this.craftOutputSlot.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.8);
         this.craftOutputSlot.icon.setText("?");
         this.craftOutputSlot.icon.setColor(UI_COLORS.textMuted);
-        this.craftHintText?.setText("Nhấn nguyên liệu để đưa vào ô chế tạo.");
+        const lockedCount = tableSize >= 3 ? 0 : 5;
+        this.craftHintText?.setText(
+          lockedCount > 0
+            ? `Nhấn nguyên liệu để xếp mẫu ${tableSize}x${tableSize}. Còn ${lockedCount} ô sẽ mở khi nâng cấp.`
+            : `Nhấn nguyên liệu để xếp mẫu ${tableSize}x${tableSize}.`
+        );
       }
     }
 

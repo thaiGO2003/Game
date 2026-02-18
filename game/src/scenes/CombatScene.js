@@ -223,6 +223,7 @@ export class CombatScene extends Phaser.Scene {
     this.boardEdgeLabels = [];
     this.gapMarkers = [];
     this.loseCondition = "NO_UNITS";
+    this.combatLootDrops = [];
   }
 
   resetTransientSceneState() {
@@ -274,6 +275,7 @@ export class CombatScene extends Phaser.Scene {
     this.boardEdgeLabels = [];
     this.gapMarkers = [];
     this.loseCondition = "NO_UNITS";
+    this.combatLootDrops = [];
     if (this.combatTickEvent) {
       this.combatTickEvent.remove(false);
       this.combatTickEvent = null;
@@ -1693,6 +1695,7 @@ export class CombatScene extends Phaser.Scene {
     this.actionCount = 0;
     this.globalDamageMult = 1;
     this.isActing = false;
+    this.combatLootDrops = [];
     this.highlightLayer.clear();
 
     this.spawnPlayerCombatUnits();
@@ -1879,6 +1882,7 @@ export class CombatScene extends Phaser.Scene {
       homeCol: col,
       classType: base.classType,
       tribe: base.tribe,
+      species: base.species,
       skillId: base.skillId,
       equips: Array.isArray(owned.equips) ? [...owned.equips] : [],
       maxHp: hpWithAug,
@@ -1973,6 +1977,7 @@ export class CombatScene extends Phaser.Scene {
     this.combatSprites.forEach((s) => s.destroy());
     this.combatSprites = [];
     this.combatUnits = [];
+    this.combatLootDrops = [];
     this.highlightLayer.clear();
     this.clearAttackPreview();
   }
@@ -3774,6 +3779,78 @@ export class CombatScene extends Phaser.Scene {
     return Math.max(0, unit.mdef + buff);
   }
 
+  getSpeciesDropCandidates(unit) {
+    const base = UNIT_BY_ID[unit?.baseId];
+    const species = String(base?.species ?? unit?.species ?? "").toLowerCase();
+    const tribe = base?.tribe ?? unit?.tribe;
+    const classType = base?.classType ?? unit?.classType;
+    const out = [];
+    const add = (itemId) => {
+      if (!itemId || out.includes(itemId)) return;
+      if (ITEM_BY_ID[itemId]?.kind !== "base") return;
+      out.push(itemId);
+    };
+    const hasSpecies = (...keys) => keys.some((key) => species.includes(String(key).toLowerCase()));
+
+    if (hasSpecies("dai-bang", "qua", "cu", "vet", "cong", "thien-nga", "phuong", "ong")) add("feather");
+    if (hasSpecies("rua", "te-te", "te-giac", "ca-sau", "ran", "khung-long", "tac-ke", "bo-cap")) add("bark");
+    if (hasSpecies("gau", "trau", "voi", "ho", "soi", "nai", "lon", "su-tu", "ha-ma", "vuon")) add("belt");
+    if (hasSpecies("ong", "kien", "bo", "bo-cap", "bo-ngua", "nhen", "muoi", "sau", "chuon-chuon", "buom")) add("claw");
+    if (tribe === "TIDE") add("tear");
+    if (tribe === "SPIRIT" || tribe === "NIGHT" || classType === "MAGE") add("crystal");
+
+    if (!out.length) {
+      const fallbackByTribe = {
+        STONE: "bark",
+        WIND: "feather",
+        FIRE: "claw",
+        TIDE: "tear",
+        NIGHT: "claw",
+        SPIRIT: "crystal",
+        SWARM: "claw"
+      };
+      add(fallbackByTribe[tribe] ?? "claw");
+    }
+
+    return out;
+  }
+
+  rollLootDropsForUnit(unit) {
+    const candidates = this.getSpeciesDropCandidates(unit);
+    if (!candidates.length) return [];
+    const tier = clamp(Number.isFinite(unit?.tier) ? Math.floor(unit.tier) : 1, 1, 5);
+    const drops = [candidates[0]];
+    const chanceByTier = {
+      1: { second: 0.18, third: 0.04 },
+      2: { second: 0.28, third: 0.08 },
+      3: { second: 0.4, third: 0.14 },
+      4: { second: 0.52, third: 0.2 },
+      5: { second: 0.66, third: 0.28 }
+    };
+    const tierChance = chanceByTier[tier] ?? chanceByTier[1];
+    if (candidates.length > 1 && Math.random() < tierChance.second) {
+      drops.push(candidates[1]);
+    }
+    if (candidates.length > 2 && Math.random() < tierChance.third) {
+      drops.push(candidates[2]);
+    }
+    return drops;
+  }
+
+  recordEnemyLootDrop(unit) {
+    const drops = this.rollLootDropsForUnit(unit);
+    if (!drops.length) return;
+    if (!Array.isArray(this.combatLootDrops)) this.combatLootDrops = [];
+    this.combatLootDrops.push(...drops);
+    const label = drops
+      .map((id) => {
+        const item = ITEM_BY_ID[id];
+        return `${item?.icon ?? "❔"} ${item?.name ?? id}`;
+      })
+      .join(", ");
+    this.addLog(`${unit?.name ?? "Linh thú"} rơi: ${label}.`);
+  }
+
   resolveDamage(attacker, defender, rawDamage, damageType, reason, options = {}) {
     if (!defender || !defender.alive) return 0;
     if (attacker && !attacker.alive) return 0;
@@ -3931,6 +4008,9 @@ export class CombatScene extends Phaser.Scene {
       this.audioFx.play("ko", 0.12);
       this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xffffff, 20, 320);
       this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "HẠ GỤC", "#ffffff");
+      if (defender.side === "RIGHT" && attacker?.side !== "RIGHT") {
+        this.recordEnemyLootDrop(defender);
+      }
     }
 
     this.updateCombatUnitUi(defender);
@@ -4166,7 +4246,8 @@ export class CombatScene extends Phaser.Scene {
       round: this.player.round,
       rightSurvivors,
       damage: Math.max(1, Math.min(4, rightSurvivors || 1)),
-      goldDelta: 0
+      goldDelta: 0,
+      lootDrops: Array.isArray(this.combatLootDrops) ? [...this.combatLootDrops] : []
     };
 
     if (winnerSide === "LEFT") {

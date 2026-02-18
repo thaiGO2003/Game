@@ -1,10 +1,10 @@
 export const BASE_ITEMS = [
-  { id: "claw", name: "Vuốt Sắc", icon: "🗡️", kind: "base" },
-  { id: "bark", name: "Vỏ Cứng", icon: "🛡️", kind: "base" },
+  { id: "claw", name: "Vuốt Sắc", icon: "🦷", kind: "base" },
+  { id: "bark", name: "Vảy Cứng", icon: "🛡️", kind: "base" },
   { id: "crystal", name: "Tinh Thạch", icon: "🔮", kind: "base" },
-  { id: "feather", name: "Lông Vũ", icon: "🪶", kind: "base" },
-  { id: "tear", name: "Nước Mắt", icon: "💧", kind: "base" },
-  { id: "belt", name: "Đai Lưng", icon: "🥋", kind: "base" }
+  { id: "feather", name: "Lông Chim", icon: "🪶", kind: "base" },
+  { id: "tear", name: "Nước Linh", icon: "💧", kind: "base" },
+  { id: "belt", name: "Da Thú", icon: "🧥", kind: "base" }
 ];
 
 const CRAFT_RECIPES_RAW = [
@@ -50,7 +50,7 @@ const CRAFT_RECIPES_RAW = [
   },
   {
     id: "sterak_gage",
-    name: "Móng Vuốt",
+    name: "Móng Vuốt Thần Thú",
     icon: "🥊",
     pattern: ["claw", "belt", null, null],
     bonus: { atkPct: 0.05, hpPct: 0.1 },
@@ -94,7 +94,7 @@ const CRAFT_RECIPES_RAW = [
     icon: "🔥",
     pattern: ["bark", "belt", null, null],
     bonus: { hpPct: 0.15, burnOnHit: 1 },
-    description: "Người mang +15% HP, Đốt cháy khi đánh"
+    description: "Người mang +15% HP, đốt cháy khi đánh"
   },
   {
     id: "rabadon_deathcap",
@@ -126,7 +126,7 @@ const CRAFT_RECIPES_RAW = [
     icon: "📖",
     pattern: ["crystal", "belt", null, null],
     bonus: { matkPct: 0.05, hpPct: 0.1, burnOnHit: 1 },
-    description: "Người mang +5% MATK, +10% HP, Đốt cháy"
+    description: "Người mang +5% MATK, +10% HP, đốt cháy"
   },
   {
     id: "rapid_firecannon",
@@ -166,7 +166,7 @@ const CRAFT_RECIPES_RAW = [
     icon: "✝️",
     pattern: ["tear", "belt", null, null],
     bonus: { hpPct: 0.1, startingRage: 10, healPct: 0.1 },
-    description: "Người mang +10% HP, +10 Nộ, +10% Hồi máu"
+    description: "Người mang +10% HP, +10 Nộ, +10% hồi máu"
   },
   {
     id: "warmog_armor",
@@ -175,26 +175,140 @@ const CRAFT_RECIPES_RAW = [
     pattern: ["belt", "belt", "belt", null],
     bonus: { hpPct: 0.25 },
     description: "Người mang +25% HP"
+  },
+
+  {
+    id: "dragon_heart",
+    name: "Trái Tim Rồng",
+    icon: "🐉",
+    gridSize: 3,
+    pattern: [
+      "claw", "crystal", "claw",
+      "belt", "tear", "belt",
+      "bark", "feather", "bark"
+    ],
+    bonus: { atkPct: 0.22, hpPct: 0.18, critPct: 0.12 },
+    description: "Người mang +22% ATK, +18% HP, +12% Crit"
+  },
+  {
+    id: "storm_crown",
+    name: "Vương Miện Bão Tố",
+    icon: "👑",
+    gridSize: 3,
+    pattern: [
+      "crystal", "feather", "crystal",
+      "tear", "crystal", "tear",
+      null, "feather", null
+    ],
+    bonus: { matkPct: 0.28, startingRage: 25, mdefFlat: 20 },
+    description: "Người mang +28% MATK, +25 Nộ, +20 MDEF"
+  },
+  {
+    id: "titan_shell",
+    name: "Mai Titan",
+    icon: "🐢",
+    gridSize: 3,
+    pattern: [
+      "bark", "bark", "bark",
+      "bark", "belt", "bark",
+      "tear", "bark", "tear"
+    ],
+    bonus: { hpPct: 0.4, defFlat: 35, mdefFlat: 20 },
+    description: "Người mang +40% HP, +35 DEF, +20 MDEF"
+  },
+  {
+    id: "bloodfang_reaper",
+    name: "Huyết Nha",
+    icon: "🩸",
+    gridSize: 3,
+    pattern: [
+      "claw", null, "claw",
+      "belt", "claw", "belt",
+      null, "tear", null
+    ],
+    bonus: { atkPct: 0.2, lifestealPct: 0.22, critPct: 0.1 },
+    description: "Người mang +20% ATK, +22% hút máu, +10% Crit"
+  },
+  {
+    id: "phoenix_plume",
+    name: "Lông Phượng",
+    icon: "🐦‍🔥",
+    gridSize: 3,
+    pattern: [
+      "feather", "feather", "feather",
+      null, "crystal", null,
+      "tear", "belt", "tear"
+    ],
+    bonus: { matkPct: 0.2, healPct: 0.18, startingRage: 20 },
+    description: "Người mang +20% MATK, +18% hồi máu, +20 Nộ"
+  },
+  {
+    id: "void_engine",
+    name: "Lõi Hư Không",
+    icon: "🌌",
+    gridSize: 3,
+    pattern: [
+      "crystal", "tear", "crystal",
+      "claw", "crystal", "claw",
+      "feather", "tear", "feather"
+    ],
+    bonus: { atkPct: 0.12, matkPct: 0.12, critPct: 0.15, startingRage: 10 },
+    description: "Người mang +12% ATK/MATK, +15% Crit, +10 Nộ"
+  },
+  {
+    id: "gaia_oath",
+    name: "Thệ Ước Đại Địa",
+    icon: "🌿",
+    gridSize: 3,
+    pattern: [
+      "belt", "bark", "belt",
+      "tear", "crystal", "tear",
+      "belt", "bark", "belt"
+    ],
+    bonus: { hpPct: 0.3, healPct: 0.12, shieldStart: 100 },
+    description: "Người mang +30% HP, +12% hồi máu, +100 khiên đầu trận"
+  },
+  {
+    id: "thunder_pike",
+    name: "Thương Lôi",
+    icon: "⚡",
+    gridSize: 3,
+    pattern: [
+      "feather", "claw", "feather",
+      null, "tear", null,
+      "claw", "crystal", "claw"
+    ],
+    bonus: { atkPct: 0.18, critPct: 0.2, startingRage: 15 },
+    description: "Người mang +18% ATK, +20% Crit, +15 Nộ"
   }
 ];
 
-function normalizePattern(pattern, requires = []) {
+function resolveGridSize(recipe) {
+  const raw = Number.isFinite(recipe?.gridSize) ? Math.floor(recipe.gridSize) : null;
+  if (raw === 3 || raw === 2) return raw;
+  if (Array.isArray(recipe?.pattern) && recipe.pattern.length >= 9) return 3;
+  return 2;
+}
+
+function normalizePattern(pattern, gridSize, requires = []) {
+  const maxCells = gridSize * gridSize;
   if (Array.isArray(pattern) && pattern.length) {
-    const out = Array.from({ length: 4 }, (_, idx) => pattern[idx] ?? null);
-    return out;
+    return Array.from({ length: maxCells }, (_, idx) => pattern[idx] ?? null);
   }
-  const out = [null, null, null, null];
-  for (let i = 0; i < Math.min(4, requires.length); i += 1) out[i] = requires[i] ?? null;
+  const out = Array.from({ length: maxCells }, () => null);
+  for (let i = 0; i < Math.min(maxCells, requires.length); i += 1) out[i] = requires[i] ?? null;
   return out;
 }
 
 function normalizeRecipe(recipe) {
-  const pattern = normalizePattern(recipe.pattern, recipe.requires ?? []);
+  const gridSize = resolveGridSize(recipe);
+  const pattern = normalizePattern(recipe.pattern, gridSize, recipe.requires ?? []);
   const requires = Array.isArray(recipe.requires) && recipe.requires.length
     ? recipe.requires.filter(Boolean)
     : pattern.filter(Boolean);
   return {
     ...recipe,
+    gridSize,
     pattern,
     requires
   };

@@ -121,6 +121,39 @@ export class AudioFx {
     playTrack(0);
   }
 
+  playWeightedPlaylist(weightsMap, volume = 0.2) {
+    if (!weightsMap || Object.keys(weightsMap).length === 0) return;
+    const game = this.scene?.game;
+    this.stopBgm();
+
+    const playNext = () => {
+      if (!this.scene?.game) return;
+      const keys = Object.keys(weightsMap).filter((k) => this.scene.cache.audio.exists(k));
+      if (keys.length === 0) return;
+
+      const totalWeight = keys.reduce((sum, k) => sum + weightsMap[k], 0);
+      let random = Math.random() * totalWeight;
+      let selectedKey = keys[0];
+
+      for (const key of keys) {
+        if (random < weightsMap[key]) {
+          selectedKey = key;
+          break;
+        }
+        random -= weightsMap[key];
+      }
+
+      const sound = this.scene.sound.add(selectedKey, { volume: volume * this.getMasterVolume(), mute: !this.enabled });
+      sound.play();
+      sound.once("complete", () => playNext());
+
+      game.__forestBgm = { key: "weighted_playlist", sound, baseVolume: volume, weightsMap };
+    };
+
+    playNext();
+  }
+
+
   play(type, duration = 0.08) {
     if (!this.enabled) return;
     const master = this.getMasterVolume();

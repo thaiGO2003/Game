@@ -65,6 +65,8 @@ export class MainMenuScene extends Phaser.Scene {
     for (let i = 1; i <= 5; i++) {
       this.load.audio(`bgm_nature_${i}`, `assets/audio/nature_${i}.mp3`);
     }
+    this.load.audio("bgm_warrior", "assets/audio/warrior.mp3");
+    this.load.audio("bgm_gunny", "assets/audio/gunny.mp3");
 
     FOREST_BACKGROUND_ASSETS.forEach((asset) => {
       if (!this.textures.exists(asset.key)) {

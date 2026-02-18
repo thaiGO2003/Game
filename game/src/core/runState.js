@@ -27,6 +27,7 @@ const PLAYER_TEMPLATE = {
   hpLossReduce: 0,
   extraClassCount: 0,
   extraTribeCount: 0,
+  craftTableLevel: 0,
   itemBag: [],
   craftedItems: [],
   enemyPreview: [],
@@ -139,6 +140,9 @@ export function hydrateRunState(raw) {
   state.player.gold = Math.max(0, state.player.gold);
   if (!Array.isArray(state.player.itemBag)) state.player.itemBag = [];
   if (!Array.isArray(state.player.craftedItems)) state.player.craftedItems = [];
+  state.player.craftTableLevel = Number.isFinite(state.player.craftTableLevel)
+    ? Math.max(0, Math.min(1, Math.floor(state.player.craftTableLevel)))
+    : 0;
   if (!Array.isArray(state.player.enemyPreview)) state.player.enemyPreview = [];
   state.player.enemyPreviewRound = Number.isInteger(state.player.enemyPreviewRound) ? state.player.enemyPreviewRound : 0;
   state.player.enemyBudget = Number.isFinite(state.player.enemyBudget) ? state.player.enemyBudget : 0;

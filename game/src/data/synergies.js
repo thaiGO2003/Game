@@ -1,5 +1,25 @@
 import synergiesCsv from "../../data/synergies.csv?raw";
 
+function parseBonusValue(bonusStrRaw) {
+  const raw = String(bonusStrRaw ?? "").trim();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch (_err) {
+    // Support legacy CSV object syntax like: {poisonOnHit:22}
+    const normalized = raw
+      .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+      .replace(/'/g, '"')
+      .replace(/,\s*}/g, "}");
+    try {
+      return JSON.parse(normalized);
+    } catch (_err2) {
+      console.warn("Failed to parse bonus JSON", bonusStrRaw);
+      return {};
+    }
+  }
+}
+
 function parseSynergiesCsv(csvText) {
   const lines = csvText.trim().split(/\r?\n/);
   // header: group,id,name,threshold,bonus
@@ -38,12 +58,7 @@ function parseSynergiesCsv(csvText) {
       bonusStr = bonusStr.slice(1, -1).replace(/""/g, '"');
     }
 
-    let bonus = {};
-    try {
-      bonus = JSON.parse(bonusStr);
-    } catch (e) {
-      console.warn("Failed to parse bonus JSON", bonusStr);
-    }
+    const bonus = parseBonusValue(bonusStr);
 
     const targetObj = group === "CLASS" ? classSynergy : tribeSynergy;
 
