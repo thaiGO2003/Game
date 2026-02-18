@@ -3344,6 +3344,24 @@ export class CombatScene extends Phaser.Scene {
         this.updateCombatUnitUi(attacker);
         break;
       }
+      case "turtle_protection": {
+        attacker.statuses.isProtecting = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "HÀO QUANG VỆ QUÂN", "#9dffba");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
+      case "rhino_counter": {
+        attacker.statuses.counterTurns = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "TẬP TRUNG PHẢN ĐÒN", "#ffd97b");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
+      case "pangolin_reflect": {
+        attacker.statuses.physReflectTurns = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "GIÁP VẢY SẮC", "#ff9b9b");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
       default:
         this.resolveDamage(attacker, target, rawSkill, skill.damageType || "physical", skill.name, skillOpts);
         break;
@@ -3378,6 +3396,28 @@ export class CombatScene extends Phaser.Scene {
   resolveDamage(attacker, defender, rawDamage, damageType, reason, options = {}) {
     if (!defender || !defender.alive) return 0;
     if (attacker && !attacker.alive) return 0;
+
+    // Turtle Protection Logic for Splash Damage
+    if (options.isSplash && !options.isProtected) {
+      const allies = this.getCombatUnits(defender.side);
+      const protector = allies.find((a) =>
+        a.alive &&
+        a.statuses.isProtecting > 0 &&
+        a.uid !== defender.uid &&
+        Math.abs(a.row - defender.row) <= 1 &&
+        Math.abs(a.col - defender.col) <= 1
+      );
+      if (protector) {
+        this.showFloatingText(defender.sprite.x, defender.sprite.y - 55, "THẾ THÂN", "#ffffff");
+        // Tanker intercepts with 25% damage reduction (takes 75%)
+        return this.resolveDamage(attacker, protector, rawDamage * 0.75, damageType, "BẢO VỆ", {
+          ...options,
+          isSplash: false,
+          isProtected: true,
+          forceHit: true
+        });
+      }
+    }
 
     if (attacker && !options.forceHit && !options.isSkill) {
       if (Math.random() < defender.mods.evadePct) {
@@ -3452,12 +3492,30 @@ export class CombatScene extends Phaser.Scene {
       defender.statuses.poisonDamage = Math.max(defender.statuses.poisonDamage, attacker.mods.poisonOnHit);
     }
 
-    if (attacker && !options.noReflect && defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0 && attacker.alive) {
-      const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
-      this.resolveDamage(defender, attacker, reflected, "true", "PHẢN ĐÒN", {
-        noReflect: true,
-        forceHit: true
-      });
+    if (attacker && !options.noReflect && attacker.alive) {
+      // Standard reflect
+      if (defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0) {
+        const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
+        this.resolveDamage(defender, attacker, reflected, "true", "REFLECT", {
+          noReflect: true,
+          forceHit: true
+        });
+      }
+      // Pangolin Physical Reflect
+      else if (damageType === "physical" && defender.statuses.physReflectTurns > 0) {
+        this.resolveDamage(defender, attacker, damageLeft, "true", "VẢY PHẢN", {
+          noReflect: true,
+          forceHit: true
+        });
+      }
+    }
+
+    // Rhino Melee Counter
+    if (attacker && !options.noCounter && attacker.alive && defender.alive) {
+      if (attacker.range <= 1 && defender.statuses.counterTurns > 0) {
+        this.addLog(`${defender.name} húc trả ${attacker.name}!`);
+        this.basicAttack(defender, attacker, { noCounter: true });
+      }
     }
 
     if (attacker && attacker.mods.lifestealPct > 0 && damageLeft > 0) {

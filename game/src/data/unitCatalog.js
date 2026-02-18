@@ -1,293 +1,34 @@
-const CORE_UNITS = [
-  {
-    id: "bear_ancient",
-    name: "Gấu Cổ Thụ",
-    tribe: "STONE",
-    classType: "TANKER",
-    tier: 1,
-    stats: { hp: 340, atk: 42, def: 30, matk: 10, mdef: 24, range: 1, rageMax: 4 },
-    skillId: "thorn_bark"
-  },
-  {
-    id: "rhino_quake",
-    name: "Tê Giác Địa Chấn",
-    tribe: "STONE",
-    classType: "TANKER",
-    tier: 2,
-    stats: { hp: 380, atk: 48, def: 33, matk: 10, mdef: 24, range: 1, rageMax: 4 },
-    skillId: "earth_ram"
-  },
-  {
-    id: "turtle_mire",
-    name: "Rùa Đầm Lầy",
-    tribe: "TIDE",
-    classType: "TANKER",
-    tier: 3,
-    stats: { hp: 410, atk: 50, def: 36, matk: 16, mdef: 30, range: 1, rageMax: 5 },
-    skillId: "shell_reflect"
-  },
-  {
-    id: "buffalo_mist",
-    name: "Trâu Sương Mù",
-    tribe: "WIND",
-    classType: "TANKER",
-    tier: 4,
-    stats: { hp: 450, atk: 55, def: 38, matk: 18, mdef: 31, range: 1, rageMax: 4 },
-    skillId: "mist_guard"
-  },
-  {
-    id: "panther_void",
-    name: "Báo Hư Không",
-    tribe: "NIGHT",
-    classType: "ASSASSIN",
-    tier: 1,
-    stats: { hp: 240, atk: 69, def: 14, matk: 14, mdef: 12, range: 1, rageMax: 2 },
-    skillId: "void_execute"
-  },
-  {
-    id: "fox_flame",
-    name: "Cáo Hỏa",
-    tribe: "FIRE",
-    classType: "ASSASSIN",
-    tier: 2,
-    stats: { hp: 255, atk: 72, def: 15, matk: 18, mdef: 13, range: 1, rageMax: 2 },
-    skillId: "flame_combo"
-  },
-  {
-    id: "bat_blood",
-    name: "Dơi Huyết",
-    tribe: "NIGHT",
-    classType: "ASSASSIN",
-    tier: 3,
-    stats: { hp: 275, atk: 78, def: 16, matk: 20, mdef: 15, range: 1, rageMax: 3 },
-    skillId: "blood_bite"
-  },
-  {
-    id: "lynx_echo",
-    name: "Bọ Ngựa Gió",
-    tribe: "WIND",
-    classType: "ASSASSIN",
-    tier: 4,
-    stats: { hp: 295, atk: 84, def: 18, matk: 22, mdef: 16, range: 1, rageMax: 3 },
-    skillId: "echo_slash"
-  },
-  {
-    id: "eagle_marksman",
-    name: "Đại Bàng Xạ Thủ",
-    tribe: "WIND",
-    classType: "ARCHER",
-    tier: 1,
-    stats: { hp: 230, atk: 62, def: 12, matk: 10, mdef: 11, range: 4, rageMax: 3 },
-    skillId: "cross_arrow"
-  },
-  {
-    id: "monkey_spear",
-    name: "Khỉ Lao Cành",
-    tribe: "WIND",
-    classType: "ARCHER",
-    tier: 2,
-    stats: { hp: 250, atk: 68, def: 12, matk: 12, mdef: 12, range: 4, rageMax: 3 },
-    skillId: "row_pierce"
-  },
-  {
-    id: "owl_nightshot",
-    name: "Cú Đêm",
-    tribe: "NIGHT",
-    classType: "ARCHER",
-    tier: 3,
-    stats: { hp: 265, atk: 74, def: 13, matk: 14, mdef: 13, range: 4, rageMax: 3 },
-    skillId: "sleep_shot"
-  },
-  {
-    id: "cat_goldbow",
-    name: "Ong Lửa",
-    tribe: "FIRE",
-    classType: "ARCHER",
-    tier: 4,
-    stats: { hp: 280, atk: 82, def: 14, matk: 16, mdef: 14, range: 4, rageMax: 3 },
-    skillId: "armor_break_arrow"
-  },
-  {
-    id: "ice_mage",
-    name: "Chuồn Chuồn Băng",
-    tribe: "TIDE",
-    classType: "MAGE",
-    tier: 1,
-    stats: { hp: 215, atk: 16, def: 10, matk: 74, mdef: 20, range: 4, rageMax: 5 },
-    skillId: "ice_column"
-  },
-  {
-    id: "worm_ice",
-    name: "Sâu Băng",
-    tribe: "TIDE",
-    classType: "MAGE",
-    tier: 2,
-    stats: { hp: 230, atk: 18, def: 10, matk: 80, mdef: 21, range: 4, rageMax: 5 },
-    skillId: "snow_burst"
-  },
-  {
-    id: "storm_mage",
-    name: "Rắn Lôi",
-    tribe: "WIND",
-    classType: "MAGE",
-    tier: 3,
-    stats: { hp: 245, atk: 20, def: 11, matk: 88, mdef: 22, range: 4, rageMax: 5 },
-    skillId: "storm_column"
-  },
-  {
-    id: "spore_mage",
-    name: "Nhện Bào Tử",
-    tribe: "SWARM",
-    classType: "MAGE",
-    tier: 4,
-    stats: { hp: 260, atk: 22, def: 11, matk: 96, mdef: 23, range: 4, rageMax: 5 },
-    skillId: "spore_rain"
-  },
-  {
-    id: "deer_song",
-    name: "Nai Thần Ca",
-    tribe: "SPIRIT",
-    classType: "SUPPORT",
-    tier: 1,
-    stats: { hp: 245, atk: 22, def: 14, matk: 62, mdef: 25, range: 3, rageMax: 4 },
-    skillId: "life_song"
-  },
-  {
-    id: "butterfly_mirror",
-    name: "Bướm Kính",
-    tribe: "SPIRIT",
-    classType: "SUPPORT",
-    tier: 2,
-    stats: { hp: 260, atk: 24, def: 15, matk: 68, mdef: 26, range: 3, rageMax: 4 },
-    skillId: "mirror_shield"
-  },
-  {
-    id: "parrot_roar",
-    name: "Vẹt Linh Hô",
-    tribe: "WIND",
-    classType: "SUPPORT",
-    tier: 3,
-    stats: { hp: 280, atk: 26, def: 16, matk: 72, mdef: 27, range: 3, rageMax: 4 },
-    skillId: "rage_chant"
-  },
-  {
-    id: "qilin_breeze",
-    name: "Kỳ Lân Gió",
-    tribe: "SPIRIT",
-    classType: "SUPPORT",
-    tier: 4,
-    stats: { hp: 300, atk: 28, def: 17, matk: 82, mdef: 28, range: 3, rageMax: 5 },
-    skillId: "wind_path"
-  },
-  {
-    id: "tiger_fang",
-    name: "Hổ Nanh",
-    tribe: "FIRE",
-    classType: "FIGHTER",
-    tier: 1,
-    stats: { hp: 305, atk: 58, def: 20, matk: 14, mdef: 16, range: 1, rageMax: 3 },
-    skillId: "cleave_fang"
-  },
-  {
-    id: "wolf_alpha",
-    name: "Sói Thủ Lĩnh",
-    tribe: "NIGHT",
-    classType: "FIGHTER",
-    tier: 2,
-    stats: { hp: 325, atk: 64, def: 21, matk: 16, mdef: 17, range: 1, rageMax: 3 },
-    skillId: "alpha_howl"
-  },
-  {
-    id: "hippo_maul",
-    name: "Hà Mã Nện",
-    tribe: "TIDE",
-    classType: "FIGHTER",
-    tier: 3,
-    stats: { hp: 350, atk: 70, def: 23, matk: 18, mdef: 18, range: 1, rageMax: 3 },
-    skillId: "mud_slam"
-  },
-  {
-    id: "beetle_drill",
-    name: "Bọ Khoan Giáp",
-    tribe: "SWARM",
-    classType: "FIGHTER",
-    tier: 4,
-    stats: { hp: 370, atk: 76, def: 24, matk: 20, mdef: 19, range: 1, rageMax: 3 },
-    skillId: "armor_drill"
-  },
-  {
-    id: "worm_queen",
-    name: "Sâu Xanh",
-    tribe: "SWARM",
-    classType: "MAGE",
-    tier: 3,
-    stats: { hp: 280, atk: 20, def: 12, matk: 85, mdef: 22, range: 4, rageMax: 2 },
-    skillId: "worm_evolve"
-  },
-  {
-    id: "mosquito_toxic",
-    name: "Muỗi Độc",
-    tribe: "SWARM",
-    classType: "ASSASSIN",
-    tier: 2,
-    stats: { hp: 240, atk: 75, def: 14, matk: 15, mdef: 12, range: 1, rageMax: 3 },
-    skillId: "mosquito_drain"
-  },
-  {
-    id: "bug_plague",
-    name: "Bọ Dịch Hạch",
-    tribe: "SWARM",
-    classType: "MAGE",
-    tier: 4,
-    stats: { hp: 260, atk: 22, def: 13, matk: 92, mdef: 24, range: 4, rageMax: 4 },
-    skillId: "global_poison"
-  },
-  {
-    id: "lion_general",
-    name: "Sư Tử Chiến Tướng",
-    tribe: "FIRE",
-    classType: "FIGHTER",
-    tier: 5,
-    stats: { hp: 550, atk: 95, def: 40, matk: 30, mdef: 35, range: 1, rageMax: 4 },
-    skillId: "lion_roar_stun"
-  },
-  {
-    id: "ant_guard",
-    name: "Kiến Hộ Vệ",
-    tribe: "SWARM",
-    classType: "TANKER",
-    tier: 2,
-    stats: { hp: 420, atk: 45, def: 45, matk: 10, mdef: 30, range: 1, rageMax: 4 },
-    skillId: "ant_shield_wall"
-  },
-  {
-    id: "mantis_blade",
-    name: "Bọ Ngựa Kiếm",
-    tribe: "SWARM",
-    classType: "ASSASSIN",
-    tier: 3,
-    stats: { hp: 310, atk: 88, def: 20, matk: 15, mdef: 18, range: 1, rageMax: 3 },
-    skillId: "mantis_slice"
-  },
-  {
-    id: "wasp_sting",
-    name: "Ong Bắp Cày",
-    tribe: "SWARM",
-    classType: "ARCHER",
-    tier: 2,
-    stats: { hp: 260, atk: 65, def: 15, matk: 12, mdef: 14, range: 4, rageMax: 3 },
-    skillId: "poison_sting"
-  },
-  {
-    id: "scorpion_king",
-    name: "Vua Bọ Cạp",
-    tribe: "SWARM",
-    classType: "FIGHTER",
-    tier: 4,
-    stats: { hp: 440, atk: 82, def: 32, matk: 20, mdef: 25, range: 1, rageMax: 3 },
-    skillId: "scorpion_venom"
+import unitsCsv from "../../data/units.csv?raw";
+
+function parseCsv(csvText) {
+  const lines = csvText.trim().split(/\r?\n/);
+  const headers = lines[0].split(",");
+  const data = [];
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].split(",");
+    if (row.length < headers.length) continue;
+    const unit = {};
+    const stats = {};
+    headers.forEach((header, index) => {
+      const value = row[index]?.trim();
+      if (!header) return;
+      if (["hp", "atk", "def", "matk", "mdef", "range", "rageMax"].includes(header)) {
+        stats[header] = Number(value);
+      } else if (header === "tier") {
+        unit.tier = Number(value);
+      } else if (header === "tribeVi" || header === "classVi") {
+        // Skip display fields
+      } else {
+        unit[header] = value;
+      }
+    });
+    unit.stats = stats;
+    data.push(unit);
   }
-];
+  return data;
+}
+
+const CORE_UNITS = parseCsv(unitsCsv);
 
 const TARGET_UNIT_COUNT = 40;
 

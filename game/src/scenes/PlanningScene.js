@@ -340,6 +340,12 @@ export class PlanningScene extends Phaser.Scene {
     this.settingsVisible = false;
     this.settingsOverlay = [];
     this.modalButtons = {};
+    this.wikiVisible = false;
+    this.wikiOverlay = [];
+    this.wikiSelectedUnitId = null;
+    this.wikiSearchQuery = "";
+    this.wikiScrollY = 0;
+    this.wikiMaxScroll = 0;
   }
 
   resetBoardViewTransform(refresh = false) {
@@ -433,6 +439,10 @@ export class PlanningScene extends Phaser.Scene {
       if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
     });
     this.input.keyboard.on("keydown-ESC", () => {
+      if (this.wikiVisible) {
+        this.toggleWikiModal(false);
+        return;
+      }
       if (this.historyModalVisible) {
         this.toggleHistoryModal(false);
         return;
@@ -1610,6 +1620,15 @@ export class PlanningScene extends Phaser.Scene {
       () => this.toggleSettingsOverlay(),
       { variant: "ghost" }
     );
+    this.buttons.wiki = this.createButton(
+      l.boardPanelX + l.boardPanelW - 364, // To the left of START button
+      y1 + 8,
+      76,
+      34,
+      "📖 Wiki",
+      () => this.toggleWikiModal(),
+      { variant: "ghost", fontSize: 13 }
+    );
     if (this.historyButtonRect) {
       this.buttons.history = this.createButton(
         this.historyButtonRect.x,
@@ -1884,10 +1903,36 @@ export class PlanningScene extends Phaser.Scene {
 
   toggleHistoryModal(force = null) {
     const next = typeof force === "boolean" ? force : !this.historyModalVisible;
-    if (next) this.toggleSettingsOverlay(false);
+    if (next) {
+      this.toggleSettingsOverlay(false);
+      this.toggleWikiModal(false);
+    }
     this.historyModalVisible = next;
     this.historyModalParts?.forEach((part) => part.setVisible(next));
     if (next) this.refreshHistoryModal();
+  }
+
+  toggleWikiModal(force = null) {
+    const next = typeof force === "boolean" ? force : !this.wikiVisible;
+    if (next) {
+      this.toggleSettingsOverlay(false);
+      this.toggleHistoryModal(false);
+      if (!this.wikiOverlay.length) this.createWikiModal();
+    } else {
+      this.clearAttackPreview();
+    }
+    this.wikiVisible = next;
+    this.wikiOverlay.forEach((o) => o?.setVisible(next));
+    if (next) {
+      this.wikiScrollY = 0;
+      this.refreshWikiList();
+    }
+  }
+
+  onWikiWheel(dy) {
+    if (!this.wikiVisible) return;
+    this.wikiScrollY = clamp(this.wikiScrollY + dy * 0.5, 0, this.wikiMaxScroll);
+    this.wikiListContainer.setY(this.wikiListBaseY - this.wikiScrollY);
   }
 
   setHistoryFilter(filterKey) {
@@ -2178,6 +2223,10 @@ export class PlanningScene extends Phaser.Scene {
 
   setupBoardViewInput() {
     this.input.on("wheel", (pointer, _gos, _dx, dy) => {
+      if (this.wikiVisible) {
+        this.onWikiWheel(dy);
+        return;
+      }
       if (this.historyModalVisible) {
         this.onHistoryWheel(dy);
         return;
@@ -4023,14 +4072,46 @@ export class PlanningScene extends Phaser.Scene {
     const equippedItems = Array.isArray(ownedUnit?.equips)
       ? ownedUnit.equips.map((id) => ITEM_BY_ID[id]).filter((x) => x?.kind === "equipment")
       : [];
+
+    let skillIcon = "✨";
+    if (skill?.damageType === "physical") skillIcon = "🗡️";
+    else if (skill?.damageType === "magic") skillIcon = "🪄";
+    else if (skill?.damageType === "true") skillIcon = "💠";
+
     const rightLines = [
-      "⚔️ Đánh thường",
+      "👊 Đánh thường",
       ...this.describeBasicAttack(base.classType, base.stats.range).map((line) => `• ${line}`),
       "",
-      `✨ Chiêu thức: ${skill?.name ?? "Không có"}`,
-      ...this.describeSkillLines(skill).map((line) => `• ${line}`),
-      ...(variant ? ["", `◆ Biến thể: ${variant.name}`] : [])
+      `${skillIcon} Chiêu thức: ${skill?.name ?? "Không có"}`,
+      ...this.describeSkillLines(skill).map((line) => `• ${line}`)
     ];
+
+    if (skill && skill.scaleStat && skill.scale) {
+      const scaleStat = skill.scaleStat;
+      const statLabel = this.translateScaleStat(scaleStat);
+      const baseVal = skill.base || 0;
+
+      let currentStat = 0;
+      if (ownedUnit) {
+        if (scaleStat === "atk") currentStat = this.getEffectiveAtk(ownedUnit);
+        else if (scaleStat === "matk") currentStat = this.getEffectiveMatk(ownedUnit);
+        else if (scaleStat === "def") currentStat = this.getEffectiveDef(ownedUnit);
+        else if (scaleStat === "mdef") currentStat = this.getEffectiveMdef(ownedUnit);
+        else currentStat = ownedUnit[scaleStat] || 0;
+      } else {
+        currentStat = Math.round((base.stats[scaleStat] || 0) * statScale);
+      }
+
+      const bonus = Math.round(currentStat * skill.scale);
+      const total = baseVal + bonus;
+      rightLines.push(`• Công thức: ${statLabel} (${skill.scale}x) + ${baseVal} = ${bonus} + ${baseVal} = ${total}`);
+    }
+
+    if (variant) {
+      rightLines.push("");
+      rightLines.push(`◆ Biến thể: ${variant.name}`);
+    }
+
     const equipmentLine = equippedItems.length
       ? `Trang bị: ${equippedItems.map((item) => `${item.icon} ${item.name}`).join(", ")}`
       : "Trang bị: Chưa có";
@@ -4718,6 +4799,36 @@ export class PlanningScene extends Phaser.Scene {
         });
         break;
       }
+      case "metamorphosis": {
+        attacker.name = "Bướm Chúa";
+        attacker.icon = "🦋";
+        attacker.atk = Math.round(attacker.atk * (skill.buffStats?.atk || 1.5));
+        attacker.matk = Math.round(attacker.matk * (skill.buffStats?.matk || 1.5));
+        attacker.maxHp = Math.round(attacker.maxHp * (skill.buffStats?.hp || 1.5));
+        attacker.hp = attacker.maxHp;
+        attacker.rage = 0;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 60, "BIẾN HÌNH!", "#ff00ff");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
+      case "turtle_protection": {
+        attacker.statuses.isProtecting = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "HÀO QUANG VỆ QUÂN", "#9dffba");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
+      case "rhino_counter": {
+        attacker.statuses.counterTurns = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "TẬP TRUNG PHẢN ĐÒN", "#ffd97b");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
+      case "pangolin_reflect": {
+        attacker.statuses.physReflectTurns = skill.turns || 3;
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "GIÁP VẢY SẮC", "#ff9b9b");
+        this.updateCombatUnitUi(attacker);
+        break;
+      }
       case "damage_stun": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name);
         if (target.alive && Math.random() < skill.stunChance) {
@@ -4781,9 +4892,12 @@ export class PlanningScene extends Phaser.Scene {
           [target.row, target.col - 1],
           [target.row, target.col + 1]
         ];
-        enemies
-          .filter((enemy) => points.some((p) => p[0] === enemy.row && p[1] === enemy.col))
-          .forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
+        enemies.forEach((enemy) => {
+          const isPrimary = enemy.row === target.row && enemy.col === target.col;
+          if (points.some((p) => p[0] === enemy.row && p[1] === enemy.col)) {
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+          }
+        });
         break;
       }
       case "row_multi": {
@@ -4791,7 +4905,10 @@ export class PlanningScene extends Phaser.Scene {
           .filter((enemy) => enemy.row === target.row)
           .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
           .slice(0, skill.maxHits);
-        victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
+        victims.forEach((enemy) => {
+          const isPrimary = enemy.row === target.row && enemy.col === target.col;
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+        });
         break;
       }
       case "single_sleep": {
@@ -4814,7 +4931,8 @@ export class PlanningScene extends Phaser.Scene {
         enemies
           .filter((enemy) => enemy.col === target.col)
           .forEach((enemy) => {
-            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name);
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
             if (enemy.alive && Math.random() < skill.freezeChance) {
               enemy.statuses.freeze = Math.max(enemy.statuses.freeze, skill.freezeTurns);
               this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "FREEZE", "#83e5ff");
@@ -4826,14 +4944,19 @@ export class PlanningScene extends Phaser.Scene {
       case "aoe_circle": {
         enemies
           .filter((enemy) => Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
-          .forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
+          .forEach((enemy) => {
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+          });
         break;
       }
       case "column_plus_splash": {
         enemies.forEach((enemy) => {
-          if (enemy.col === target.col) this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name);
-          else if (enemy.col === target.col - 1 || enemy.col === target.col + 1) {
-            this.resolveDamage(attacker, enemy, rawSkill * skill.splashRate, skill.damageType, "SPLASH");
+          const isPrimary = enemy.row === target.row && enemy.col === target.col;
+          if (enemy.col === target.col) {
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+          } else if (enemy.col === target.col - 1 || enemy.col === target.col + 1) {
+            this.resolveDamage(attacker, enemy, rawSkill * skill.splashRate, skill.damageType, "SPLASH", { isSplash: true });
           }
         });
         break;
@@ -4842,7 +4965,8 @@ export class PlanningScene extends Phaser.Scene {
         enemies
           .filter((enemy) => Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
           .forEach((enemy) => {
-            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name);
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
             if (enemy.alive) {
               enemy.statuses.poisonTurns = Math.max(enemy.statuses.poisonTurns, skill.poisonTurns);
               enemy.statuses.poisonDamage = Math.max(enemy.statuses.poisonDamage, skill.poisonPerTurn);
@@ -4902,7 +5026,8 @@ export class PlanningScene extends Phaser.Scene {
         enemies
           .filter((enemy) => enemy.row === target.row)
           .forEach((enemy) => {
-            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name);
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
             enemy.statuses.armorBreakTurns = Math.max(enemy.statuses.armorBreakTurns, skill.turns);
             enemy.statuses.armorBreakValue = Math.max(enemy.statuses.armorBreakValue, skill.armorBreak);
             this.updateCombatUnitUi(enemy);
@@ -4923,7 +5048,10 @@ export class PlanningScene extends Phaser.Scene {
       case "cone_smash": {
         enemies
           .filter((enemy) => Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
-          .forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, "physical", skill.name));
+          .forEach((enemy) => {
+            const isPrimary = enemy.row === target.row && enemy.col === target.col;
+            this.resolveDamage(attacker, enemy, rawSkill, "physical", skill.name, { isSplash: !isPrimary });
+          });
         break;
       }
       case "true_single": {
@@ -4964,6 +5092,28 @@ export class PlanningScene extends Phaser.Scene {
   resolveDamage(attacker, defender, rawDamage, damageType, reason, options = {}) {
     if (!defender || !defender.alive) return 0;
     if (attacker && !attacker.alive) return 0;
+
+    // Turtle Protection Logic for Splash Damage
+    if (options.isSplash && !options.isProtected) {
+      const allies = this.getCombatUnits(defender.side);
+      const protector = allies.find((a) =>
+        a.alive &&
+        a.statuses.isProtecting > 0 &&
+        a.uid !== defender.uid &&
+        Math.abs(a.row - defender.row) <= 1 &&
+        Math.abs(a.col - defender.col) <= 1
+      );
+      if (protector) {
+        this.showFloatingText(defender.sprite.x, defender.sprite.y - 55, "THẾ THÂN", "#ffffff");
+        // Tanker intercepts with 25% damage reduction (takes 75%)
+        return this.resolveDamage(attacker, protector, rawDamage * 0.75, damageType, "BẢO VỆ", {
+          ...options,
+          isSplash: false,
+          isProtected: true,
+          forceHit: true
+        });
+      }
+    }
 
     if (attacker && !options.forceHit) {
       if (Math.random() < defender.mods.evadePct) {
@@ -5018,12 +5168,34 @@ export class PlanningScene extends Phaser.Scene {
       defender.statuses.poisonDamage = Math.max(defender.statuses.poisonDamage, attacker.mods.poisonOnHit);
     }
 
-    if (attacker && !options.noReflect && defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0 && attacker.alive) {
-      const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
-      this.resolveDamage(defender, attacker, reflected, "true", "REFLECT", {
-        noReflect: true,
-        forceHit: true
-      });
+    if (attacker && !options.noReflect && attacker.alive) {
+      // Standard reflect
+      if (defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0) {
+        const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
+        this.resolveDamage(defender, attacker, reflected, "true", "REFLECT", {
+          noReflect: true,
+          forceHit: true
+        });
+      }
+      // Pangolin Physical Reflect
+      else if (damageType === "physical" && defender.statuses.physReflectTurns > 0) {
+        this.resolveDamage(defender, attacker, damageLeft, "true", "VẢY PHẢN", {
+          noReflect: true,
+          forceHit: true
+        });
+      }
+    }
+
+    // Rhino Melee Counter
+    if (attacker && !options.noCounter && attacker.alive && defender.alive) {
+      // PlanningScene doesn't have full combat loop, but for consistency:
+      if (attacker.range <= 1 && defender.statuses.counterTurns > 0) {
+        // Just show text or simulate a hit if possible
+        // (PlanningScene.basicAttack is simpler)
+        if (typeof this.basicAttack === "function") {
+          this.basicAttack(defender, attacker, { noCounter: true });
+        }
+      }
     }
 
     if (attacker && attacker.mods.lifestealPct > 0 && damageLeft > 0) {
