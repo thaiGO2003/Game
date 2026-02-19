@@ -109,7 +109,7 @@ const CLASS_COLORS = {
   TANKER: 0x5f86d9,
   ASSASSIN: 0x7b59b5,
   ARCHER: 0x5ca65b,
-  MAGE: 0x4f95f2,
+  MAGE: 0xd160b2,
   SUPPORT: 0xd2b35e,
   FIGHTER: 0xb86a44
 };
@@ -118,7 +118,7 @@ const ROLE_THEME = {
   TANKER: { fill: 0x5f86d9, glow: 0x9ec6ff, stroke: 0xc2ddff, card: 0x1a2d4c, cardHover: 0x24406a, bench: 0x213655 },
   ASSASSIN: { fill: 0x7b59b5, glow: 0xbf9af5, stroke: 0xdcc9ff, card: 0x2a2146, cardHover: 0x3a2d60, bench: 0x352a54 },
   ARCHER: { fill: 0x5ca65b, glow: 0x9fe3a0, stroke: 0xc9f0c6, card: 0x1f3a2a, cardHover: 0x295039, bench: 0x2a4533 },
-  MAGE: { fill: 0x4f95f2, glow: 0xaed9ff, stroke: 0xd3ecff, card: 0x18365a, cardHover: 0x23507d, bench: 0x1f4670 },
+  MAGE: { fill: 0xd160b2, glow: 0xf3a9de, stroke: 0xffd3f2, card: 0x4f2144, cardHover: 0x6f2f60, bench: 0x5c2850 },
   SUPPORT: { fill: 0xd2b35e, glow: 0xf0dc9a, stroke: 0xfff0bd, card: 0x4a3b21, cardHover: 0x654f2d, bench: 0x5a4928 },
   FIGHTER: { fill: 0xb86a44, glow: 0xe4a07b, stroke: 0xffcaad, card: 0x44281d, cardHover: 0x61382a, bench: 0x553427 }
 };
@@ -210,12 +210,14 @@ const HISTORY_FILTERS = [
 const MATCH_WIKI_ENABLED = false;
 
 const VERSION_INFO = {
-  version: "v0.9.1-dev",
+  version: "v0.2.0",
   updatedAt: "2026-02-19",
   notes: [
-    "Chế độ PvE Vô tận tiếp tục theo vòng, không chặn ở mốc 25.",
-    "Tạm tắt Wiki trong trận để tránh lỗi tương tác.",
-    "Bổ sung cửa sổ Thông tin phiên bản ngay trong trận."
+    "Thêm màn hình Loading trước Main Menu, có tiến độ và tên tài nguyên đang tải.",
+    "Đổi tông màu nghề Pháp sư sang hồng để tách biệt với Đỡ đòn.",
+    "Một thú không thể trang bị các món trùng tên; tự lọc cả dữ liệu cũ/merge/combat.",
+    "Sát thủ ưu tiên mục tiêu cùng hàng, rồi đến cột xa nhất.",
+    "Nút Thông tin cập nhật đặt ở màn hình chính."
   ]
 };
 
@@ -839,7 +841,7 @@ export class PlanningScene extends Phaser.Scene {
       baseId: base.id,
       star: clamp(starRaw, 1, 3),
       base,
-      equips: Array.isArray(raw.equips) ? raw.equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
+      equips: this.normalizeEquipIds(raw.equips)
     };
   }
 
@@ -1040,7 +1042,7 @@ export class PlanningScene extends Phaser.Scene {
       baseId: base.id,
       star,
       base,
-      equips: Array.isArray(equips) ? equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
+      equips: this.normalizeEquipIds(equips)
     };
   }
 
@@ -3810,6 +3812,27 @@ export class PlanningScene extends Phaser.Scene {
     return ITEM_BY_ID[itemId]?.kind === "equipment";
   }
 
+  getEquipmentNameKey(itemId) {
+    const item = ITEM_BY_ID[itemId];
+    if (!item || item.kind !== "equipment") return null;
+    const byName = String(item.name ?? "").trim().toLowerCase();
+    if (byName) return byName;
+    return String(item.id ?? itemId).trim().toLowerCase();
+  }
+
+  normalizeEquipIds(equips) {
+    if (!Array.isArray(equips)) return [];
+    const seen = new Set();
+    const out = [];
+    equips.forEach((itemId) => {
+      const key = this.getEquipmentNameKey(itemId);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(itemId);
+    });
+    return out.slice(0, 3);
+  }
+
   getItemCount(itemId) {
     if (!itemId) return 0;
     return this.player.itemBag.reduce((sum, id) => sum + (id === itemId ? 1 : 0), 0);
@@ -4044,7 +4067,15 @@ export class PlanningScene extends Phaser.Scene {
       this.refreshStorageUi();
       return false;
     }
-    const equips = Array.isArray(unit.equips) ? unit.equips : [];
+    const equips = this.normalizeEquipIds(unit.equips);
+    unit.equips = equips;
+    const selectedEquipKey = this.getEquipmentNameKey(itemId);
+    const hasSameName = equips.some((existingId) => this.getEquipmentNameKey(existingId) === selectedEquipKey);
+    if (hasSameName) {
+      const selectedItem = ITEM_BY_ID[itemId];
+      this.addLog(`${unit.base.name} đã có trang bị ${selectedItem?.icon ?? "✨"} ${selectedItem?.name ?? itemId}.`);
+      return false;
+    }
     if (equips.length >= 3) {
       this.addLog(`${unit.base.name} đã đủ 3 trang bị.`);
       return false;
@@ -4236,9 +4267,26 @@ export class PlanningScene extends Phaser.Scene {
         if (ITEM_BY_ID[itemId]?.kind === "equipment") all.push(itemId);
       });
     });
+    const seen = new Set();
+    const kept = [];
+    const overflow = [];
+    all.forEach((itemId) => {
+      const key = this.getEquipmentNameKey(itemId);
+      if (!key) return;
+      if (seen.has(key)) {
+        overflow.push(itemId);
+        return;
+      }
+      seen.add(key);
+      if (kept.length < 3) {
+        kept.push(itemId);
+      } else {
+        overflow.push(itemId);
+      }
+    });
     return {
-      kept: all.slice(0, 3),
-      overflow: all.slice(3)
+      kept,
+      overflow
     };
   }
 
@@ -5441,7 +5489,7 @@ export class PlanningScene extends Phaser.Scene {
       let iconText = "❔";
       if (base) {
         iconText = visual.icon;
-        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNá»™ ${base.stats.rageMax} • Tầm ${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`;
+        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNộ ${base.stats.rageMax} • Tầm ${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`;
       }
 
       const status = this.add.text(x + 10, y + 8, sold ? "ĐÃ MUA" : "SẴN SÀNG", {
@@ -6155,7 +6203,7 @@ export class PlanningScene extends Phaser.Scene {
       "Loại sát thương: Vật lý"
     ];
     if (classType === "ASSASSIN") {
-      lines.push("Ưu tiên mục tiêu hậu phương thấp máu.");
+      lines.push("Ưu tiên mục tiêu cùng hàng, sau đó chọn cột xa nhất.");
     } else if (classType === "ARCHER" || classType === "MAGE") {
       lines.push("Ưu tiên mục tiêu cùng hàng, sau đó gần tiền tuyến.");
     } else {
@@ -6458,7 +6506,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   applyOwnedEquipmentBonuses(unit, owned) {
-    const equips = Array.isArray(owned?.equips) ? owned.equips : [];
+    const equips = this.normalizeEquipIds(owned?.equips);
     equips.forEach((itemId) => {
       const item = ITEM_BY_ID[itemId];
       if (!item || item.kind !== "equipment" || !item.bonus) return;
@@ -6675,7 +6723,14 @@ export class PlanningScene extends Phaser.Scene {
 
     const ai = this.getAI();
     const keepFrontline = attacker.range <= 1 && attacker.classType !== "ASSASSIN";
-    if (attacker.side === "RIGHT" && !keepFrontline && !options.deterministic && Math.random() < ai.randomTargetChance) {
+    const allowRandomTarget = attacker.classType !== "ASSASSIN";
+    if (
+      attacker.side === "RIGHT" &&
+      allowRandomTarget &&
+      !keepFrontline &&
+      !options.deterministic &&
+      Math.random() < ai.randomTargetChance
+    ) {
       return randomItem(enemies);
     }
 
@@ -6703,7 +6758,8 @@ export class PlanningScene extends Phaser.Scene {
     const hpRaw = target.hp;
 
     if (attacker.classType === "ASSASSIN") {
-      return [backlineDist, hpRatio, lineDist, frontlineDist, hpRaw];
+      const farthestColScore = attacker.side === "LEFT" ? -target.col : target.col;
+      return [sameRow, farthestColScore, lineDist, hpRatio, hpRaw];
     }
     if (attacker.classType === "ARCHER" || attacker.classType === "MAGE") {
       return [sameRow, lineDist, frontlineDist, hpRatio, hpRaw];
@@ -6938,7 +6994,7 @@ export class PlanningScene extends Phaser.Scene {
           dead.hp = Math.round(dead.maxHp * 0.4);
           dead.sprite.clearFill();
           dead.tag.setColor("#ffffff");
-          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "Há»'I SINH", "#ffff00");
+          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
         } else {
           allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));

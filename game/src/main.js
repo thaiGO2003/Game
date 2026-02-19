@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { LoadingScene } from "./scenes/LoadingScene.js";
 import { MainMenuScene } from "./scenes/MainMenuScene.js";
 import { PlanningScene } from "./scenes/PlanningScene.js";
 import { CombatScene } from "./scenes/CombatScene.js";
@@ -15,7 +16,7 @@ const config = {
   resolution: RENDER_DPR,
   autoRound: false,
   backgroundColor: "#11141b",
-  scene: [MainMenuScene, PlanningScene, CombatScene],
+  scene: [LoadingScene, MainMenuScene, PlanningScene, CombatScene],
   render: {
     antialias: true,
     antialiasGL: true,

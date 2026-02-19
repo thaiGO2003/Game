@@ -83,7 +83,7 @@ const NAME_POOL = {
 };
 
 const CLASS_ORDER = ["TANKER", "ASSASSIN", "ARCHER", "MAGE", "SUPPORT", "FIGHTER"];
-const TRIBE_ORDER = ["STONE", "WIND", "FIRE", "TIDE", "NIGHT", "SPIRIT", "SWARM", "WOOD"];
+const TRIBE_ORDER = ["STONE", "WIND", "FIRE", "TIDE", "NIGHT", "SPIRIT", "SWARM"];
 
 const TRIBE_TITLE_POOL = {
   STONE: ["Nham", "Thạch", "Kiên", "Địa", "Sơn", "Đá"],
@@ -92,8 +92,7 @@ const TRIBE_TITLE_POOL = {
   TIDE: ["Thủy", "Triều", "Lam", "Sương", "Lưu", "Hải"],
   NIGHT: ["Dạ", "U", "Nguyệt", "Hắc", "Ảnh", "Tối"],
   SPIRIT: ["Linh", "Thánh", "Tinh", "Phúc", "Quang", "Âm"],
-  SWARM: ["Trùng", "Độc", "Bào", "Kén", "Tơ", "Gai"],
-  WOOD: ["Mộc", "Lâm", "Diệp", "Thảo", "Tùng", "Rừng"]
+  SWARM: ["Trùng", "Độc", "Bào", "Kén", "Tơ", "Gai"]
 };
 
 const CLASS_TITLE_POOL = {

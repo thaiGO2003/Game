@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { AudioFx } from "../core/audioFx.js";
 import { clearProgress, loadProgress } from "../core/persistence.js";
+import { queueSharedAssets } from "../core/sharedAssetLoader.js";
 import {
   RESOLUTION_PRESETS,
   createDefaultUiSettings,
@@ -10,7 +11,6 @@ import {
   resolveResolution,
   saveUiSettings
 } from "../core/uiSettings.js";
-import { FOREST_BACKGROUND_ASSETS } from "../data/forestBackgrounds.js";
 import { hydrateRunState } from "../core/runState.js";
 import { getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
 import { UNIT_CATALOG } from "../data/unitCatalog.js";
@@ -25,7 +25,7 @@ const AI_LABELS = {
   HARD: "Khó"
 };
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.2.0";
 const APP_VERSION_DATE = "19/02/2026";
 
 export class MainMenuScene extends Phaser.Scene {
@@ -62,28 +62,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.audio("bgm_menu", "assets/audio/bgm_menu.mp3");
-    this.load.audio("bgm_planning", "assets/audio/bgm_planning.mp3");
-    this.load.audio("bgm_combat", "assets/audio/bgm_combat.mp3");
-    this.load.audio("sfx_key", "assets/audio/key.wav");
-    this.load.audio("sfx_explosion", "assets/audio/explosion.mp3");
-    this.load.audio("sfx_blaster", "assets/audio/blaster.mp3");
-    this.load.audio("sfx_sword", "assets/audio/sword.mp3");
-    this.load.audio("sfx_ping", "assets/audio/p-ping.mp3");
-    this.load.audio("sfx_shot", "assets/audio/shot1.wav");
-
-    // Load nature playlist
-    for (let i = 1; i <= 5; i++) {
-      this.load.audio(`bgm_nature_${i}`, `assets/audio/nature_${i}.mp3`);
-    }
-    this.load.audio("bgm_warrior", "assets/audio/warrior.mp3");
-    this.load.audio("bgm_gunny", "assets/audio/gunny.mp3");
-
-    FOREST_BACKGROUND_ASSETS.forEach((asset) => {
-      if (!this.textures.exists(asset.key)) {
-        this.load.image(asset.key, asset.path);
-      }
-    });
+    queueSharedAssets(this);
   }
 
   create() {
@@ -735,6 +714,13 @@ export class MainMenuScene extends Phaser.Scene {
     return [
       `FOREST THRONE • THÔNG TIN PHIÊN BẢN ${APP_VERSION}`,
       `Ngày cập nhật: ${APP_VERSION_DATE}`,
+      "",
+      "0) Điểm mới của bản 0.2.0",
+      "• Thêm màn hình Loading trước Main Menu, hiển thị tiến độ và tài nguyên đang tải.",
+      "• Đổi màu nhận diện nghề Pháp sư sang tông hồng để dễ phân biệt với Đỡ đòn.",
+      "• Một thú không thể mang 2 trang bị cùng tên; dữ liệu save cũ/merge/combat tự loại trùng.",
+      "• Sát thủ ưu tiên mục tiêu cùng hàng, sau đó chọn cột xa nhất.",
+      "• Nút Thông tin cập nhật đặt ở màn hình chính, nội dung lấy trực tiếp từ dữ liệu game.",
       "",
       "1) Tóm tắt nội dung hiện có",
       `• Tổng linh thú: ${unitRows.length}`,

@@ -58,7 +58,7 @@ const PHASE = {
 
 const AI_SETTINGS = {
   EASY: {
-    label: "Dá»…",
+    label: "Dễ",
     difficulty: "EASY",
     hpMult: 0.84,
     atkMult: 0.82,
@@ -114,7 +114,7 @@ const CLASS_COLORS = {
   TANKER: 0x5f86d9,
   ASSASSIN: 0x7b59b5,
   ARCHER: 0x5ca65b,
-  MAGE: 0x4f95f2,
+  MAGE: 0xd160b2,
   SUPPORT: 0xd2b35e,
   FIGHTER: 0xb86a44
 };
@@ -123,12 +123,33 @@ const ROLE_THEME = {
   TANKER: { fill: 0x5f86d9, glow: 0x9ec6ff, stroke: 0xc2ddff, card: 0x1a2d4c, cardHover: 0x24406a, bench: 0x213655 },
   ASSASSIN: { fill: 0x7b59b5, glow: 0xbf9af5, stroke: 0xdcc9ff, card: 0x2a2146, cardHover: 0x3a2d60, bench: 0x352a54 },
   ARCHER: { fill: 0x5ca65b, glow: 0x9fe3a0, stroke: 0xc9f0c6, card: 0x1f3a2a, cardHover: 0x295039, bench: 0x2a4533 },
-  MAGE: { fill: 0x4f95f2, glow: 0xaed9ff, stroke: 0xd3ecff, card: 0x18365a, cardHover: 0x23507d, bench: 0x1f4670 },
+  MAGE: { fill: 0xd160b2, glow: 0xf3a9de, stroke: 0xffd3f2, card: 0x4f2144, cardHover: 0x6f2f60, bench: 0x5c2850 },
   SUPPORT: { fill: 0xd2b35e, glow: 0xf0dc9a, stroke: 0xfff0bd, card: 0x4a3b21, cardHover: 0x654f2d, bench: 0x5a4928 },
   FIGHTER: { fill: 0xb86a44, glow: 0xe4a07b, stroke: 0xffcaad, card: 0x44281d, cardHover: 0x61382a, bench: 0x553427 }
 };
 
 const LEVEL_LABEL = { EASY: "Dễ", MEDIUM: "TB", HARD: "Khó" };
+
+function getEquipmentNameKey(itemId) {
+  const item = ITEM_BY_ID[itemId];
+  if (!item || item.kind !== "equipment") return null;
+  const byName = String(item.name ?? "").trim().toLowerCase();
+  if (byName) return byName;
+  return String(item.id ?? itemId).trim().toLowerCase();
+}
+
+function normalizeEquipIds(equips) {
+  if (!Array.isArray(equips)) return [];
+  const seen = new Set();
+  const out = [];
+  equips.forEach((itemId) => {
+    const key = getEquipmentNameKey(itemId);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(itemId);
+  });
+  return out.slice(0, 3);
+}
 
 const UI_FONT = "Segoe UI";
 
@@ -589,7 +610,7 @@ export class CombatScene extends Phaser.Scene {
     this.modalButtons.volumeUp = makeModalBtn(84, -46, 70, 44, "+", () => this.changeVolumeLevel(1));
     this.modalButtons.resolution = makeModalBtn(0, 6, 230, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
     this.modalButtons.exit = makeModalBtn(0, 110, 230, 44, "Thoát về chuẩn bị", () => this.exitToPlanning());
-    this.modalButtons.menu = makeModalBtn(-126, 172, 220, 44, "Trang chá»§", () => this.scene.start("MainMenuScene"), "secondary");
+    this.modalButtons.menu = makeModalBtn(-126, 172, 220, 44, "Trang chủ", () => this.scene.start("MainMenuScene"), "secondary");
     this.modalButtons.close = makeModalBtn(126, 172, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
@@ -899,7 +920,7 @@ export class CombatScene extends Phaser.Scene {
       baseId,
       star,
       base,
-      equips: Array.isArray(equips) ? equips.filter((id) => ITEM_BY_ID[id]?.kind === "equipment").slice(0, 3) : []
+      equips: normalizeEquipIds(equips)
     };
   }
 
@@ -2737,7 +2758,7 @@ export class CombatScene extends Phaser.Scene {
     const effects = [];
     if (unit.statuses.freeze > 0) effects.push(`Đóng băng (${unit.statuses.freeze})`);
     if (unit.statuses.stun > 0) effects.push(`Choáng (${unit.statuses.stun})`);
-    if (unit.statuses.sleep > 0) effects.push(`Ngá»§ (${unit.statuses.sleep})`);
+    if (unit.statuses.sleep > 0) effects.push(`Ngủ (${unit.statuses.sleep})`);
     if (unit.statuses.silence > 0) effects.push(`Câm lặng (${unit.statuses.silence})`);
     if (unit.statuses.burnTurns > 0) effects.push(`Cháy (${unit.statuses.burnTurns})`);
     if (unit.statuses.poisonTurns > 0) effects.push(`Độc (${unit.statuses.poisonTurns})`);
@@ -2833,7 +2854,7 @@ export class CombatScene extends Phaser.Scene {
       "Loại sát thương: Vật lý"
     ];
     if (classType === "ASSASSIN") {
-      lines.push("Ưu tiên mục tiêu hậu phương thấp máu.");
+      lines.push("Ưu tiên mục tiêu cùng hàng, sau đó chọn cột xa nhất.");
     } else if (classType === "ARCHER" || classType === "MAGE") {
       lines.push("Ưu tiên mục tiêu cùng hàng, sau đó gần tiền tuyến.");
     } else {
@@ -3081,19 +3102,24 @@ export class CombatScene extends Phaser.Scene {
   }
 
   applyOwnedEquipmentBonuses(unit, owned) {
-    const equips = Array.isArray(owned?.equips) ? owned.equips : [];
+    const equips = normalizeEquipIds(owned?.equips);
     const seen = new Set();
     const equipItems = [];
 
     equips.forEach((itemId) => {
       const item = ITEM_BY_ID[itemId];
-      if (!item || item.kind !== "equipment" || seen.has(item.id)) return;
-      seen.add(item.id);
+      const key = getEquipmentNameKey(itemId);
+      if (!item || item.kind !== "equipment" || !key || seen.has(key)) return;
+      seen.add(key);
       equipItems.push(item);
     });
 
-    if (owned?.equipment?.kind === "equipment" && owned.equipment.id && !seen.has(owned.equipment.id)) {
-      equipItems.push(owned.equipment);
+    if (owned?.equipment?.kind === "equipment" && owned.equipment.id) {
+      const legacyKey = getEquipmentNameKey(owned.equipment.id);
+      if (legacyKey && !seen.has(legacyKey)) {
+        seen.add(legacyKey);
+        equipItems.push(owned.equipment);
+      }
     }
 
     unit.equips = equipItems.map((item) => item.id).filter((id) => typeof id === "string");
@@ -3318,7 +3344,14 @@ export class CombatScene extends Phaser.Scene {
 
     const ai = this.getAI();
     const keepFrontline = attacker.range <= 1 && attacker.classType !== "ASSASSIN";
-    if (attacker.side === "RIGHT" && !keepFrontline && !options.deterministic && Math.random() < ai.randomTargetChance) {
+    const allowRandomTarget = attacker.classType !== "ASSASSIN";
+    if (
+      attacker.side === "RIGHT" &&
+      allowRandomTarget &&
+      !keepFrontline &&
+      !options.deterministic &&
+      Math.random() < ai.randomTargetChance
+    ) {
       return randomItem(enemies);
     }
 
@@ -3346,7 +3379,8 @@ export class CombatScene extends Phaser.Scene {
     const hpRaw = target.hp;
 
     if (attacker.classType === "ASSASSIN") {
-      return [backlineDist, hpRatio, lineDist, frontlineDist, hpRaw];
+      const farthestColScore = attacker.side === "LEFT" ? -target.col : target.col;
+      return [sameRow, farthestColScore, lineDist, hpRatio, hpRaw];
     }
     if (attacker.classType === "ARCHER" || attacker.classType === "MAGE") {
       return [sameRow, lineDist, frontlineDist, hpRatio, hpRaw];
@@ -3588,7 +3622,7 @@ export class CombatScene extends Phaser.Scene {
           dead.hp = Math.round(dead.maxHp * 0.4);
           dead.sprite.clearFill();
           dead.tag.setColor("#ffffff");
-          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "Há»'I SINH", "#ffff00");
+          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
         } else {
           allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
