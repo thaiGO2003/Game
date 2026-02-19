@@ -6992,7 +6992,9 @@ export class PlanningScene extends Phaser.Scene {
         if (dead && Math.random() < 0.5) {
           dead.alive = true;
           dead.hp = Math.round(dead.maxHp * 0.4);
-          dead.sprite.clearFill();
+          const revivedTheme = this.getRoleTheme(dead.classType);
+          dead.sprite?.setFillStyle?.(revivedTheme.fill, 0.98);
+          dead.sprite?.setStrokeStyle?.(3, revivedTheme.stroke, 1);
           dead.tag.setColor("#ffffff");
           this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
