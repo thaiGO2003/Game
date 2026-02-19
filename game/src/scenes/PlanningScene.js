@@ -8,12 +8,11 @@ import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
-import { clearAllLocalStorage, clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
+import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
   loadUiSettings,
-  normalizeGuiScale,
   normalizeResolutionKey,
   resolveResolution,
   saveUiSettings
@@ -31,7 +30,10 @@ import {
   rollTierForLevel,
   sampleWithoutReplacement,
   scaledBaseStats,
-  getBaseEvasion
+  getBaseEvasion,
+  starEffectChanceMultiplier,
+  starTargetBonus,
+  starAreaBonus
 } from "../core/gameUtils.js";
 
 const TILE_W = 98;
@@ -205,6 +207,18 @@ const HISTORY_FILTERS = [
   { key: "EVENT", label: "Sự kiện" }
 ];
 
+const MATCH_WIKI_ENABLED = false;
+
+const VERSION_INFO = {
+  version: "v0.9.1-dev",
+  updatedAt: "2026-02-19",
+  notes: [
+    "Chế độ PvE Vô tận tiếp tục theo vòng, không chặn ở mốc 25.",
+    "Tạm tắt Wiki trong trận để tránh lỗi tương tác.",
+    "Bổ sung cửa sổ Thông tin phiên bản ngay trong trận."
+  ]
+};
+
 export class PlanningScene extends Phaser.Scene {
   constructor() {
     super("PlanningScene");
@@ -254,6 +268,8 @@ export class PlanningScene extends Phaser.Scene {
     this.historyMaxScroll = 0;
     this.historyListViewport = null;
     this.historyButtonRect = null;
+    this.versionInfoVisible = false;
+    this.versionInfoOverlay = [];
     this.attackPreviewLayer = null;
     this.attackPreviewSword = null;
     this.attackPreviewIcons = [];
@@ -335,6 +351,8 @@ export class PlanningScene extends Phaser.Scene {
     this.historyMaxScroll = 0;
     this.historyListViewport = null;
     this.historyButtonRect = null;
+    this.versionInfoVisible = false;
+    this.versionInfoOverlay = [];
     this.attackPreviewLayer = null;
     this.attackPreviewSword = null;
     this.attackPreviewIcons = [];
@@ -417,6 +435,7 @@ export class PlanningScene extends Phaser.Scene {
     this.createHud();
     this.createButtons();
     this.createHistoryModal();
+    this.createVersionInfoModal();
     this.createSettingsOverlay();
     this.createPlayerCellZones();
     this.createBenchSlots();
@@ -478,7 +497,7 @@ export class PlanningScene extends Phaser.Scene {
     if (resolution) {
       this.scale.resize(resolution.width, resolution.height);
     }
-    const zoom = guiScaleToZoom(normalizeGuiScale(settings?.guiScale));
+    const zoom = guiScaleToZoom(settings?.guiScale);
     this.cameras.main.setZoom(zoom);
     if (refresh) {
       this.layout = this.computeLayout();
@@ -489,17 +508,21 @@ export class PlanningScene extends Phaser.Scene {
 
   setupInput() {
     this.input.keyboard.on("keydown-SPACE", () => {
-      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.beginCombat();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.beginCombat();
     });
     this.input.keyboard.on("keydown-R", () => this.startNewRun());
 
     this.input.keyboard.on("keydown-S", () => {
-      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
     });
     this.input.keyboard.on("keydown-DELETE", () => {
-      if (!this.settingsVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
     });
     this.input.keyboard.on("keydown-ESC", () => {
+      if (this.versionInfoVisible) {
+        this.toggleVersionInfoModal(false);
+        return;
+      }
       if (this.wikiVisible) {
         this.toggleWikiModal(false);
         return;
@@ -601,7 +624,7 @@ export class PlanningScene extends Phaser.Scene {
 
     if (this.consumePadButton(pad, 0)) this.handleGamepadConfirm();
     if (this.consumePadButton(pad, 1)) this.handleGamepadCancel();
-    if (this.wikiVisible) return;
+    if (this.wikiVisible || this.versionInfoVisible) return;
     if (this.consumePadButton(pad, 2)) this.gamepadFocus = "SHOP";
     if (this.consumePadButton(pad, 3)) this.gamepadFocus = "BOARD";
     if (this.consumePadButton(pad, 4)) this.gamepadFocus = "BENCH";
@@ -613,7 +636,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadMove(dx, dy) {
-    if (this.settingsVisible || this.historyModalVisible || this.wikiVisible) return;
+    if (this.settingsVisible || this.historyModalVisible || this.wikiVisible || this.versionInfoVisible) return;
     if (this.gamepadFocus === "SHOP") {
       this.gamepadCursor.shopIndex = clamp(this.gamepadCursor.shopIndex + dx, 0, 4);
       if (dy < 0) this.gamepadFocus = "BOARD";
@@ -641,6 +664,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadConfirm() {
+    if (this.versionInfoVisible) {
+      this.toggleVersionInfoModal(false);
+      return;
+    }
     if (this.wikiVisible) {
       this.toggleWikiModal(false);
       return;
@@ -668,6 +695,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadCancel() {
+    if (this.versionInfoVisible) {
+      this.toggleVersionInfoModal(false);
+      return;
+    }
     if (this.wikiVisible) {
       this.toggleWikiModal(false);
       return;
@@ -691,7 +722,7 @@ export class PlanningScene extends Phaser.Scene {
   refreshGamepadCursorVisual() {
     if (!this.gamepadCursorLayer) return;
     this.gamepadCursorLayer.clear();
-    if (!this.gamepadActive || this.settingsVisible || this.historyModalVisible) return;
+    if (!this.gamepadActive || this.settingsVisible || this.historyModalVisible || this.versionInfoVisible) return;
 
     if (this.gamepadFocus === "SHOP") {
       const card = this.shopCards?.[this.gamepadCursor.shopIndex];
@@ -753,7 +784,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   startNewRun() {
-    clearAllLocalStorage();
+    clearProgress();
     this.toggleSettingsOverlay(false);
     this.toggleHistoryModal(false);
     this.clearCombatSprites();
@@ -1054,7 +1085,8 @@ export class PlanningScene extends Phaser.Scene {
     const shopCardH = 154;
     const benchCols = this.benchUpgradeLevel > 0 ? 7 : 4;
     const benchRows = 2;
-    const benchSlotH = 76;
+    const compactBench = this.benchUpgradeLevel > 0;
+    const benchSlotH = compactBench ? 62 : 70;
     const benchRowGap = UI_SPACING.XS;
 
     const lowerPanelH = 210; // Fixed height for bottom section
@@ -1073,8 +1105,14 @@ export class PlanningScene extends Phaser.Scene {
 
     const shopGap = UI_SPACING.SM;
     const shopCardW = Math.floor((shopRegionW - shopGap * 4) / 5);
-    const benchGap = UI_SPACING.XS;
-    const benchSlotW = Math.max(68, Math.floor((benchSlotsRegionW - benchGap * (benchCols - 1)) / benchCols));
+    const benchGap = compactBench ? 5 : UI_SPACING.XS;
+    const benchSlotWRaw = Math.floor((benchSlotsRegionW - benchGap * (benchCols - 1)) / benchCols);
+    const benchSlotW = compactBench
+      ? Math.max(24, benchSlotWRaw)
+      : Math.max(44, benchSlotWRaw);
+
+    const boardNudgeX = -36;
+    const boardNudgeY = -46;
 
     return {
       width: w,
@@ -1086,8 +1124,8 @@ export class PlanningScene extends Phaser.Scene {
       contentW,
       topPanelY,
       topPanelH,
-      boardOriginX: boardPanelX + Math.floor(contentW * 0.35),
-      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.75),
+      boardOriginX: boardPanelX + Math.floor(contentW * 0.35) + boardNudgeX,
+      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.75) + boardNudgeY,
       boardPanelX,
       boardPanelY,
       boardPanelW: contentW,
@@ -1390,7 +1428,7 @@ export class PlanningScene extends Phaser.Scene {
       .setDepth(2000);
 
     this.ruleText = this.add
-      .text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 25, "Luật quét: Ta (hàng 0→4, cột 4→0) | Địch (hàng 0→4, cột 5→9)", {
+      .text(l.boardPanelX + UI_SPACING.SM, l.topPanelY + UI_SPACING.SM + 25, "Luật quét: Ta (E→A, mỗi cột 5→1) | Địch (G→K, mỗi cột 5→1)", {
         fontFamily: UI_FONT,
         fontSize: "12px",
         color: UI_COLORS.textSecondary
@@ -1532,7 +1570,7 @@ export class PlanningScene extends Phaser.Scene {
       bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.78);
       bg.setDepth(2000);
       bg.setInteractive({ useHandCursor: true });
-      const icon = this.add.text(x + 6, yy + 4, "＋", {
+      const icon = this.add.text(x + 6, yy + 4, "+", {
         fontFamily: "Segoe UI Emoji",
         fontSize: "18px",
         color: UI_COLORS.textMuted
@@ -1734,15 +1772,7 @@ export class PlanningScene extends Phaser.Scene {
       { variant: "ghost", fontSize: 12 }
     );
 
-    this.buttons.wiki = this.createButton(
-      l.boardPanelX + l.boardPanelW - ctaW - 100, // To the left of START button
-      y1 + 8,
-      86,
-      34,
-      "📖 Wiki",
-      () => this.toggleWikiModal(),
-      { variant: "ghost", fontSize: 13 }
-    );
+    this.buttons.versionInfo = null;
 
     this.buttons.history = this.createButton(
       l.boardPanelX + l.boardPanelW - ctaW - 194,
@@ -1897,16 +1927,20 @@ export class PlanningScene extends Phaser.Scene {
     this.modalButtons.load = makeModalBtn(0, -80, 260, 44, "Tải tiến trình", () => this.onLoadClick());
     this.modalButtons.clear = makeModalBtn(0, -28, 260, 44, "Xóa tiến trình lưu", () => this.onClearClick());
     this.modalButtons.audio = makeModalBtn(0, 24, 260, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.volume = makeModalBtn(0, 76, 260, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
+    this.modalButtons.volumeDown = makeModalBtn(-92, 76, 78, 44, "-", () => this.changeVolumeLevel(-1));
+    this.modalButtons.volume = makeModalBtn(0, 76, 168, 44, "Âm lượng: 10/10", () => {});
+    this.modalButtons.volumeUp = makeModalBtn(92, 76, 78, 44, "+", () => this.changeVolumeLevel(1));
     this.modalButtons.resolution = makeModalBtn(0, 128, 260, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
-    this.modalButtons.guiScale = makeModalBtn(0, 180, 260, 44, "Kích thước GUI: 3/5", () => this.changeGuiScale());
     this.modalButtons.menu = makeModalBtn(-136, 242, 230, 44, "Về trang chủ", () => this.goMainMenu());
     this.modalButtons.close = makeModalBtn(136, 242, 230, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
   toggleSettingsOverlay(force = null) {
     const next = typeof force === "boolean" ? force : !this.settingsVisible;
-    if (next) this.toggleHistoryModal(false);
+    if (next) {
+      this.toggleHistoryModal(false);
+      this.toggleVersionInfoModal(false);
+    }
     this.settingsVisible = next;
     if (this.modalButtons?.audio) {
       this.modalButtons.audio.setLabel(`Âm thanh: ${this.audioFx.enabled ? "Bật" : "Tắt"}`);
@@ -1921,10 +1955,6 @@ export class PlanningScene extends Phaser.Scene {
       const resolution = resolveResolution(this.runtimeSettings?.resolutionKey);
       const label = resolution?.label ?? `${resolution.width}x${resolution.height}`;
       this.modalButtons.resolution.setLabel(`Độ phân giải: ${label}`);
-    }
-    if (this.modalButtons?.guiScale) {
-      const level = normalizeGuiScale(this.runtimeSettings?.guiScale);
-      this.modalButtons.guiScale.setLabel(`Kích thước GUI: ${level}/5`);
     }
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
@@ -2031,11 +2061,94 @@ export class PlanningScene extends Phaser.Scene {
     const next = typeof force === "boolean" ? force : !this.historyModalVisible;
     if (next) {
       this.toggleSettingsOverlay(false);
+      this.toggleVersionInfoModal(false);
       this.toggleWikiModal(false);
     }
     this.historyModalVisible = next;
     this.historyModalParts?.forEach((part) => part.setVisible(next));
     if (next) this.refreshHistoryModal();
+  }
+
+  createVersionInfoModal() {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const panelW = Math.min(640, Math.floor(w * 0.78));
+    const panelH = Math.min(430, Math.floor(h * 0.62));
+    const cx = Math.floor(w * 0.5);
+    const cy = Math.floor(h * 0.5);
+    const x0 = cx - panelW * 0.5;
+    const y0 = cy - panelH * 0.5;
+
+    const shade = this.add.rectangle(cx, cy, w, h, 0x020509, 0.7);
+    shade.setDepth(5900);
+    shade.setVisible(false);
+    shade.setInteractive({ useHandCursor: true });
+    shade.on("pointerdown", () => this.toggleVersionInfoModal(false));
+
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x0f1a29, 0.98);
+    panel.setStrokeStyle(1, UI_COLORS.panelEdge, 0.92);
+    panel.setDepth(5901);
+    panel.setVisible(false);
+
+    const title = this.add.text(x0 + 20, y0 + 16, "Thông tin phiên bản", {
+      fontFamily: UI_FONT,
+      fontSize: "21px",
+      color: UI_COLORS.textPrimary,
+      fontStyle: "bold"
+    });
+    title.setDepth(5902);
+    title.setVisible(false);
+
+    const meta = this.add.text(
+      x0 + 20,
+      y0 + 52,
+      `Phiên bản: ${VERSION_INFO.version}  •  Cập nhật: ${VERSION_INFO.updatedAt}`,
+      {
+        fontFamily: UI_FONT,
+        fontSize: "13px",
+        color: UI_COLORS.textSecondary
+      }
+    );
+    meta.setDepth(5902);
+    meta.setVisible(false);
+
+    const notesText = VERSION_INFO.notes.map((note, idx) => `${idx + 1}. ${note}`).join("\n");
+    const notes = this.add.text(x0 + 20, y0 + 86, notesText, {
+      fontFamily: UI_FONT,
+      fontSize: "14px",
+      color: UI_COLORS.textPrimary,
+      lineSpacing: 8,
+      wordWrap: { width: panelW - 40 }
+    });
+    notes.setDepth(5902);
+    notes.setVisible(false);
+
+    const closeBtn = this.createButton(
+      x0 + panelW - 130,
+      y0 + panelH - 48,
+      110,
+      34,
+      "Đóng",
+      () => this.toggleVersionInfoModal(false),
+      { variant: "ghost", fontSize: 13 }
+    );
+    closeBtn.shadow.setDepth(5902);
+    closeBtn.bg.setDepth(5903);
+    closeBtn.text.setDepth(5904);
+    closeBtn.setVisible(false);
+
+    this.versionInfoOverlay = [shade, panel, title, meta, notes, closeBtn.shadow, closeBtn.bg, closeBtn.text];
+  }
+
+  toggleVersionInfoModal(force = null) {
+    const next = typeof force === "boolean" ? force : !this.versionInfoVisible;
+    if (next) {
+      this.toggleSettingsOverlay(false);
+      this.toggleHistoryModal(false);
+      this.toggleWikiModal(false);
+    }
+    this.versionInfoVisible = next;
+    this.versionInfoOverlay?.forEach((part) => part?.setVisible(next));
   }
 
   createWikiModal() {
@@ -2184,6 +2297,7 @@ export class PlanningScene extends Phaser.Scene {
       const skill = SKILL_LIBRARY?.[unit.skillId];
       const stats = unit.stats ?? {};
       const range = Number.isFinite(stats.range) ? stats.range : 1;
+      const rangeTypeLabel = range >= 2 ? "Đánh xa" : "Cận chiến";
       const evasionPct = Math.round(getBaseEvasion(unit.classType) * 100);
 
       const backBtn = this.add.text(0, y, "← Quay lại danh sách", {
@@ -2214,7 +2328,7 @@ export class PlanningScene extends Phaser.Scene {
       const metaText = this.add.text(16, y + 46, [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
         `HP: ${stats.hp ?? "?"}   ATK: ${stats.atk ?? "?"}   DEF: ${stats.def ?? "?"}   MDEF: ${stats.mdef ?? "?"}`,
-        `MATK: ${stats.matk ?? "?"}   Tầm đánh: ${range}   Né tránh: ${evasionPct}%   Nộ tối đa: ${stats.rageMax ?? "?"}`
+        `MATK: ${stats.matk ?? "?"}   Tầm đánh: ${rangeTypeLabel}   Né tránh: ${evasionPct}%   Nộ tối đa: ${stats.rageMax ?? "?"}`
       ].join("\n"), {
         fontFamily: UI_FONT, fontSize: "14px", color: "#c0ddf5", lineSpacing: 6
       });
@@ -2242,7 +2356,7 @@ export class PlanningScene extends Phaser.Scene {
       });
       this.wikiListContainer.add(atkTitle);
 
-      const rangeLabel = range >= 3 ? "Tầm xa (3+)" : range >= 2 ? "Tầm trung (2)" : "Cận chiến (1)";
+      const rangeLabel = range >= 2 ? "Đánh xa" : "Cận chiến";
       const atkDesc = this.add.text(16, atkY + 22, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
         fontFamily: UI_FONT, fontSize: "13px", color: "#d0eaff", lineSpacing: 4,
         wordWrap: { width: viewportW - 44 }
@@ -2645,10 +2759,23 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   toggleWikiModal(force = null) {
+    if (!MATCH_WIKI_ENABLED) {
+      const shouldOpen = force == null ? !this.wikiVisible : !!force;
+      if (shouldOpen) {
+        this.addLog("Wiki trong trận đang tạm tắt để sửa lỗi.");
+      } else if (this.wikiVisible) {
+        this.wikiVisible = false;
+        this.wikiOverlay.forEach((o) => o?.setVisible(false));
+        this.clearAttackPreview();
+      }
+      return;
+    }
+
     const next = typeof force === "boolean" ? force : !this.wikiVisible;
     if (next) {
       this.toggleSettingsOverlay(false);
       this.toggleHistoryModal(false);
+      this.toggleVersionInfoModal(false);
       if (!this.wikiOverlay.length) this.createWikiModal();
     } else {
       this.clearAttackPreview();
@@ -2757,9 +2884,9 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   onClearClick() {
-    const ok = clearAllLocalStorage();
+    const ok = clearProgress();
     this.audioFx.play("click");
-    this.addLog(ok ? "Đã xóa toàn bộ localStorage." : "Không xóa được localStorage.");
+    this.addLog(ok ? "Đã xóa dữ liệu ván chơi." : "Không xóa được dữ liệu lưu.");
   }
 
   toggleAudio() {
@@ -2775,7 +2902,8 @@ export class PlanningScene extends Phaser.Scene {
 
   changeVolumeLevel(step = 1) {
     const current = this.audioFx.getVolumeLevel();
-    const next = current + step > 10 ? 1 : current + step;
+    const next = Math.min(10, Math.max(1, current + step));
+    if (next === current) return;
     this.audioFx.setVolumeLevel(next);
     this.runtimeSettings.volumeLevel = next;
     saveUiSettings(this.runtimeSettings);
@@ -2794,16 +2922,6 @@ export class PlanningScene extends Phaser.Scene {
     const restoredState = this.exportRunState();
     this.scene.start("PlanningScene", { restoredState, settings: this.runtimeSettings, mode: this.gameMode });
   }
-
-  changeGuiScale() {
-    const current = normalizeGuiScale(this.runtimeSettings?.guiScale);
-    const next = current >= 5 ? 1 : current + 1;
-    this.runtimeSettings.guiScale = next;
-    saveUiSettings(this.runtimeSettings);
-    this.modalButtons?.guiScale?.setLabel(`Kích thước GUI: ${next}/5`);
-    this.applyDisplaySettings(this.runtimeSettings, false);
-  }
-
   goMainMenu() {
     this.toggleSettingsOverlay(false);
     this.persistProgress();
@@ -2869,12 +2987,12 @@ export class PlanningScene extends Phaser.Scene {
       bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.85);
       bg.setDepth(1500);
       const label = this.createBenchSlotLabel(x, yy, slotW);
-      const icon = this.createBenchSlotIcon(x, yy, slotH);
+      const icon = this.createBenchSlotIcon(x, yy, slotW, slotH);
       bg.setInteractive({ useHandCursor: true });
       bg.on("pointerdown", (pointer, _localX, _localY, event) => {
         if (pointer?.rightButtonDown?.()) {
           if (event?.stopPropagation) event.stopPropagation();
-          if (this.phase !== PHASE.PLANNING || this.settingsVisible || this.wikiVisible || this.historyModalVisible) return;
+          if (this.phase !== PHASE.PLANNING || this.settingsVisible || this.wikiVisible || this.historyModalVisible || this.versionInfoVisible) return;
           const unit = this.player?.bench?.[i];
           if (unit) this.showContextMenu(unit, "BENCH", i, null, pointer.x, pointer.y);
           return;
@@ -2909,20 +3027,23 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   createBenchSlotLabel(x, y, slotW) {
+    const fontSize = slotW < 36 ? "8px" : slotW < 52 ? "9px" : "10px";
     const label = this.add.text(x + 8, y + 8, "", {
       fontFamily: UI_FONT,
-      fontSize: "10px",
+      fontSize,
       color: UI_COLORS.textPrimary,
-      wordWrap: { width: slotW - 14 }
+      wordWrap: { width: Math.max(8, slotW - 10) }
     });
     label.setDepth(1501);
     return label;
   }
 
-  createBenchSlotIcon(x, y, slotH) {
-    const icon = this.add.text(x + 8, y + slotH - 24, "", {
+  createBenchSlotIcon(x, y, slotW, slotH) {
+    const iconX = x + (slotW < 40 ? 4 : 8);
+    const fontSize = slotW < 36 ? "11px" : slotW < 52 ? "13px" : "16px";
+    const icon = this.add.text(iconX, y + slotH - 22, "", {
       fontFamily: "Segoe UI Emoji",
-      fontSize: "16px",
+      fontSize,
       color: "#ffffff"
     });
     icon.setDepth(1502);
@@ -2941,7 +3062,7 @@ export class PlanningScene extends Phaser.Scene {
     }
     if (!this.isTextRenderable(slot.icon)) {
       slot.icon?.destroy();
-      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotH);
+      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotW, slot.slotH);
     }
   }
 
@@ -2970,7 +3091,7 @@ export class PlanningScene extends Phaser.Scene {
       slot.label?.destroy();
       slot.icon?.destroy();
       slot.label = this.createBenchSlotLabel(slot.x, slot.y, slot.slotW);
-      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotH);
+      slot.icon = this.createBenchSlotIcon(slot.x, slot.y, slot.slotW, slot.slotH);
       apply();
     }
   }
@@ -2984,6 +3105,7 @@ export class PlanningScene extends Phaser.Scene {
 
   setupBoardViewInput() {
     this.input.on("wheel", (pointer, _gos, _dx, dy) => {
+      if (this.versionInfoVisible) return;
       if (this.wikiVisible) {
         this.onWikiWheel(dy);
         return;
@@ -3004,7 +3126,7 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.input.on("pointerdown", (pointer) => {
-      if (this.wikiVisible) return;
+      if (this.wikiVisible || this.versionInfoVisible) return;
       if (pointer?.rightButtonDown?.()) return;
       if (this.isPanPointer(pointer)) {
         if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
@@ -3016,7 +3138,7 @@ export class PlanningScene extends Phaser.Scene {
       }
 
       // Check left click for Unit Drag
-      if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.wikiVisible && !this.historyModalVisible && !this.settingsVisible) {
+      if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.wikiVisible && !this.historyModalVisible && !this.settingsVisible && !this.versionInfoVisible) {
         const pos = this.getPointerWorldPosition(pointer);
         const unit = this.getUnitAt(pos.x, pos.y);
         if (unit) {
@@ -3034,7 +3156,7 @@ export class PlanningScene extends Phaser.Scene {
     });
 
     this.input.on("pointermove", (pointer) => {
-      if (this.wikiVisible) return;
+      if (this.wikiVisible || this.versionInfoVisible) return;
       if (this.isUnitDragging) {
         this.updateUnitDrag(pointer);
         return;
@@ -4739,7 +4861,7 @@ export class PlanningScene extends Phaser.Scene {
     const shieldEffects = new Set(["shield_immune", "team_buff_def", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
     const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
 
-    if (effect === "global_tide_evade") return "💨";
+    if (effect === "global_tide_evade") return "💚";
     if (shieldEffects.has(effect)) return "🛡️";
     if (healBuffEffects.has(effect)) return "💚";
     if (attacker?.classType === "ARCHER") return "🏹";
@@ -4833,8 +4955,6 @@ export class PlanningScene extends Phaser.Scene {
       cells.push({ row, col });
     };
     const pushUnits = (units) => units.forEach((u) => pushCell(u.row, u.col));
-    const isWaterUnit = (unit) => (unit?.tribe ?? unit?.base?.tribe) === "TIDE";
-
     if (!skill) {
       pushCell(target.row, target.col);
       return this.dedupePreviewCells(cells);
@@ -4850,8 +4970,7 @@ export class PlanningScene extends Phaser.Scene {
         pushUnits(enemies);
         break;
       case "global_tide_evade":
-        pushUnits(enemies);
-        pushUnits(allies.filter(isWaterUnit));
+        pushUnits(allies);
         break;
       case "single_burst_armor_pen":
       case "single_poison_slow":
@@ -5012,7 +5131,7 @@ export class PlanningScene extends Phaser.Scene {
 
   handleRightClick(pointer) {
     if (this.phase !== PHASE.PLANNING) return;
-    if (this.settingsVisible || this.wikiVisible || this.historyModalVisible) return;
+    if (this.settingsVisible || this.wikiVisible || this.historyModalVisible || this.versionInfoVisible) return;
     if (this.isBoardDragging) {
       this.isBoardDragging = false;
       this.lastDragPoint = null;
@@ -5056,13 +5175,15 @@ export class PlanningScene extends Phaser.Scene {
     container.setDepth(5000);
 
     const options = [];
-    // Detail
-    options.push({
-      label: "Chi tiết", action: () => {
-        this._wikiDetailUnit = unit.baseId;
-        this.toggleWikiModal(true);
-      }
-    });
+    if (MATCH_WIKI_ENABLED) {
+      options.push({
+        label: "Chi tiết",
+        action: () => {
+          this._wikiDetailUnit = unit.baseId;
+          this.toggleWikiModal(true);
+        }
+      });
+    }
 
     if (region === "BENCH") {
       // Deploy (find free slot on board?) - Logic complex, maybe just Swap mode?
@@ -5320,7 +5441,7 @@ export class PlanningScene extends Phaser.Scene {
       let iconText = "❔";
       if (base) {
         iconText = visual.icon;
-        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNộ ${base.stats.rageMax} • Tầm ${base.stats.range}`;
+        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNá»™ ${base.stats.rageMax} • Tầm ${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`;
       }
 
       const status = this.add.text(x + 10, y + 8, sold ? "ĐÃ MUA" : "SẴN SÀNG", {
@@ -5418,6 +5539,7 @@ export class PlanningScene extends Phaser.Scene {
       slot.icon.setVisible(true);
       const unit = this.player.bench[index];
       const selected = this.selectedBenchIndex === index;
+      const compactSlot = slot.slotW < 52 || slot.slotH < 66;
 
       if (!unit) {
         slot.bg.setStrokeStyle(1, selected ? UI_COLORS.accent : UI_COLORS.panelEdgeSoft, 0.95);
@@ -5428,11 +5550,15 @@ export class PlanningScene extends Phaser.Scene {
         slot.bg.setStrokeStyle(1, selected ? UI_COLORS.accent : roleTheme.stroke, 0.95);
         slot.bg.setFillStyle(selected ? roleTheme.cardHover : roleTheme.bench, selected ? 0.95 : 0.9);
         const visual = getUnitVisual(unit.baseId, unit.base.classType);
-        const nameShort = visual.nameVi.length > 13 ? `${visual.nameVi.slice(0, 12)}…` : visual.nameVi;
+        const nameLimit = compactSlot ? 8 : 13;
+        const nameShort = visual.nameVi.length > nameLimit ? `${visual.nameVi.slice(0, nameLimit - 1)}…` : visual.nameVi;
         const equipCount = Array.isArray(unit.equips) ? unit.equips.length : 0;
+        const labelText = compactSlot
+          ? `${nameShort}\n${unit.star}★ • ${equipCount}/3`
+          : `${nameShort}\n${unit.star}★ • ${getClassLabelVi(unit.base.classType)}\nTrang bị:${equipCount}/3`;
         this.safeUpdateBenchSlotText(
           slot,
-          `${nameShort}\n${unit.star}★ • ${getClassLabelVi(unit.base.classType)}\nTrang bị:${equipCount}/3`,
+          labelText,
           UI_COLORS.textPrimary,
           visual.icon
         );
@@ -5713,7 +5839,7 @@ export class PlanningScene extends Phaser.Scene {
         const isSelected = false;
         cell.bg.setFillStyle(0x162639, isSelected ? 1 : 0.95);
         cell.bg.setStrokeStyle(1, isSelected ? UI_COLORS.accent : UI_COLORS.panelEdgeSoft, isSelected ? 0.95 : 0.78);
-        cell.icon.setText("＋");
+        cell.icon.setText("+");
         cell.icon.setColor(UI_COLORS.textMuted);
         cell.count.setText("");
         return;
@@ -5933,7 +6059,7 @@ export class PlanningScene extends Phaser.Scene {
       body: [
         `🏷️ Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
         `❤️ HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
-        `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range}`,
+        `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`,
         `🔥 Nộ tối đa:${base.stats.rageMax}`,
         `🎒 ${equipmentLine}`,
         `🎯 Mốc nghề: ${classMarks}`,
@@ -6023,7 +6149,11 @@ export class PlanningScene extends Phaser.Scene {
 
   describeBasicAttack(classType, range) {
     const pattern = this.inferBasicActionPattern(classType, range);
-    const lines = [`Thi triển: ${this.translateActionPattern(pattern)}`, `Tầm đánh: ${range} ô`, "Loại sát thương: Vật lý"];
+    const lines = [
+      `Thi triển: ${this.translateActionPattern(pattern)}`,
+      `Tầm đánh: ${range >= 2 ? "Đánh xa" : "Cận chiến"}`,
+      "Loại sát thương: Vật lý"
+    ];
     if (classType === "ASSASSIN") {
       lines.push("Ưu tiên mục tiêu hậu phương thấp máu.");
     } else if (classType === "ARCHER" || classType === "MAGE") {
@@ -6078,7 +6208,7 @@ export class PlanningScene extends Phaser.Scene {
       shield_cleanse: "Không tấn công. Tạo khiên + thanh tẩy cho đồng minh.",
       team_rage: `Không tấn công. Tăng nộ tối đa ${maxTargets ?? 3} đồng minh.`,
       column_bless: "Không tấn công. Cường hóa 1 cột đồng minh (tối đa 5 ô).",
-      global_tide_evade: "Tấn công toàn bộ địch, đồng thời tăng né tránh cho toàn bộ đồng minh hệ Thủy.",
+      global_tide_evade: "Không tấn công. Hồi đầy máu cho toàn bộ đồng minh.",
       row_cleave: "Tấn công 5 ô hình hàng ngang.",
       self_atk_and_assist: "Tấn công 1 ô tiền tuyến, đồng thời tự cường hóa.",
       cone_smash: "Tấn công 3 ô hình nón trước mặt.",
@@ -6144,7 +6274,7 @@ export class PlanningScene extends Phaser.Scene {
       shield_cleanse: "Tạo khiên + thanh tẩy",
       team_rage: "Tăng nộ đồng minh",
       column_bless: "Cường hóa theo cột",
-      global_tide_evade: "Sóng thần + né tránh hệ Thủy",
+      global_tide_evade: "Sóng thần hồi đầy máu đồng minh",
       column_bleed: "Xé cột + chảy máu",
       row_cleave: "Quét hàng",
       self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
@@ -6650,6 +6780,10 @@ export class PlanningScene extends Phaser.Scene {
     const enemies = this.getCombatUnits(attacker.side === "LEFT" ? "RIGHT" : "LEFT");
     const allies = this.getCombatUnits(attacker.side);
     const rawSkill = this.calcSkillRaw(attacker, skill);
+    const starChanceMult = starEffectChanceMultiplier(attacker.star);
+    const areaBonus = starAreaBonus(attacker.star);
+    const targetBonus = starTargetBonus(attacker.star);
+    const skillOpts = { isSkill: true };
 
     switch (skill.effect) {
 
@@ -6728,11 +6862,14 @@ export class PlanningScene extends Phaser.Scene {
         if (target.alive) {
           const push = attacker.side === "LEFT" ? 1 : -1;
           const newCol = Math.max(0, Math.min(9, target.col + push));
-          if (!enemies.find(u => u.row === target.row && u.col === newCol)) {
+          const blocked = enemies.some((u) => u.uid !== target.uid && u.row === target.row && u.col === newCol);
+          if (!blocked && newCol !== target.col) {
             target.col = newCol;
             const screen = this.gridToScreen(target.col, target.row);
-            this.tweens.add({ targets: target.sprite, x: screen.x, y: screen.y - 10, duration: 200 });
-            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
+            await this.tweenCombatUnit(target, screen.x, screen.y - 10, 220);
+            this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
+          } else {
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "KHÓA VỊ TRÍ", "#c8d5e6");
           }
         }
         break;
@@ -6801,7 +6938,7 @@ export class PlanningScene extends Phaser.Scene {
           dead.hp = Math.round(dead.maxHp * 0.4);
           dead.sprite.clearFill();
           dead.tag.setColor("#ffffff");
-          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
+          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "Há»'I SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
         } else {
           allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
@@ -6825,16 +6962,17 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "global_tide_evade": {
-        enemies.forEach((enemy) => {
-          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
-        });
-        const evadeBuff = Phaser.Math.Clamp(Number(skill.evadeBuff ?? 0.15), 0, 0.6);
+        let healedAny = false;
         allies.forEach((ally) => {
-          if ((ally?.tribe ?? ally?.base?.tribe) !== "TIDE") return;
-          ally.mods.evadePct = Math.max(ally.mods.evadePct, evadeBuff);
-          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "THỦY ẢNH", "#7fd8ff");
+          if (!ally?.alive) return;
+          const missingHp = Math.max(0, (ally.maxHp ?? 0) - (ally.hp ?? 0));
+          if (missingHp <= 0) return;
+          healedAny = true;
+          ally.hp = ally.maxHp;
+          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${missingHp}`, "#9dffba");
           this.updateCombatUnitUi(ally);
         });
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 37, healedAny ? "THỦY TRIỀU" : "ĐẦY MÁU", "#c9ffde");
         break;
       }
       case "multi_disarm": {
@@ -7009,12 +7147,26 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "single_sleep": {
-        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name);
-        if (target.alive && Math.random() < skill.sleepChance) {
-          target.statuses.sleep = Math.max(target.statuses.sleep, skill.sleepTurns);
-          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "SLEEP", "#d4bcff");
-          this.updateCombatUnitUi(target);
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        const effectiveSleepChance = Math.min(1, skill.sleepChance * starChanceMult);
+        const maxSleepTargets = Math.min(3, Math.max(1, attacker.star ?? 1));
+        const pool = enemies.filter((enemy) => enemy.alive);
+        const selected = [];
+        while (selected.length < maxSleepTargets && pool.length > 0) {
+          const highestRage = Math.max(...pool.map((enemy) => enemy.rage ?? 0));
+          const topRageEnemies = pool.filter((enemy) => (enemy.rage ?? 0) === highestRage);
+          const victim = topRageEnemies[Math.floor(Math.random() * topRageEnemies.length)];
+          if (!victim) break;
+          selected.push(victim);
+          const victimIndex = pool.indexOf(victim);
+          if (victimIndex >= 0) pool.splice(victimIndex, 1);
         }
+        selected.forEach((enemy) => {
+          if (!enemy.alive || Math.random() >= effectiveSleepChance) return;
+          enemy.statuses.sleep = Math.max(enemy.statuses.sleep, skill.sleepTurns);
+          this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "NGỦ", "#d4bcff");
+          this.updateCombatUnitUi(enemy);
+        });
         break;
       }
       case "single_armor_break": {
@@ -7605,3 +7757,4 @@ export class PlanningScene extends Phaser.Scene {
     return { x, y };
   }
 }
+

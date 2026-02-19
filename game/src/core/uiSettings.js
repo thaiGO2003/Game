@@ -14,11 +14,11 @@ const DEFAULT_RESOLUTION_KEY = "1600x900";
 export function createDefaultUiSettings() {
   return {
     audioEnabled: true,
-    aiMode: "MEDIUM",
+    aiMode: "EASY",
     loseCondition: DEFAULT_LOSE_CONDITION,
-    volumeLevel: 10,
+    volumeLevel: 5,
     resolutionKey: DEFAULT_RESOLUTION_KEY,
-    guiScale: 3
+    guiScale: 2
   };
 }
 
@@ -33,13 +33,15 @@ export function resolveResolution(value) {
 }
 
 export function normalizeGuiScale(value) {
-  const numeric = Number.isFinite(value) ? Math.round(value) : 3;
-  return Math.min(5, Math.max(1, numeric));
+  void value;
+  // GUI scale levels are deprecated; keep a fixed compatibility value.
+  return 2;
 }
 
 export function guiScaleToZoom(guiScale) {
-  const level = normalizeGuiScale(guiScale);
-  return 0.8 + (level - 1) * 0.2;
+  void guiScale;
+  // Keep UI zoom fixed to avoid level-based scaling (1..5).
+  return 1;
 }
 
 export function loadUiSettings() {

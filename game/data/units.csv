@@ -35,7 +35,7 @@ elephant_guard,Voi Thiết Giáp,voi,🐘,STONE,Nham,TANKER,Đỡ đòn,4,480,50
 crocodile_bite,Cá Sấu Đầm,ca-sau,🐊,TIDE,Thủy,FIGHTER,Đấu sĩ,4,390,80,28,18,20,1,3,death_roll
 crow_storm,Quạ Bão Táp,qua,🐦‍⬛,WIND,Phong,ARCHER,Xạ thủ,4,270,85,15,14,15,4,3,storm_feather
 peacock_dazzle,Khổng Tước Vũ,cong,🦚,WIND,Phong,SUPPORT,Hỗ trợ,4,290,30,18,75,28,3,4,dazzling_dance
-triceratops_charge,Khủng Long Ba Sừng,khung-long,🦕,STONE,Nham,TANKER,Đỡ đòn,4,460,52,42,12,32,1,4,tricera_charge
+triceratops_charge,Khủng Long Ba Sừng,khung-long,🦕,STONE,Nham,TANKER,Đỡ đòn,1,350,44,31,10,24,1,4,tricera_charge
 gorilla_smash,Đười Ươi Phẫn Nộ,vuon,🦍,STONE,Nham,FIGHTER,Đấu sĩ,4,400,85,26,15,22,1,3,gorilla_slam
 cobra_venom,Rắn Hổ Mang,ran,🐍,SWARM,Trùng,ASSASSIN,Sát thủ,4,280,90,16,25,18,1,3,cobra_bite
 swan_grace,Thiên Nga Trắng,thien-nga,🦢,TIDE,Thủy,SUPPORT,Hỗ trợ,4,285,28,16,78,30,3,4,swan_shield

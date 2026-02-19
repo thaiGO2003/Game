@@ -9,12 +9,11 @@ import { EQUIPMENT_ITEMS, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { VfxController } from "../core/vfx.js";
-import { clearAllLocalStorage } from "../core/persistence.js";
+import { clearProgress } from "../core/persistence.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
   loadUiSettings,
-  normalizeGuiScale,
   normalizeResolutionKey,
   resolveResolution,
   saveUiSettings
@@ -59,7 +58,7 @@ const PHASE = {
 
 const AI_SETTINGS = {
   EASY: {
-    label: "Dễ",
+    label: "Dá»…",
     difficulty: "EASY",
     hpMult: 0.84,
     atkMult: 0.82,
@@ -227,6 +226,13 @@ export class CombatScene extends Phaser.Scene {
     this.gapMarkers = [];
     this.loseCondition = "NO_UNITS";
     this.combatLootDrops = [];
+    this.boardZoom = 1;
+    this.boardPanX = 0;
+    this.boardPanY = 0;
+    this.isBoardDragging = false;
+    this.lastDragPoint = null;
+    this.boardPointerDown = null;
+    this.boardDragConsumed = false;
   }
 
   scaleCombatDuration(ms) {
@@ -285,6 +291,13 @@ export class CombatScene extends Phaser.Scene {
     this.gapMarkers = [];
     this.loseCondition = "NO_UNITS";
     this.combatLootDrops = [];
+    this.boardZoom = 1;
+    this.boardPanX = 0;
+    this.boardPanY = 0;
+    this.isBoardDragging = false;
+    this.lastDragPoint = null;
+    this.boardPointerDown = null;
+    this.boardDragConsumed = false;
     if (this.combatTickEvent) {
       this.combatTickEvent.remove(false);
       this.combatTickEvent = null;
@@ -349,7 +362,7 @@ export class CombatScene extends Phaser.Scene {
     if (resolution) {
       this.scale.resize(resolution.width, resolution.height);
     }
-    const zoom = guiScaleToZoom(normalizeGuiScale(settings?.guiScale));
+    const zoom = guiScaleToZoom(settings?.guiScale);
     this.cameras.main.setZoom(zoom);
   }
 
@@ -364,9 +377,152 @@ export class CombatScene extends Phaser.Scene {
       }
       this.toggleSettingsOverlay();
     });
-    this.input.on("wheel", (_pointer, _gos, _dx, dy) => {
-      if (this.historyModalVisible) this.onHistoryWheel(dy);
+
+    this.input.on("wheel", (pointer, _gos, _dx, dy) => {
+      if (this.historyModalVisible) {
+        this.onHistoryWheel(dy);
+        return;
+      }
+      if (this.settingsVisible) return;
+      if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
+      const before = this.boardZoom;
+      this.boardZoom = clamp(this.boardZoom - dy * 0.0012, 0.65, 1.85);
+      if (Math.abs(before - this.boardZoom) < 0.0001) return;
+      this.refreshBoardGeometry();
     });
+
+    this.input.on("pointerdown", (pointer) => {
+      if (this.settingsVisible || this.historyModalVisible) return;
+      if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
+      if (this.isPanPointer(pointer)) {
+        this.boardPointerDown = { x: pointer.x, y: pointer.y };
+        this.boardDragConsumed = false;
+        this.isBoardDragging = true;
+        this.lastDragPoint = { x: pointer.x, y: pointer.y };
+        return;
+      }
+      this.boardPointerDown = { x: pointer.x, y: pointer.y };
+      this.boardDragConsumed = false;
+      this.lastDragPoint = { x: pointer.x, y: pointer.y };
+    });
+
+    this.input.on("pointermove", (pointer) => {
+      if (this.settingsVisible || this.historyModalVisible) return;
+
+      if (this.isBoardDragging && this.lastDragPoint) {
+        const dx = pointer.x - this.lastDragPoint.x;
+        const dy = pointer.y - this.lastDragPoint.y;
+        if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
+        this.boardDragConsumed = true;
+        this.boardPanX += dx;
+        this.boardPanY += dy;
+        this.lastDragPoint = { x: pointer.x, y: pointer.y };
+        this.refreshBoardGeometry();
+        return;
+      }
+
+      if (!this.isBoardDragging && this.boardPointerDown) {
+        if (!this.pointInBoardPanel(this.boardPointerDown.x, this.boardPointerDown.y)) return;
+        const dx0 = pointer.x - this.boardPointerDown.x;
+        const dy0 = pointer.y - this.boardPointerDown.y;
+        if (Math.hypot(dx0, dy0) > 6) {
+          this.isBoardDragging = true;
+          this.boardDragConsumed = true;
+          this.lastDragPoint = { x: pointer.x, y: pointer.y };
+        }
+      }
+    });
+
+    const releaseDrag = () => {
+      this.isBoardDragging = false;
+      this.lastDragPoint = null;
+      this.boardPointerDown = null;
+      if (this.boardDragConsumed) {
+        this.time.delayedCall(0, () => {
+          this.boardDragConsumed = false;
+        });
+      } else {
+        this.boardDragConsumed = false;
+      }
+    };
+    this.input.on("pointerup", releaseDrag);
+    this.input.on("pointerupoutside", releaseDrag);
+  }
+
+  getTileSize() {
+    return {
+      tileW: TILE_W * this.boardZoom,
+      tileH: TILE_H * this.boardZoom
+    };
+  }
+
+  isPanPointer(pointer) {
+    if (!pointer) return false;
+    const buttons = pointer.event?.buttons ?? 0;
+    if (typeof pointer.rightButtonDown === "function" && pointer.rightButtonDown()) return true;
+    if (typeof pointer.middleButtonDown === "function" && pointer.middleButtonDown()) return true;
+    if (pointer.button === 2 || pointer.button === 1) return true;
+    if ((buttons & 2) !== 0 || (buttons & 4) !== 0) return true;
+    if ((buttons & 1) !== 0 && (pointer.event?.altKey || pointer.event?.ctrlKey)) return true;
+    return false;
+  }
+
+  pointInBoardPanel(x, y) {
+    const l = this.layout;
+    return x >= l.boardPanelX && x <= l.boardPanelX + l.boardPanelW && y >= l.boardPanelY && y <= l.boardPanelY + l.boardPanelH;
+  }
+
+  refreshBoardGeometry() {
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < COLS; col += 1) {
+        const data = this.tileLookup.get(gridKey(row, col));
+        if (!data) continue;
+        const center = this.gridToScreen(col, row);
+        data.center = center;
+        data.tile.clear();
+        this.paintGrassTile(data.tile, center.x, center.y, row, col);
+      }
+    }
+    this.refreshBoardEdgeLabels();
+
+    const { tileW, tileH } = this.getTileSize();
+    this.playerCellZones.forEach((entry) => {
+      const zone = entry?.zone ?? entry;
+      const row = Number.isInteger(entry?.row) ? entry.row : null;
+      const col = Number.isInteger(entry?.col) ? entry.col : null;
+      if (!zone || row == null || col == null) return;
+      const tile = this.tileLookup.get(gridKey(row, col));
+      if (!tile) return;
+      zone.setPosition(tile.center.x, tile.center.y);
+      zone.setSize(tileW - 10, tileH - 10);
+    });
+
+    this.gapMarkers.forEach((token, row) => {
+      const a = this.gridToScreen(4, row);
+      const b = this.gridToScreen(5, row);
+      const mx = (a.x + b.x) * 0.5;
+      const my = (a.y + b.y) * 0.5;
+      token.clear();
+      this.paintRiverTile(token, mx, my - 2, row);
+      token.setDepth(RIVER_LAYER_DEPTH);
+    });
+
+    if (this.phase === PHASE.PLANNING || this.phase === PHASE.AUGMENT) {
+      this.refreshBoardUi();
+    } else if (this.phase === PHASE.COMBAT && Array.isArray(this.combatUnits)) {
+      this.combatUnits.forEach((unit) => {
+        if (!unit?.sprite?.active) return;
+        const point = this.gridToScreen(unit.col, unit.row);
+        unit.sprite.setPosition(point.x, point.y - 10);
+        this.syncCombatLabels(unit);
+        this.updateCombatUnitUi(unit);
+      });
+      this.clearHighlights();
+    }
+
+    if (this.previewHoverUnit) {
+      this.showAttackPreviewForUnit(this.previewHoverUnit);
+    }
   }
 
   startFromPayload() {
@@ -428,11 +584,12 @@ export class CombatScene extends Phaser.Scene {
 
     this.modalButtons = {};
     this.modalButtons.audio = makeModalBtn(0, -98, 230, 44, "Âm thanh: Bật", () => this.toggleAudio());
-    this.modalButtons.volume = makeModalBtn(0, -46, 230, 44, "Âm lượng: 10/10", () => this.changeVolumeLevel(1));
+    this.modalButtons.volumeDown = makeModalBtn(-84, -46, 70, 44, "-", () => this.changeVolumeLevel(-1));
+    this.modalButtons.volume = makeModalBtn(0, -46, 146, 44, "Âm lượng: 10/10", () => {});
+    this.modalButtons.volumeUp = makeModalBtn(84, -46, 70, 44, "+", () => this.changeVolumeLevel(1));
     this.modalButtons.resolution = makeModalBtn(0, 6, 230, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
-    this.modalButtons.guiScale = makeModalBtn(0, 58, 230, 44, "Kích thước GUI: 3/5", () => this.changeGuiScale());
     this.modalButtons.exit = makeModalBtn(0, 110, 230, 44, "Thoát về chuẩn bị", () => this.exitToPlanning());
-    this.modalButtons.menu = makeModalBtn(-126, 172, 220, 44, "Trang chủ", () => this.scene.start("MainMenuScene"), "secondary");
+    this.modalButtons.menu = makeModalBtn(-126, 172, 220, 44, "Trang chá»§", () => this.scene.start("MainMenuScene"), "secondary");
     this.modalButtons.close = makeModalBtn(126, 172, 220, 44, "Đóng", () => this.toggleSettingsOverlay(false));
   }
 
@@ -446,10 +603,6 @@ export class CombatScene extends Phaser.Scene {
       const resolution = resolveResolution(loadUiSettings().resolutionKey);
       const label = resolution?.label ?? `${resolution.width}x${resolution.height}`;
       this.modalButtons.resolution.setLabel(`Độ phân giải: ${label}`);
-    }
-    if (this.modalButtons?.guiScale) {
-      const level = normalizeGuiScale(loadUiSettings().guiScale);
-      this.modalButtons.guiScale.setLabel(`Kích thước GUI: ${level}/5`);
     }
     this.settingsOverlay?.forEach((o) => o.setVisible(next));
   }
@@ -641,7 +794,8 @@ export class CombatScene extends Phaser.Scene {
 
   changeVolumeLevel(step = 1) {
     const current = this.audioFx.getVolumeLevel();
-    const next = current + step > 10 ? 1 : current + step;
+    const next = Math.min(10, Math.max(1, current + step));
+    if (next === current) return;
     this.audioFx.setVolumeLevel(next);
     const currentSettings = loadUiSettings();
     saveUiSettings({
@@ -663,16 +817,6 @@ export class CombatScene extends Phaser.Scene {
     this.modalButtons?.resolution?.setLabel(`Độ phân giải: ${next.label ?? `${next.width}x${next.height}`}`);
     this.scene.start("CombatScene", { runState: this.runStatePayload });
   }
-
-  changeGuiScale() {
-    const currentSettings = loadUiSettings();
-    const current = normalizeGuiScale(currentSettings.guiScale);
-    const next = current >= 5 ? 1 : current + 1;
-    saveUiSettings({ ...currentSettings, guiScale: next });
-    this.modalButtons?.guiScale?.setLabel(`Kích thước GUI: ${next}/5`);
-    this.cameras.main.setZoom(guiScaleToZoom(next));
-  }
-
   exitToPlanning() {
     this.toggleSettingsOverlay(false);
     this.scene.start("PlanningScene", { restoredState: this.runStatePayload });
@@ -686,7 +830,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   startNewRun() {
-    clearAllLocalStorage();
+    clearProgress();
     this.clearCombatSprites();
     this.clearPlanningSprites();
     this.clearOverlay();
@@ -790,6 +934,9 @@ export class CombatScene extends Phaser.Scene {
     // Combat scene: board panel stretches to the bottom for better battlefield focus.
     const boardPanelH = Math.max(250, h - margin - boardPanelY);
 
+    const boardNudgeX = -44;
+    const boardNudgeY = -64;
+
     return {
       width: w,
       height: h,
@@ -802,8 +949,8 @@ export class CombatScene extends Phaser.Scene {
       rightPanelX,
       topPanelY,
       topPanelH,
-      boardOriginX: boardPanelX + Math.floor(contentW * 0.28),
-      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.78),
+      boardOriginX: boardPanelX + Math.floor(contentW * 0.28) + boardNudgeX,
+      boardOriginY: boardPanelY + Math.floor(boardPanelH * 0.78) + boardNudgeY,
       boardPanelX,
       boardPanelY,
       boardPanelW: contentW,
@@ -933,14 +1080,15 @@ export class CombatScene extends Phaser.Scene {
   }
 
   refreshBoardEdgeLabels() {
+    const { tileW, tileH } = this.getTileSize();
     this.boardEdgeLabels.forEach((entry) => {
       const p = this.gridToScreen(entry.col, entry.row);
       let dx = 0;
       let dy = 0;
-      if (entry.anchor === "bottom") dy = TILE_H * 0.72;
-      if (entry.anchor === "top") dy = -TILE_H * 0.72;
-      if (entry.anchor === "left") dx = -TILE_W * 0.68;
-      if (entry.anchor === "right") dx = TILE_W * 0.68;
+      if (entry.anchor === "bottom") dy = tileH * 0.72;
+      if (entry.anchor === "top") dy = -tileH * 0.72;
+      if (entry.anchor === "left") dx = -tileW * 0.68;
+      if (entry.anchor === "right") dx = tileW * 0.68;
       entry.label.setPosition(p.x + dx, p.y + dy);
       entry.label.setDepth(p.y + 4);
     });
@@ -956,6 +1104,7 @@ export class CombatScene extends Phaser.Scene {
 
   paintGrassTile(graphics, x, y, row, col) {
     const { fill, stroke } = this.getGrassTileStyle(row, col);
+    const { tileW, tileH } = this.getTileSize();
     graphics.fillStyle(fill, 0.72);
     graphics.lineStyle(1, stroke, 0.92);
     this.drawDiamond(graphics, x, y);
@@ -963,15 +1112,16 @@ export class CombatScene extends Phaser.Scene {
     // Add a subtle top highlight for a checkerboard grass-tile look.
     graphics.lineStyle(1, UI_COLORS.grassHighlight, 0.2);
     graphics.beginPath();
-    graphics.moveTo(x - TILE_W / 2 + 4, y);
-    graphics.lineTo(x, y - TILE_H / 2 + 2);
-    graphics.lineTo(x + TILE_W / 2 - 4, y);
+    graphics.moveTo(x - tileW / 2 + 4, y);
+    graphics.lineTo(x, y - tileH / 2 + 2);
+    graphics.lineTo(x + tileW / 2 - 4, y);
     graphics.strokePath();
   }
 
   paintRiverTile(graphics, x, y, row) {
-    const w = TILE_W;
-    const h = TILE_H;
+    const { tileW, tileH } = this.getTileSize();
+    const w = tileW;
+    const h = tileH;
     const even = row % 2 === 0;
     const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
     const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
@@ -995,11 +1145,12 @@ export class CombatScene extends Phaser.Scene {
   }
 
   drawDiamond(graphics, x, y, fill = true) {
+    const { tileW, tileH } = this.getTileSize();
     graphics.beginPath();
-    graphics.moveTo(x, y - TILE_H / 2);
-    graphics.lineTo(x + TILE_W / 2, y);
-    graphics.lineTo(x, y + TILE_H / 2);
-    graphics.lineTo(x - TILE_W / 2, y);
+    graphics.moveTo(x, y - tileH / 2);
+    graphics.lineTo(x + tileW / 2, y);
+    graphics.lineTo(x, y + tileH / 2);
+    graphics.lineTo(x - tileW / 2, y);
     graphics.closePath();
     if (fill) graphics.fillPath();
     graphics.strokePath();
@@ -1057,7 +1208,7 @@ export class CombatScene extends Phaser.Scene {
     this.ruleText = this.add.text(
       l.boardPanelX + UI_SPACING.SM,
       l.topPanelY + UI_SPACING.SM + 30,
-      "Luật quét: Ta (hàng 0→4, cột 4→0) | Địch (hàng 0→4, cột 5→9)",
+      "Luật quét: Ta (E→A, mỗi cột 5→1) | Địch (G→K, mỗi cột 5→1)",
       {
         fontFamily: UI_FONT,
         fontSize: "13px",
@@ -1233,15 +1384,16 @@ export class CombatScene extends Phaser.Scene {
   }
 
   createPlayerCellZones() {
+    const { tileW, tileH } = this.getTileSize();
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const tile = this.tileLookup.get(gridKey(row, col));
-        const zone = this.add.zone(tile.center.x, tile.center.y, TILE_W - 10, TILE_H - 10);
-        zone.setRectangleDropZone(TILE_W - 10, TILE_H - 10);
+        const zone = this.add.zone(tile.center.x, tile.center.y, tileW - 10, tileH - 10);
+        zone.setRectangleDropZone(tileW - 10, tileH - 10);
         zone.setInteractive({ useHandCursor: true });
         zone.on("pointerdown", () => this.onPlayerCellClick(row, col));
         zone.setDepth(1500);
-        this.playerCellZones.push(zone);
+        this.playerCellZones.push({ row, col, zone });
       }
     }
   }
@@ -2107,7 +2259,6 @@ export class CombatScene extends Phaser.Scene {
       cells.push({ row, col });
     };
     const pushUnits = (units) => units.forEach((u) => pushCell(u.row, u.col));
-    const isWaterUnit = (unit) => (unit?.tribe ?? unit?.base?.tribe) === "TIDE";
 
     if (!skill) {
       pushCell(target.row, target.col);
@@ -2124,8 +2275,7 @@ export class CombatScene extends Phaser.Scene {
         pushUnits(enemies);
         break;
       case "global_tide_evade":
-        pushUnits(enemies);
-        pushUnits(allies.filter(isWaterUnit));
+        pushUnits(allies);
         break;
       case "single_burst_armor_pen":
       case "single_poison_slow":
@@ -2551,6 +2701,7 @@ export class CombatScene extends Phaser.Scene {
     const skill = SKILL_LIBRARY[unit.skillId];
     const classDef = CLASS_SYNERGY[unit.classType];
     const tribeDef = TRIBE_SYNERGY[unit.tribe];
+    const rangeTypeLabel = unit.range >= 2 ? "Đánh xa" : "Cận chiến";
 
     const rightLines = [
       "⚔️ Đánh thường",
@@ -2574,7 +2725,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     const bodyLines = [
-      `🏷️ ${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${unit.range}`,
+      `🏷️ ${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${rangeTypeLabel}`,
       `❤️ HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`,
       `⚔️ ATK ${this.getEffectiveAtk(unit)} | ✨ MATK ${this.getEffectiveMatk(unit)}`,
       `🛡️ DEF ${this.getEffectiveDef(unit)} | 🔮 MDEF ${this.getEffectiveMdef(unit)}`,
@@ -2586,7 +2737,7 @@ export class CombatScene extends Phaser.Scene {
     const effects = [];
     if (unit.statuses.freeze > 0) effects.push(`Đóng băng (${unit.statuses.freeze})`);
     if (unit.statuses.stun > 0) effects.push(`Choáng (${unit.statuses.stun})`);
-    if (unit.statuses.sleep > 0) effects.push(`Ngủ (${unit.statuses.sleep})`);
+    if (unit.statuses.sleep > 0) effects.push(`Ngá»§ (${unit.statuses.sleep})`);
     if (unit.statuses.silence > 0) effects.push(`Câm lặng (${unit.statuses.silence})`);
     if (unit.statuses.burnTurns > 0) effects.push(`Cháy (${unit.statuses.burnTurns})`);
     if (unit.statuses.poisonTurns > 0) effects.push(`Độc (${unit.statuses.poisonTurns})`);
@@ -2676,7 +2827,11 @@ export class CombatScene extends Phaser.Scene {
 
   describeBasicAttack(classType, range) {
     const pattern = this.inferBasicActionPattern(classType, range);
-    const lines = [`Thi triển: ${this.translateActionPattern(pattern)}`, `Tầm đánh: ${range} ô`, "Loại sát thương: Vật lý"];
+    const lines = [
+      `Thi triển: ${this.translateActionPattern(pattern)}`,
+      `Tầm đánh: ${range >= 2 ? "Đánh xa" : "Cận chiến"}`,
+      "Loại sát thương: Vật lý"
+    ];
     if (classType === "ASSASSIN") {
       lines.push("Ưu tiên mục tiêu hậu phương thấp máu.");
     } else if (classType === "ARCHER" || classType === "MAGE") {
@@ -2733,7 +2888,7 @@ export class CombatScene extends Phaser.Scene {
       shield_cleanse: "Tạo khiên và xóa hiệu ứng xấu cho đồng minh.",
       team_rage: `Hồi nộ cho ${maxTargets ?? 3} đồng minh xung quanh.`,
       column_bless: "Ban phước tấn công và né tránh cho cột dọc đồng minh.",
-      global_tide_evade: "Sóng thần đánh toàn bộ địch, đồng thời tăng né tránh cho đồng minh hệ Thủy.",
+      global_tide_evade: "Sóng thần không gây sát thương, hồi đầy máu cho toàn bộ đồng minh.",
       row_cleave: "Quét vũ khí tấn công toàn bộ hàng ngang.",
       self_atk_and_assist: "Tự tăng công và gọi đồng minh cùng hàng đánh bồi.",
       cone_smash: "Nện xuống đất gây sát thương hình nón 3 ô.",
@@ -2823,7 +2978,7 @@ export class CombatScene extends Phaser.Scene {
       shield_cleanse: "Tạo khiên + thanh tẩy",
       team_rage: "Tăng nộ đồng minh",
       column_bless: "Cường hóa theo cột",
-      global_tide_evade: "Sóng thần + né tránh hệ Thủy",
+      global_tide_evade: "Sóng thần hồi đầy máu đồng minh",
       column_bleed: "Cào rách theo cột",
       row_cleave: "Quét hàng",
       self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
@@ -2960,14 +3115,16 @@ export class CombatScene extends Phaser.Scene {
 
   buildOrderForSide(side) {
     const list = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      if (side === "LEFT") {
-        for (let col = 4; col >= 0; col -= 1) {
+    if (side === "LEFT") {
+      for (let col = PLAYER_COLS - 1; col >= 0; col -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
-      } else {
-        for (let col = 5; col <= 9; col += 1) {
+      }
+    } else {
+      for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
@@ -3355,16 +3512,14 @@ export class CombatScene extends Phaser.Scene {
         if (target.alive) {
           const push = attacker.side === "LEFT" ? 1 : -1;
           const newCol = Math.max(0, Math.min(9, target.col + push));
-          if (!enemies.find(u => u.row === target.row && u.col === newCol)) {
+          const blocked = enemies.some((u) => u.uid !== target.uid && u.row === target.row && u.col === newCol);
+          if (!blocked && newCol !== target.col) {
             target.col = newCol;
             const screen = this.gridToScreen(target.col, target.row);
-            this.tweens.add({
-              targets: target.sprite,
-              x: screen.x,
-              y: screen.y - 10,
-              duration: this.scaleCombatDuration(200)
-            });
-            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐẨY LÙI", "#ffffff");
+            await this.tweenCombatUnit(target, screen.x, screen.y - 10, 220);
+            this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
+          } else {
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "KHÓA VỊ TRÍ", "#c8d5e6");
           }
         }
         break;
@@ -3433,7 +3588,7 @@ export class CombatScene extends Phaser.Scene {
           dead.hp = Math.round(dead.maxHp * 0.4);
           dead.sprite.clearFill();
           dead.tag.setColor("#ffffff");
-          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
+          this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "Há»'I SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
         } else {
           allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
@@ -3457,16 +3612,19 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "global_tide_evade": {
-        enemies.forEach((enemy) => {
-          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
-        });
-        const evadeBuff = Phaser.Math.Clamp(Number(skill.evadeBuff ?? 0.15), 0, 0.6);
+        let healedAny = false;
         allies.forEach((ally) => {
-          if ((ally?.tribe ?? ally?.base?.tribe) !== "TIDE") return;
-          ally.mods.evadePct = Math.max(ally.mods.evadePct, evadeBuff);
-          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "THỦY ẢNH", "#7fd8ff");
+          if (!ally?.alive) return;
+          const missingHp = Math.max(0, (ally.maxHp ?? 0) - (ally.hp ?? 0));
+          if (missingHp <= 0) return;
+          healedAny = true;
+          ally.hp = ally.maxHp;
+          this.vfx?.pulseAt(ally.sprite.x, ally.sprite.y - 10, 0x9dffba, 14, 180);
+          this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${missingHp}`, "#9dffba");
           this.updateCombatUnitUi(ally);
         });
+        if (healedAny) this.audioFx.play("heal");
+        this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 37, healedAny ? "THỦY TRIỀU" : "ĐẦY MÁU", "#c9ffde");
         break;
       }
       case "multi_disarm": {
@@ -3601,11 +3759,24 @@ export class CombatScene extends Phaser.Scene {
       case "single_sleep": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         const effectiveSleepChance = Math.min(1, skill.sleepChance * starChanceMult);
-        if (target.alive && Math.random() < effectiveSleepChance) {
-          target.statuses.sleep = Math.max(target.statuses.sleep, skill.sleepTurns);
-          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "NGỦ", "#d4bcff");
-          this.updateCombatUnitUi(target);
+        const maxSleepTargets = Math.min(3, Math.max(1, attacker.star ?? 1));
+        const pool = enemies.filter((enemy) => enemy.alive);
+        const selected = [];
+        while (selected.length < maxSleepTargets && pool.length > 0) {
+          const highestRage = Math.max(...pool.map((enemy) => enemy.rage ?? 0));
+          const topRageEnemies = pool.filter((enemy) => (enemy.rage ?? 0) === highestRage);
+          const victim = topRageEnemies[Math.floor(Math.random() * topRageEnemies.length)];
+          if (!victim) break;
+          selected.push(victim);
+          const victimIndex = pool.indexOf(victim);
+          if (victimIndex >= 0) pool.splice(victimIndex, 1);
         }
+        selected.forEach((enemy) => {
+          if (!enemy.alive || Math.random() >= effectiveSleepChance) return;
+          enemy.statuses.sleep = Math.max(enemy.statuses.sleep, skill.sleepTurns);
+          this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "NGỦ", "#d4bcff");
+          this.updateCombatUnitUi(enemy);
+        });
         break;
       }
       case "single_armor_break": {
@@ -4410,8 +4581,10 @@ export class CombatScene extends Phaser.Scene {
 
   gridToScreen(col, row) {
     const visualCol = this.toVisualCol(col);
-    const x = this.originX + (visualCol + row) * (TILE_W / 2);
-    const y = this.originY + (row - visualCol) * (TILE_H / 2);
+    const { tileW, tileH } = this.getTileSize();
+    const x = this.originX + this.boardPanX + (visualCol + row) * (tileW / 2);
+    const y = this.originY + this.boardPanY + (row - visualCol) * (tileH / 2);
     return { x, y };
   }
 }
+
