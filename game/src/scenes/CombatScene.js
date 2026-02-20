@@ -24,6 +24,8 @@ import {
   clamp,
   createUnitUid,
   getDeployCapByLevel,
+  getEffectiveSkillId,
+  getGoldReserveScaling,
   getXpToLevelUp,
   gridKey,
   manhattan,
@@ -1553,7 +1555,7 @@ export class CombatScene extends Phaser.Scene {
 
   gainXp(value) {
     let amount = value;
-    while (amount > 0 && this.player.level < 9) {
+    while (amount > 0 && this.player.level < 25) {
       const need = getXpToLevelUp(this.player.level) - this.player.xp;
       if (amount >= need) {
         amount -= need;
@@ -1965,9 +1967,25 @@ export class CombatScene extends Phaser.Scene {
     const star = Math.max(1, owned.star ?? 1);
     const baseStats = scaledBaseStats(base.stats, star, base.classType);
     const ai = this.getAI();
-    const hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
-    const atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
-    const matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
+    let hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
+    let atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
+    let matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
+
+    // Apply Endless mode scaling for AI units when round > 30
+    if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
+      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+      hpBase = Math.round(hpBase * scaleFactor);
+      atkBase = Math.round(atkBase * scaleFactor);
+      matkBase = Math.round(matkBase * scaleFactor);
+    }
+
+    // Apply Easy mode difficulty scaling for AI units when round > 30
+    if (side === "RIGHT" && ai.difficulty === "EASY" && this.player.round > 30) {
+      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+      hpBase = Math.round(hpBase * scaleFactor);
+      atkBase = Math.round(atkBase * scaleFactor);
+      matkBase = Math.round(matkBase * scaleFactor);
+    }
 
     const hpWithAug = side === "LEFT" ? Math.round(hpBase * (1 + this.player.teamHpPct)) : hpBase;
     const atkWithAug = side === "LEFT" ? Math.round(atkBase * (1 + this.player.teamAtkPct)) : atkBase;
@@ -2067,7 +2085,7 @@ export class CombatScene extends Phaser.Scene {
       classType: base.classType,
       tribe: base.tribe,
       species: base.species,
-      skillId: base.skillId,
+      skillId: getEffectiveSkillId(base.skillId, base.classType, star, SKILL_LIBRARY),
       equips: Array.isArray(owned.equips) ? [...owned.equips] : [],
       maxHp: hpWithAug,
       hp: hpWithAug,
@@ -3166,145 +3184,253 @@ export class CombatScene extends Phaser.Scene {
   getCombatUnitAt(side, row, col) {
     return this.combatUnits.find((u) => u.alive && u.side === side && u.row === row && u.col === col);
   }
-  async stepCombat() {
-    if (this.phase !== PHASE.COMBAT) return;
-    if (this.isActing) return;
-    this.clearAttackPreview();
 
-    const leftAlive = this.getCombatUnits("LEFT").length;
-    const rightAlive = this.getCombatUnits("RIGHT").length;
-    if (!leftAlive || !rightAlive) {
-      this.resolveCombat(leftAlive > 0 ? "LEFT" : "RIGHT");
-      return;
+  /**
+   * Find the optimal knockback position for a target unit.
+   * Scans the horizontal row in the push direction to find:
+   * - The last empty cell, OR
+   * - The cell immediately before an enemy TANKER
+   * 
+   * @param {Object} target - The unit being pushed
+   * @param {number} pushDirection - Direction to push: +1 (right) or -1 (left)
+   * @param {Array} enemies - Array of enemy units to check for collisions
+   * @param {number} boardWidth - Width of the board (default: 10)
+   * @returns {number} The target column position (returns current col if no valid push)
+   */
+  findKnockbackPosition(target, pushDirection, enemies, boardWidth = 10) {
+    // Validate inputs - check for valid numeric col and row
+    if (!target || typeof target.col !== 'number' || typeof target.row !== 'number' || 
+        !Number.isFinite(target.col) || !Number.isFinite(target.row)) {
+      console.error('Invalid target in findKnockbackPosition:', target);
+      return 0; // Return safe fallback position
     }
-
-    if (this.turnQueue.length === 0 || this.turnIndex >= this.turnQueue.length) {
-      if (this.combatRound >= 20) {
-        this.resolveCombat("DRAW");
-        return;
-      }
-      this.buildTurnQueue();
-      this.combatRound = Math.max(1, this.combatRound + 1);
-      if (!this.turnQueue.length) {
-        this.resolveCombat("RIGHT");
-        return;
-      }
+    
+    const currentCol = target.col;
+    const currentRow = target.row;
+    
+    // Ensure current position is within bounds
+    if (currentCol < 0 || currentCol >= boardWidth) {
+      console.error(`Invalid current column ${currentCol}, clamping to bounds`);
+      return Math.max(0, Math.min(boardWidth - 1, currentCol));
     }
-
-    const actor = this.turnQueue[this.turnIndex];
-    this.turnIndex += 1;
-    if (!actor || !actor.alive) {
-      this.refreshQueuePreview();
-      return;
-    }
-
-    this.actionCount += 1;
-    if (this.actionCount > 100 && this.actionCount % 5 === 0) {
-      this.globalDamageMult += 0.2;
-      this.addLog(`Tử chiến x${this.globalDamageMult.toFixed(1)} sát thương.`);
-    }
-
-    this.isActing = true;
-    this.highlightUnit(actor, 0xffef9f);
-    const skipped = this.processStartTurn(actor);
-    if (skipped) {
-      this.addLog(`${actor.name} bỏ lượt (${skipped}).`);
+    
+    // Determine scan range based on push direction
+    let scanStart, scanEnd, scanStep;
+    if (pushDirection > 0) {
+      // Pushing right (player attacking)
+      scanStart = currentCol + 1;
+      scanEnd = boardWidth - 1;
+      scanStep = 1;
     } else {
-      const target = this.selectTarget(actor);
-      if (target) {
-        if (actor.rage >= actor.rageMax && actor.statuses.silence <= 0) {
-          actor.rage = 0;
-          this.updateCombatUnitUi(actor);
-          await this.castSkill(actor, target);
-        } else {
-          if ((actor.statuses.disarmTurns ?? 0) <= 0) {
-            await this.basicAttack(actor, target);
+      // Pushing left (enemy attacking)
+      scanStart = currentCol - 1;
+      scanEnd = 0;
+      scanStep = -1;
+    }
+    
+    // Scan for last empty cell or cell before tanker
+    let lastEmptyCol = currentCol; // Default: no movement
+    
+    for (let col = scanStart; pushDirection > 0 ? col <= scanEnd : col >= scanEnd; col += scanStep) {
+      // Check if cell is occupied
+      const occupant = enemies.find(u => u.alive && u.row === currentRow && u.col === col);
+      
+      if (!occupant) {
+        // Empty cell found
+        lastEmptyCol = col;
+      } else {
+        // Cell occupied - check if it's a tanker
+        if (occupant.classType === "TANKER") {
+          // Stop at cell before tanker
+          let targetCol;
+          if (pushDirection > 0) {
+            targetCol = Math.max(currentCol, col - 1);
           } else {
-            this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
+            targetCol = Math.min(currentCol, col + 1);
           }
+          // Ensure result is within bounds
+          return Math.max(0, Math.min(boardWidth - 1, targetCol));
+        } else {
+          // Non-tanker blocking - stop here
+          break;
         }
       }
     }
+    
+    // Ensure final result is within bounds
+    const finalCol = Math.max(0, Math.min(boardWidth - 1, lastEmptyCol));
+    return finalCol;
+  }
 
-    this.clearHighlights();
-    this.refreshQueuePreview();
-    this.refreshHeader();
-    this.isActing = false;
+  async stepCombat() {
+    // Comprehensive error recovery wrapper (Requirement 26.5)
+    try {
+      if (this.phase !== PHASE.COMBAT) return;
+      if (this.isActing) return;
+      this.clearAttackPreview();
 
-    const leftNow = this.getCombatUnits("LEFT").length;
-    const rightNow = this.getCombatUnits("RIGHT").length;
-    if (!leftNow || !rightNow) {
-      this.resolveCombat(leftNow > 0 ? "LEFT" : "RIGHT");
+      const leftAlive = this.getCombatUnits("LEFT").length;
+      const rightAlive = this.getCombatUnits("RIGHT").length;
+      if (!leftAlive || !rightAlive) {
+        this.resolveCombat(leftAlive > 0 ? "LEFT" : "RIGHT");
+        return;
+      }
+
+      if (this.turnQueue.length === 0 || this.turnIndex >= this.turnQueue.length) {
+        if (this.combatRound >= 20) {
+          this.resolveCombat("DRAW");
+          return;
+        }
+        this.buildTurnQueue();
+        this.combatRound = Math.max(1, this.combatRound + 1);
+        if (!this.turnQueue.length) {
+          this.resolveCombat("RIGHT");
+          return;
+        }
+      }
+
+      const actor = this.turnQueue[this.turnIndex];
+      this.turnIndex += 1;
+      if (!actor || !actor.alive) {
+        this.refreshQueuePreview();
+        return;
+      }
+
+      this.actionCount += 1;
+      if (this.actionCount > 100 && this.actionCount % 5 === 0) {
+        this.globalDamageMult += 0.2;
+        this.addLog(`Tử chiến x${this.globalDamageMult.toFixed(1)} sát thương.`);
+      }
+
+      this.isActing = true;
+      this.highlightUnit(actor, 0xffef9f);
+      
+      try {
+        const skipped = this.processStartTurn(actor);
+        if (skipped) {
+          this.addLog(`${actor.name} bỏ lượt (${skipped}).`);
+        } else {
+          const target = this.selectTarget(actor);
+          if (target) {
+            if (actor.rage >= actor.rageMax && actor.statuses.silence <= 0) {
+              actor.rage = 0;
+              this.updateCombatUnitUi(actor);
+              await this.castSkill(actor, target);
+            } else {
+              if ((actor.statuses.disarmTurns ?? 0) <= 0) {
+                await this.basicAttack(actor, target);
+              } else {
+                this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
+              }
+            }
+          }
+        }
+      } catch (actionError) {
+        // Log error and continue combat (Requirement 26.5)
+        console.error(`[Combat Error] Error during ${actor?.name || 'unknown'} action:`, actionError);
+        this.addLog(`Lỗi kỹ thuật - bỏ qua lượt ${actor?.name || 'unknown'}.`);
+      }
+
+      this.clearHighlights();
+      this.refreshQueuePreview();
+      this.refreshHeader();
+      this.isActing = false;
+
+      const leftNow = this.getCombatUnits("LEFT").length;
+      const rightNow = this.getCombatUnits("RIGHT").length;
+      if (!leftNow || !rightNow) {
+        this.resolveCombat(leftNow > 0 ? "LEFT" : "RIGHT");
+      }
+    } catch (error) {
+      // Critical error recovery - log and continue to next turn (Requirement 26.5)
+      console.error('[Combat Error] Unexpected error in stepCombat:', error);
+      this.isActing = false;
+      this.clearHighlights();
+      
+      // Try to continue combat gracefully
+      try {
+        this.refreshQueuePreview();
+        this.refreshHeader();
+      } catch (recoveryError) {
+        console.error('[Combat Error] Error during recovery:', recoveryError);
+      }
     }
   }
 
   processStartTurn(unit) {
-    this.tickTimedStatus(unit, "tauntTurns");
-    this.tickTimedStatus(unit, "silence");
-    this.tickTimedStatus(unit, "armorBreakTurns");
-    this.tickTimedStatus(unit, "reflectTurns");
-    this.tickTimedStatus(unit, "atkBuffTurns");
-    this.tickTimedStatus(unit, "defBuffTurns");
-    this.tickTimedStatus(unit, "mdefBuffTurns");
-    this.tickTimedStatus(unit, "slowTurns");
-    this.tickTimedStatus(unit, "disarmTurns");
-    this.tickTimedStatus(unit, "immuneTurns");
-    this.tickTimedStatus(unit, "physReflectTurns");
-    this.tickTimedStatus(unit, "counterTurns");
-    this.tickTimedStatus(unit, "isProtecting");
+    // Error recovery for status effects (Requirement 26.5)
+    try {
+      this.tickTimedStatus(unit, "tauntTurns");
+      this.tickTimedStatus(unit, "silence");
+      this.tickTimedStatus(unit, "armorBreakTurns");
+      this.tickTimedStatus(unit, "reflectTurns");
+      this.tickTimedStatus(unit, "atkBuffTurns");
+      this.tickTimedStatus(unit, "defBuffTurns");
+      this.tickTimedStatus(unit, "mdefBuffTurns");
+      this.tickTimedStatus(unit, "slowTurns");
+      this.tickTimedStatus(unit, "disarmTurns");
+      this.tickTimedStatus(unit, "immuneTurns");
+      this.tickTimedStatus(unit, "physReflectTurns");
+      this.tickTimedStatus(unit, "counterTurns");
+      this.tickTimedStatus(unit, "isProtecting");
 
-    if (unit.statuses.burnTurns > 0) {
-      this.resolveDamage(null, unit, unit.statuses.burnDamage, "true", "THIÊU", { noRage: true, noReflect: true });
-      unit.statuses.burnTurns -= 1;
-    }
-    if (unit.statuses.poisonTurns > 0) {
-      this.resolveDamage(null, unit, unit.statuses.poisonDamage, "true", "ĐỘC", { noRage: true, noReflect: true });
-      unit.statuses.poisonTurns -= 1;
-    }
-    if (unit.statuses.bleedTurns > 0) {
-      this.resolveDamage(null, unit, unit.statuses.bleedDamage, "true", "MÁU", { noRage: true, noReflect: true });
-      unit.statuses.bleedTurns -= 1;
-    }
-    if (unit.statuses.diseaseTurns > 0) {
-      const neighbors = [
-        { r: unit.row - 1, c: unit.col },
-        { r: unit.row + 1, c: unit.col },
-        { r: unit.row, c: unit.col - 1 },
-        { r: unit.row, c: unit.col + 1 }
-      ];
-      neighbors.forEach((pos) => {
-        const neighbor = this.getCombatUnitAt(unit.side, pos.r, pos.c);
-        if (neighbor && neighbor.alive && !neighbor.statuses.diseaseTurns) {
-          neighbor.statuses.diseaseTurns = 2;
-          neighbor.statuses.diseaseDamage = unit.statuses.diseaseDamage;
-          this.showFloatingText(neighbor.sprite.x, neighbor.sprite.y - 45, "LÂY BỆNH", "#880088");
-          this.updateCombatUnitUi(neighbor);
-        }
-      });
-      this.resolveDamage(null, unit, unit.statuses.diseaseDamage, "true", "DỊCH", { noRage: true, noReflect: true });
-      unit.statuses.diseaseTurns -= 1;
-    }
+      if (unit.statuses.burnTurns > 0) {
+        this.resolveDamage(null, unit, unit.statuses.burnDamage, "true", "THIÊU", { noRage: true, noReflect: true });
+        unit.statuses.burnTurns -= 1;
+      }
+      if (unit.statuses.poisonTurns > 0) {
+        this.resolveDamage(null, unit, unit.statuses.poisonDamage, "true", "ĐỘC", { noRage: true, noReflect: true });
+        unit.statuses.poisonTurns -= 1;
+      }
+      if (unit.statuses.bleedTurns > 0) {
+        this.resolveDamage(null, unit, unit.statuses.bleedDamage, "true", "MÁU", { noRage: true, noReflect: true });
+        unit.statuses.bleedTurns -= 1;
+      }
+      if (unit.statuses.diseaseTurns > 0) {
+        const neighbors = [
+          { r: unit.row - 1, c: unit.col },
+          { r: unit.row + 1, c: unit.col },
+          { r: unit.row, c: unit.col - 1 },
+          { r: unit.row, c: unit.col + 1 }
+        ];
+        neighbors.forEach((pos) => {
+          const neighbor = this.getCombatUnitAt(unit.side, pos.r, pos.c);
+          if (neighbor && neighbor.alive && !neighbor.statuses.diseaseTurns) {
+            neighbor.statuses.diseaseTurns = 2;
+            neighbor.statuses.diseaseDamage = unit.statuses.diseaseDamage;
+            this.showFloatingText(neighbor.sprite.x, neighbor.sprite.y - 45, "LÂY BỆNH", "#880088");
+            this.updateCombatUnitUi(neighbor);
+          }
+        });
+        this.resolveDamage(null, unit, unit.statuses.diseaseDamage, "true", "DỊCH", { noRage: true, noReflect: true });
+        unit.statuses.diseaseTurns -= 1;
+      }
 
-    if (!unit.alive) return "dot";
+      if (!unit.alive) return "dot";
 
-    if (unit.statuses.freeze > 0) {
-      unit.statuses.freeze -= 1;
+      if (unit.statuses.freeze > 0) {
+        unit.statuses.freeze -= 1;
+        this.updateCombatUnitUi(unit);
+        return "freeze";
+      }
+      if (unit.statuses.stun > 0) {
+        unit.statuses.stun -= 1;
+        this.updateCombatUnitUi(unit);
+        return "stun";
+      }
+      if (unit.statuses.sleep > 0) {
+        unit.statuses.sleep -= 1;
+        this.updateCombatUnitUi(unit);
+        return "sleep";
+      }
+
       this.updateCombatUnitUi(unit);
-      return "freeze";
+      return null;
+    } catch (error) {
+      // Log error and skip turn processing (Requirement 26.5)
+      console.error(`[Combat Error] Error processing start turn for ${unit?.name || 'unknown'}:`, error);
+      return "error";
     }
-    if (unit.statuses.stun > 0) {
-      unit.statuses.stun -= 1;
-      this.updateCombatUnitUi(unit);
-      return "stun";
-    }
-    if (unit.statuses.sleep > 0) {
-      unit.statuses.sleep -= 1;
-      this.updateCombatUnitUi(unit);
-      return "sleep";
-    }
-
-    this.updateCombatUnitUi(unit);
-    return null;
   }
 
   tickTimedStatus(unit, key) {
@@ -3415,6 +3541,10 @@ export class CombatScene extends Phaser.Scene {
   async castSkill(attacker, target) {
     const skill = SKILL_LIBRARY[attacker.skillId];
     if (!skill) {
+      // Log error for missing skill (Requirement 18.3)
+      console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
+      
+      // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;
     }
@@ -3461,20 +3591,23 @@ export class CombatScene extends Phaser.Scene {
   }
 
   async applySkillEffect(attacker, target, skill) {
-    const enemies = this.getCombatUnits(attacker.side === "LEFT" ? "RIGHT" : "LEFT");
-    const allies = this.getCombatUnits(attacker.side);
-    const rawSkill = this.calcSkillRaw(attacker, skill);
-    const starChanceMult = starEffectChanceMultiplier(attacker.star);
-    const areaBonus = starAreaBonus(attacker.star);
-    const targetBonus = starTargetBonus(attacker.star);
-    const skillOpts = { isSkill: true };
+    // Comprehensive error recovery for skill effects (Requirement 26.5)
+    try {
+      const enemies = this.getCombatUnits(attacker.side === "LEFT" ? "RIGHT" : "LEFT");
+      const allies = this.getCombatUnits(attacker.side);
+      const rawSkill = this.calcSkillRaw(attacker, skill);
+      const starChanceMult = starEffectChanceMultiplier(attacker.star);
+      const areaBonus = starAreaBonus(attacker.star);
+      const targetBonus = starTargetBonus(attacker.star);
+      const skillOpts = { isSkill: true };
 
-    switch (skill.effect) {
+      switch (skill.effect) {
 
       case "global_stun": {
+        const goldMultiplier = getGoldReserveScaling(this.player.gold);
         enemies.forEach((enemy) => {
           this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
-          const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult);
+          const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult * goldMultiplier);
           if (enemy.alive && Math.random() < effectiveStunChance) {
             enemy.statuses.stun = Math.max(enemy.statuses.stun, skill.stunTurns);
             this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHOÁNG", "#ffd97b");
@@ -3499,12 +3632,13 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "aoe_circle_stun": {
+        const goldMultiplier = getGoldReserveScaling(this.player.gold);
         const expandAoe = 1 + areaBonus;
         enemies
           .filter((enemy) => Math.abs(enemy.row - target.row) <= expandAoe && Math.abs(enemy.col - target.col) <= expandAoe)
           .forEach((enemy) => {
             this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
-            const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult);
+            const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult * goldMultiplier);
             if (enemy.alive && Math.random() < effectiveStunChance) {
               enemy.statuses.stun = Math.max(enemy.statuses.stun, skill.stunTurns);
               this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHOÁNG", "#ffd97b");
@@ -3542,17 +3676,38 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "knockback_charge": {
+        // Apply damage first
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        
+        // Check if target survived the damage
         if (target.alive) {
-          const push = attacker.side === "LEFT" ? 1 : -1;
-          const newCol = Math.max(0, Math.min(9, target.col + push));
-          const blocked = enemies.some((u) => u.uid !== target.uid && u.row === target.row && u.col === newCol);
-          if (!blocked && newCol !== target.col) {
-            target.col = newCol;
+          const pushDirection = attacker.side === "LEFT" ? 1 : -1;
+          const boardWidth = 10; // Standard board width
+          
+          // Validate target position before knockback
+          if (typeof target.col !== 'number' || target.col < 0 || target.col >= boardWidth) {
+            console.error(`Invalid target column ${target.col} for knockback, skipping`);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "LỖI VỊ TRÍ", "#ff6b6b");
+            break;
+          }
+          
+          const targetPosition = this.findKnockbackPosition(target, pushDirection, enemies, boardWidth);
+          
+          // Validate returned position
+          if (typeof targetPosition !== 'number' || targetPosition < 0 || targetPosition >= boardWidth) {
+            console.error(`Invalid knockback position ${targetPosition}, keeping target at ${target.col}`);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "KHÓA VỊ TRÍ", "#c8d5e6");
+            break;
+          }
+          
+          // Move target to new position if different from current
+          if (targetPosition !== target.col) {
+            target.col = targetPosition;
             const screen = this.gridToScreen(target.col, target.row);
             await this.tweenCombatUnit(target, screen.x, screen.y - 10, 220);
             this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
           } else {
+            // Target blocked - cannot move
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "KHÓA VỊ TRÍ", "#c8d5e6");
           }
         }
@@ -3703,8 +3858,9 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "damage_stun": {
+        const goldMultiplier = getGoldReserveScaling(this.player.gold);
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
-        const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult);
+        const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult * goldMultiplier);
         if (target.alive && Math.random() < effectiveStunChance) {
           target.statuses.stun = Math.max(target.statuses.stun, skill.stunTurns);
           this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHOÁNG", "#ffd97b");
@@ -3793,8 +3949,9 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "single_sleep": {
+        const goldMultiplier = getGoldReserveScaling(this.player.gold);
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
-        const effectiveSleepChance = Math.min(1, skill.sleepChance * starChanceMult);
+        const effectiveSleepChance = Math.min(1, skill.sleepChance * starChanceMult * goldMultiplier);
         const maxSleepTargets = Math.min(3, Math.max(1, attacker.star ?? 1));
         const pool = enemies.filter((enemy) => enemy.alive);
         const selected = [];
@@ -3834,12 +3991,13 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       case "column_freeze": {
+        const goldMultiplier = getGoldReserveScaling(this.player.gold);
         const expandCol = areaBonus;
         enemies
           .filter((enemy) => Math.abs(enemy.col - target.col) <= expandCol)
           .forEach((enemy) => {
             this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
-            const effectiveFreezeChance = Math.min(1, skill.freezeChance * starChanceMult);
+            const effectiveFreezeChance = Math.min(1, skill.freezeChance * starChanceMult * goldMultiplier);
             if (enemy.alive && Math.random() < effectiveFreezeChance) {
               enemy.statuses.freeze = Math.max(enemy.statuses.freeze, skill.freezeTurns);
               this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "ĐÓNG BĂNG", "#83e5ff");
@@ -4008,6 +4166,95 @@ export class CombatScene extends Phaser.Scene {
         }
         break;
       }
+      case "lifesteal_disease_maxhp": {
+        const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        
+        if (dealt > 0) {
+          // Lifesteal (60% of damage dealt)
+          const heal = Math.round(dealt * 0.6);
+          this.healUnit(attacker, attacker, heal, "HÚT MÁU");
+          
+          // Increase max HP (15% of damage dealt)
+          const maxHpIncrease = Math.round(dealt * 0.15);
+          attacker.maxHp += maxHpIncrease;
+          attacker.hp += maxHpIncrease;  // Also increase current hp
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 55, `+${maxHpIncrease} HP TỐI ĐA`, "#00ff88");
+          this.updateCombatUnitUi(attacker);
+          
+          // Disease spread to adjacent enemies
+          const neighbors = enemies.filter(e => 
+            Math.abs(e.row - target.row) <= 1 && 
+            Math.abs(e.col - target.col) <= 1 &&
+            e.uid !== target.uid
+          );
+          neighbors.forEach(e => {
+            e.statuses.diseaseTurns = Math.max(e.statuses.diseaseTurns || 0, 3);
+            e.statuses.diseaseDamage = Math.max(e.statuses.diseaseDamage || 0, 10);
+            this.updateCombatUnitUi(e);
+          });
+        }
+        break;
+      }
+      case "double_hit_gold_reward": {
+        // Calculate damage for both hits
+        const hit1 = this.calcSkillRaw(attacker, { base: 26, scaleStat: "atk", scale: 1.45 });
+        const hit2 = this.calcSkillRaw(attacker, { base: 22, scaleStat: "atk", scale: 1.25 });
+        
+        // Execute first hit
+        const dealt1 = this.resolveDamage(attacker, target, hit1, "physical", "HỎA ẤN 1", skillOpts);
+        
+        // Wait between hits
+        await this.wait(120);
+        
+        // Check if target was alive after first hit
+        const targetAliveAfterHit1 = target.alive;
+        
+        // Execute second hit
+        const dealt2 = this.resolveDamage(attacker, target, hit2, "physical", "HỎA ẤN 2", skillOpts);
+        
+        // Award gold if target was alive before second hit and died from either hit
+        // Only award gold when attacker is on LEFT side (player)
+        if (targetAliveAfterHit1 && !target.alive && attacker.side === "LEFT") {
+          this.player.gold += 1;
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 65, "+1 VÀNG", "#ffd700");
+          this.addLog(`${attacker.name} kết liễu ${target.name} và nhận 1 vàng!`);
+        }
+        break;
+      }
+      case "assassin_execute_rage_refund": {
+        // Track if target was alive before damage
+        const targetWasAlive = target.alive;
+        
+        // Apply damage
+        const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        
+        // If kill: refund 50% of attacker's rageMax, award 5 gold, and allow extra attack
+        if (targetWasAlive && !target.alive) {
+          // Refund 50% rage
+          const refund = Math.ceil(attacker.rageMax * 0.5);
+          attacker.rage = Math.min(attacker.rageMax, attacker.rage + refund);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 65, `+${refund} NỘ`, "#ff6b9d");
+          
+          // Award 5 gold if attacker is on LEFT side (player)
+          if (attacker.side === "LEFT") {
+            this.player.gold += 5;
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 85, "+5 VÀNG", "#ffd700");
+            this.addLog(`${attacker.name} kết liễu ${target.name} và nhận 5 vàng!`);
+          }
+          
+          // Allow immediate extra attack on another enemy
+          const enemySide = attacker.side === "LEFT" ? "RIGHT" : "LEFT";
+          const remainingEnemies = this.getCombatUnits(enemySide);
+          if (remainingEnemies.length > 0) {
+            const newTarget = this.selectTarget(attacker);
+            if (newTarget) {
+              this.addLog(`${attacker.name} tấn công tiếp!`);
+              await this.basicAttack(attacker, newTarget);
+            }
+          }
+        }
+        break;
+      }
       case "metamorphosis": {
         attacker.name = "Bướm Gió";
         attacker.tribe = "WIND";
@@ -4049,8 +4296,23 @@ export class CombatScene extends Phaser.Scene {
         break;
       }
       default:
+        // Log error for unknown skill effect (Requirement 26.3)
+        console.error(`[Skill Error] Unknown skill effect "${skill.effect}" for skill "${skill.name}" (ID: ${skill.id || 'unknown'}). Falling back to basic damage.`);
         this.resolveDamage(attacker, target, rawSkill, skill.damageType || "physical", skill.name, skillOpts);
         break;
+      }
+    } catch (error) {
+      // Log error and continue combat (Requirement 26.5)
+      console.error(`[Skill Error] Error applying skill effect "${skill?.effect || 'unknown'}" for ${attacker?.name || 'unknown'}:`, error);
+      this.addLog(`Lỗi kỹ năng ${skill?.name || 'unknown'} - bỏ qua hiệu ứng.`);
+      
+      // Try to apply basic damage as fallback
+      try {
+        const rawSkill = this.calcSkillRaw(attacker, skill);
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType || "physical", "LỖI", { isSkill: true });
+      } catch (fallbackError) {
+        console.error('[Skill Error] Fallback damage also failed:', fallbackError);
+      }
     }
   }
 
@@ -4058,7 +4320,13 @@ export class CombatScene extends Phaser.Scene {
     const statName = skill.scaleStat || "atk";
     const sourceStat =
       statName === "atk" ? this.getEffectiveAtk(attacker) : statName === "matk" ? this.getEffectiveMatk(attacker) : attacker[statName] ?? 0;
-    return skill.base + sourceStat * skill.scale;
+    const baseDamage = skill.base + sourceStat * skill.scale;
+    
+    // Apply gold scaling to skill damage (Requirement 2.1, 2.2, 2.3, 2.4)
+    const goldMultiplier = getGoldReserveScaling(this.player.gold);
+    const scaledDamage = Math.round(baseDamage * goldMultiplier);
+    
+    return scaledDamage;
   }
   getEffectiveAtk(unit) {
     const buff = unit.statuses.atkBuffTurns > 0 ? unit.statuses.atkBuffValue : 0;
@@ -4153,8 +4421,21 @@ export class CombatScene extends Phaser.Scene {
   }
 
   resolveDamage(attacker, defender, rawDamage, damageType, reason, options = {}) {
+    // Validate inputs and provide fallback values (Requirement 26.3)
     if (!defender || !defender.alive) return 0;
     if (attacker && !attacker.alive) return 0;
+    
+    // Validate and clamp rawDamage (Requirement 26.3)
+    if (typeof rawDamage !== 'number' || !Number.isFinite(rawDamage) || rawDamage < 0) {
+      console.error(`[Combat Error] Invalid rawDamage value: ${rawDamage}, using fallback 0`);
+      rawDamage = 0;
+    }
+    
+    // Validate damageType (Requirement 26.3)
+    if (!['physical', 'magic', 'true'].includes(damageType)) {
+      console.error(`[Combat Error] Invalid damageType: ${damageType}, using fallback 'physical'`);
+      damageType = 'physical';
+    }
 
     // Turtle Protection Logic for Splash Damage
     if (options.isSplash && !options.isProtected) {
@@ -4183,6 +4464,12 @@ export class CombatScene extends Phaser.Scene {
       if (Math.random() < evadePct) {
         this.audioFx.play("click");
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "TRƯỢT", "#d3f2ff");
+        // Defender gains rage even on miss, but attacker does not
+        if (!options.noRage) {
+          // Clamp rage to rageMax (Requirement 26.1)
+          defender.rage = Math.min(defender.rageMax || 5, (defender.rage || 0) + 1);
+          this.updateCombatUnitUi(defender);
+        }
         return 0;
       }
     }
@@ -4251,11 +4538,17 @@ export class CombatScene extends Phaser.Scene {
       });
     }
 
-    if (attacker && !options.noRage) {
+    // Attacker only gains rage when damage is actually dealt (damageLeft > 0)
+    if (attacker && !options.noRage && damageLeft > 0) {
       const gain = attacker.side === "RIGHT" ? this.getAI().rageGain : 1;
-      attacker.rage = Math.min(attacker.rageMax, attacker.rage + gain);
+      // Clamp rage to rageMax (Requirement 26.1)
+      attacker.rage = Math.min(attacker.rageMax || 5, (attacker.rage || 0) + gain);
     }
-    if (!options.noRage) defender.rage = Math.min(defender.rageMax, defender.rage + 1);
+    // Defender always gains rage when attacked (even on miss)
+    if (!options.noRage) {
+      // Clamp rage to rageMax (Requirement 26.1)
+      defender.rage = Math.min(defender.rageMax || 5, (defender.rage || 0) + 1);
+    }
 
     if (attacker && attacker.mods.burnOnHit > 0 && defender.alive) {
       defender.statuses.burnTurns = Math.max(defender.statuses.burnTurns, 2);
@@ -4324,6 +4617,13 @@ export class CombatScene extends Phaser.Scene {
   }
 
   addShield(target, amount) {
+    // Validate inputs (Requirement 26.3)
+    if (!target || !target.alive) return;
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) {
+      console.error(`[Combat Error] Invalid shield amount: ${amount}, using fallback 0`);
+      amount = 0;
+    }
+    
     const val = Math.max(1, Math.round(amount));
     target.shield += val;
     this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 10, 0x8ce9ff, 18, 220);
@@ -4332,7 +4632,13 @@ export class CombatScene extends Phaser.Scene {
   }
 
   healUnit(caster, target, amount, reason) {
-    if (!target.alive) return 0;
+    // Validate inputs (Requirement 26.3)
+    if (!target || !target.alive) return 0;
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) {
+      console.error(`[Combat Error] Invalid heal amount: ${amount}, using fallback 0`);
+      amount = 0;
+    }
+    
     const bonus = caster ? 1 + caster.mods.healPct : 1;
     const healRaw = Math.max(1, Math.round(amount * bonus));
     const before = target.hp;

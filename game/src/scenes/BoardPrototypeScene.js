@@ -7,6 +7,7 @@ import {
   clamp,
   createUnitUid,
   getDeployCapByLevel,
+  getEffectiveSkillId,
   getXpToLevelUp,
   gridKey,
   manhattan,
@@ -534,7 +535,7 @@ export class BoardPrototypeScene extends Phaser.Scene {
 
   gainXp(value) {
     let amount = value;
-    while (amount > 0 && this.player.level < 9) {
+    while (amount > 0 && this.player.level < 25) {
       const need = getXpToLevelUp(this.player.level) - this.player.xp;
       if (amount >= need) {
         amount -= need;
@@ -957,7 +958,7 @@ export class BoardPrototypeScene extends Phaser.Scene {
       homeCol: col,
       classType: owned.base.classType,
       tribe: owned.base.tribe,
-      skillId: owned.base.skillId,
+      skillId: getEffectiveSkillId(owned.base.skillId, owned.base.classType, owned.star, SKILL_LIBRARY),
       maxHp: hpWithAug,
       hp: hpWithAug,
       atk: atkWithAug,
@@ -1522,6 +1523,10 @@ export class BoardPrototypeScene extends Phaser.Scene {
   async castSkill(attacker, target) {
     const skill = SKILL_LIBRARY[attacker.skillId];
     if (!skill) {
+      // Log error for missing skill (Requirement 18.3)
+      console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
+      
+      // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;
     }

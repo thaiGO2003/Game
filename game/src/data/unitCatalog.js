@@ -3,57 +3,106 @@ import unitsCsv from "../../data/units.csv?raw";
 function parseCsv(csvText) {
   const lines = csvText.trim().split(/\r?\n/);
   const headers = lines[0].split(",").map((h) => h.trim());
+  
+  // Define required fields for units (Requirement 24.1)
+  const requiredFields = ['id', 'name', 'species', 'icon', 'tribe', 'classType', 'tier', 
+                          'hp', 'atk', 'def', 'matk', 'mdef', 'range', 'rageMax', 'skillId'];
+  
+  // Define numeric fields (Requirement 24.4)
+  const numericFields = ['tier', 'hp', 'atk', 'def', 'matk', 'mdef', 'range', 'rageMax'];
+  
   const data = [];
+  
   for (let i = 1; i < lines.length; i++) {
+    const lineNumber = i + 1; // +1 for 1-based line numbering
     const line = lines[i].trim();
     if (!line) continue;
 
-    const values = [];
-    let current = "";
-    let inQuote = false;
-    for (let j = 0; j < line.length; j++) {
-      const char = line[j];
-      if (char === '"') {
-        if (inQuote && line[j + 1] === '"') {
-          current += '"';
-          j++;
+    try {
+      const values = [];
+      let current = "";
+      let inQuote = false;
+      
+      // Parse CSV with quoted field support (Requirement 24.2)
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          if (inQuote && line[j + 1] === '"') {
+            // Handle escaped quotes
+            current += '"';
+            j++;
+          } else {
+            inQuote = !inQuote;
+          }
+        } else if (char === ',' && !inQuote) {
+          values.push(current.trim()); // Trim whitespace (Requirement 24.3)
+          current = "";
         } else {
-          inQuote = !inQuote;
+          current += char;
         }
-      } else if (char === ',' && !inQuote) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += char;
       }
+      values.push(current.trim()); // Trim whitespace (Requirement 24.3)
+
+      const unit = {};
+      const stats = {};
+      
+      headers.forEach((header, index) => {
+        let value = values[index];
+        
+        // Handle empty fields (Requirement 24.1)
+        if (value === undefined || value === null) {
+          value = '';
+        }
+        
+        // Remove surrounding quotes if present (Requirement 24.2)
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1);
+        }
+        
+        // Trim whitespace (Requirement 24.3)
+        value = value.trim();
+        
+        // Check for empty required fields (Requirement 24.1)
+        if (value === '' && requiredFields.includes(header)) {
+          throw new Error(`Empty value for required field "${header}" at line ${lineNumber}`);
+        }
+        
+        // Skip empty optional fields
+        if (!header || value === "") return;
+
+        // Convert numeric fields to numbers (Requirement 24.4)
+        if (numericFields.includes(header)) {
+          const numValue = Number(value);
+          if (isNaN(numValue)) {
+            throw new Error(`Invalid numeric value "${value}" for field "${header}" at line ${lineNumber}`);
+          }
+          
+          if (header === "tier") {
+            unit.tier = numValue;
+          } else {
+            stats[header] = numValue;
+          }
+        } else if (header === "tribeVi" || header === "classVi") {
+          // Skip display fields
+        } else {
+          unit[header] = value;
+        }
+      });
+      
+      unit.stats = stats;
+      data.push(unit);
+    } catch (error) {
+      // Report line number and field on parse errors (Requirement 24.5)
+      if (error.message.includes('line')) {
+        throw error; // Already has line number
+      }
+      throw new Error(`Parse error at line ${lineNumber}: ${error.message}`);
     }
-    values.push(current.trim());
-
-    const unit = {};
-    const stats = {};
-    headers.forEach((header, index) => {
-      const value = values[index];
-      if (!header || value === undefined || value === "") return;
-
-      if (["hp", "atk", "def", "matk", "mdef", "range", "rageMax"].includes(header)) {
-        stats[header] = Number(value);
-      } else if (header === "tier") {
-        unit.tier = Number(value);
-      } else if (header === "tribeVi" || header === "classVi") {
-        // Skip display fields
-      } else {
-        unit[header] = value;
-      }
-    });
-    unit.stats = stats;
-    data.push(unit);
   }
   return data;
 }
 
 const CORE_UNITS = parseCsv(unitsCsv);
-
-const TARGET_UNIT_COUNT = 40;
 
 const CLASS_SKILLS = {
   TANKER: ["thorn_bark", "earth_ram", "shell_reflect", "mist_guard", "ant_shield_wall"],
@@ -112,6 +161,13 @@ const CLASS_ICON_POOL = {
   SUPPORT: ["🦌", "🦋", "🐝", "🐌", "🕊️", "🐬", "🐇", "🐿️", "🐑", "🦘", "🦭", "🦄"],
   FIGHTER: ["🐯", "🐗", "🪲", "🐜", "🐺", "🦗", "🦁", "🐻", "🦖", "🦈", "🦍", "🐕"]
 };
+
+// Dynamic unit generation removed - all 120 units are now loaded directly from units.csv
+// The following helper functions and data structures are kept for reference but no longer used:
+// - CLASS_SKILLS, CLASS_BASE_STATS, NAME_POOL, CLASS_ORDER, TRIBE_ORDER
+// - TRIBE_TITLE_POOL, CLASS_TITLE_POOL, CLASS_ICON_POOL
+// - roundStat(), pickBySeed(), generateName(), generateIcon()
+// - generateExtraUnits()
 
 function roundStat(value) {
   return Math.max(1, Math.round(value));
@@ -253,46 +309,10 @@ function inferSpeciesKey(name, fallbackId = "linh-thu") {
   return idRoot || "linh-thu";
 }
 
-function generateExtraUnits(totalCount) {
-  const extra = [];
-  let idx = 0;
-  const usedNames = new Set(CORE_UNITS.map((unit) => unit.name));
-  while (CORE_UNITS.length + extra.length < totalCount) {
-    const classType = CLASS_ORDER[idx % CLASS_ORDER.length];
-    const tier = (idx % 5) + 1;
-    const tribe = TRIBE_ORDER[(idx * 2 + tier) % TRIBE_ORDER.length];
-    const template = CLASS_BASE_STATS[classType];
-    const skillId = CLASS_SKILLS[classType][idx % CLASS_SKILLS[classType].length];
-    const name = generateName(classType, tribe, idx, tier, usedNames);
-    const icon = generateIcon(classType, tribe, idx);
-    const growth = 1 + tier * 0.16 + Math.floor(idx / 6) * 0.006;
-    const id = `beast_${String(idx + 1).padStart(3, "0")}`;
+// generateExtraUnits() function removed - no longer generating units dynamically
+// All 120 units are loaded directly from units.csv
 
-    extra.push({
-      id,
-      name,
-      species: inferSpeciesKey(name, id),
-      icon,
-      tribe,
-      classType,
-      tier,
-      stats: {
-        hp: roundStat(template.hp * growth + (idx % 4) * 10),
-        atk: roundStat(template.atk * (1 + tier * 0.11) + (idx % 5) * 2),
-        def: roundStat(template.def * (1 + tier * 0.08) + (idx % 3)),
-        matk: roundStat(template.matk * (1 + tier * 0.12) + (idx % 5)),
-        mdef: roundStat(template.mdef * (1 + tier * 0.09) + (idx % 4)),
-        range: template.range,
-        rageMax: template.rageByTier[tier - 1]
-      },
-      skillId
-    });
-    idx += 1;
-  }
-  return extra;
-}
-
-export const UNIT_CATALOG = [...CORE_UNITS, ...generateExtraUnits(TARGET_UNIT_COUNT)].map((unit) => {
+export const UNIT_CATALOG = CORE_UNITS.map((unit) => {
   const existingSpecies = /** @type {any} */ (unit).species;
   return {
     ...unit,

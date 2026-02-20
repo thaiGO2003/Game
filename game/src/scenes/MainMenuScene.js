@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import Phaser from "phaser"; // Updated Encyclopedia
 import { AudioFx } from "../core/audioFx.js";
 import { clearProgress, loadProgress } from "../core/persistence.js";
 import { queueSharedAssets } from "../core/sharedAssetLoader.js";
@@ -403,7 +403,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.refreshSettingsPanel();
   }
 
-  createWikiPanel() {
+  createWikiPanel() { this.createWikiPanelV2(); } createWikiPanelOld() {
     const w = this.scale.width;
     const h = this.scale.height;
     const panelWidth = Math.min(Math.floor(w * 0.9), 1060);
@@ -786,7 +786,7 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  refreshWikiPanel(tab = null) {
+  refreshWikiPanel(tab = null) { this.refreshWikiPanelV2(tab); } refreshWikiPanelOld(tab) {
     if (!this.wikiContent || !this.wikiViewport) return;
     this.wikiContent.removeAll(true);
     this.wikiScrollY = 0;
@@ -1171,6 +1171,406 @@ export class MainMenuScene extends Phaser.Scene {
       onStart: () => this.statusText.setAlpha(1),
       onComplete: () => this.statusText.setText("")
     });
+  }
+  createWikiPanelV2() {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const panelWidth = Math.min(Math.floor(w * 0.9), 1060);
+    const panelHeight = Math.min(Math.floor(h * 0.86), 760);
+    const panelX = w * 0.5;
+    const panelY = h * 0.5;
+    const panel = this.add.container(panelX, panelY);
+    panel.setVisible(false);
+
+    const dim = this.add.rectangle(0, 0, w, h, 0x060d18, 0.7);
+    dim.setInteractive({ useHandCursor: true });
+    dim.on("pointerdown", () => {
+      panel.setVisible(false);
+    });
+    panel.add(dim);
+
+    const bg = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x0e1a2d, 0.97);
+    bg.setStrokeStyle(2, 0x86c8ff, 1);
+    bg.setInteractive(
+      new Phaser.Geom.Rectangle(-panelWidth * 0.5, -panelHeight * 0.5, panelWidth, panelHeight),
+      Phaser.Geom.Rectangle.Contains
+    );
+    bg.on("pointerdown", (_pointer, _lx, _ly, event) => {
+      event?.stopPropagation?.();
+    });
+    panel.add(bg);
+
+    const title = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 22, "Thư viện", {
+      fontFamily: "Consolas",
+      fontSize: "29px",
+      color: "#ffeab0"
+    });
+    panel.add(title);
+
+    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là wiki cập nhật theo.", {
+      fontFamily: "Consolas",
+      fontSize: "16px",
+      color: "#cde8ff",
+      wordWrap: { width: panelWidth - 220 }
+    });
+    panel.add(subtitle);
+
+    const viewport = {
+      x: -panelWidth * 0.5 + 24,
+      y: -panelHeight * 0.5 + 150,
+      width: panelWidth - 48,
+      height: panelHeight - 224
+    };
+    this.wikiViewport = viewport;
+    this.wikiWheelArea = new Phaser.Geom.Rectangle(
+      panelX + viewport.x,
+      panelY + viewport.y,
+      viewport.width,
+      viewport.height
+    );
+
+    const contentMaskGfx = this.add.graphics();
+    contentMaskGfx.fillStyle(0xffffff, 1);
+    contentMaskGfx.fillRect(
+      panelX + viewport.x,
+      panelY + viewport.y,
+      viewport.width,
+      viewport.height
+    );
+    contentMaskGfx.setVisible(false);
+
+    this.wikiContentBaseY = viewport.y + 6;
+    this.wikiContent = this.add.container(viewport.x + 6, this.wikiContentBaseY);
+    this.wikiContent.setMask(contentMaskGfx.createGeometryMask());
+
+    this.wikiControls = this.add.container(viewport.x + 6, -panelHeight * 0.5 + 98);
+    panel.add(this.wikiControls);
+    panel.add(this.wikiContent);
+
+    this.wikiScrollHint = this.add.text(-panelWidth * 0.5 + 28, panelHeight * 0.5 - 42, "Lăn chuột để cuộn • ESC hoặc Đóng để thoát", {
+      fontFamily: "Consolas",
+      fontSize: "15px",
+      color: "#9ec4e8"
+    });
+    panel.add(this.wikiScrollHint);
+
+    this.createButton(panelWidth * 0.5 - 116, panelHeight * 0.5 - 38, 180, 42, "Đóng", () => {
+      panel.setVisible(false);
+    }, 0x3b4e66, 0xb6d3ff, panel);
+
+    this.wikiPanel = panel;
+    this.refreshWikiPanelV2();
+  }
+
+  refreshWikiPanelV2(tab = null) {
+    if (!this.wikiContent || !this.wikiViewport) return;
+    this.wikiContent.removeAll(true);
+    if (this.wikiControls) this.wikiControls.removeAll(true);
+
+    this.wikiScrollY = 0;
+    this.wikiContent.y = this.wikiContentBaseY;
+
+    // Tab state
+    if (tab !== null) this._wikiTab = tab;
+    if (!this._wikiTab) this._wikiTab = "units";
+    if (!this._wikiDetailUnit) this._wikiDetailUnit = null;
+
+    // Initialize Filter State if needed
+    if (this._wikiSearchQuery === undefined) this._wikiSearchQuery = "";
+    if (this._wikiFilterClass === undefined) this._wikiFilterClass = null; // null = All
+    if (this._wikiFilterTribe === undefined) this._wikiFilterTribe = null; // null = All
+    if (this._wikiFilterTier === undefined) this._wikiFilterTier = null;   // null = All
+
+    const vw = this.wikiViewport.width;
+    const controls = this.wikiControls;
+
+    // --- 1. Draw Tabs (Fixed) ---
+    const tabDefs = [
+      { key: "units", label: "🐾 LINH THÚ" },
+      { key: "recipes", label: "⚗️ CÔNG THỨC" }
+    ];
+    let tabX = 0;
+    if (controls) {
+      tabDefs.forEach((td, i) => {
+        const active = this._wikiTab === td.key;
+        const tabW = 180;
+        const tabBg = this.add.rectangle(tabX, 0, tabW, 32, active ? 0x2a5080 : 0x1a2d40, active ? 1 : 0.8).setOrigin(0, 0);
+        tabBg.setStrokeStyle(1, active ? 0x7ab8f5 : 0x3a5070, 1);
+        tabBg.setInteractive({ useHandCursor: true });
+        tabBg.on("pointerdown", () => {
+          this._wikiDetailUnit = null;
+          this.refreshWikiPanelV2(td.key);
+        });
+        const tabLabel = this.add.text(tabX + tabW / 2, 16, td.label, {
+          fontFamily: "Consolas", fontSize: "14px",
+          color: active ? "#ffeab0" : "#8ab4d4"
+        }).setOrigin(0.5);
+        controls.add([tabBg, tabLabel]);
+        tabX += tabW + 8;
+      });
+    }
+
+    // --- 2. Draw Filters (Fixed, Units tab only) ---
+    if (this._wikiTab === "units" && !this._wikiDetailUnit && controls) {
+      let filterX = 0;
+      const filterY = 40;
+      const btnH = 30;
+
+      // Filter: Class
+      const classLabel = this._wikiFilterClass ? getClassLabelVi(this._wikiFilterClass) : "Tất cả Nghề";
+      const classBtn = this.createButton(filterX, filterY + btnH / 2, 140, btnH, classLabel, () => {
+        const options = ["ALL", ...Object.keys(CLASS_SYNERGY)];
+        const nextIdx = (options.indexOf(this._wikiFilterClass || "ALL") + 1) % options.length;
+        this._wikiFilterClass = options[nextIdx] === "ALL" ? null : options[nextIdx];
+        this.refreshWikiPanelV2();
+      }, 0x233850, 0x5a8ab0, controls);
+      classBtn.label.setFontSize(13);
+      filterX += 150;
+
+      // Filter: Tribe
+      const tribeLabel = this._wikiFilterTribe ? getTribeLabelVi(this._wikiFilterTribe) : "Tất cả Tộc";
+      const tribeBtn = this.createButton(filterX, filterY + btnH / 2, 140, btnH, tribeLabel, () => {
+        const options = ["ALL", ...Object.keys(TRIBE_SYNERGY)];
+        const nextIdx = (options.indexOf(this._wikiFilterTribe || "ALL") + 1) % options.length;
+        this._wikiFilterTribe = options[nextIdx] === "ALL" ? null : options[nextIdx];
+        this.refreshWikiPanelV2();
+      }, 0x233850, 0x5a8ab0, controls);
+      tribeBtn.label.setFontSize(13);
+      filterX += 150;
+
+      // Filter: Tier
+      const tierLabel = this._wikiFilterTier ? `Bậc ${this._wikiFilterTier}` : "Tất cả Bậc";
+      const tierBtn = this.createButton(filterX, filterY + btnH / 2, 120, btnH, tierLabel, () => {
+        const options = [0, 1, 2, 3, 4, 5]; // 0 = All
+        const nextIdx = (options.indexOf(this._wikiFilterTier || 0) + 1) % options.length;
+        this._wikiFilterTier = options[nextIdx] === 0 ? null : options[nextIdx];
+        this.refreshWikiPanelV2();
+      }, 0x233850, 0x5a8ab0, controls);
+      tierBtn.label.setFontSize(13);
+      filterX += 130;
+
+      // Filter: Search
+      const searchLabel = this._wikiSearchQuery ? `🔍 "${this._wikiSearchQuery}"` : "🔍 Tìm kiếm...";
+      const searchBtn = this.createButton(filterX, filterY + btnH / 2, 180, btnH, searchLabel, () => {
+        const input = window.prompt("Nhập tên linh thú để tìm kiếm:", this._wikiSearchQuery);
+        if (input !== null) {
+          this._wikiSearchQuery = input.trim();
+          this.refreshWikiPanelV2();
+        }
+      }, 0x16273f, 0x7ab8f5, controls);
+      searchBtn.label.setFontSize(13);
+      filterX += 190;
+
+      // Reset
+      if (this._wikiFilterClass || this._wikiFilterTribe || this._wikiFilterTier || this._wikiSearchQuery) {
+        const resetBtn = this.createButton(filterX, filterY + btnH / 2, 80, btnH, "Xóa lọc", () => {
+          this._wikiFilterClass = null;
+          this._wikiFilterTribe = null;
+          this._wikiFilterTier = null;
+          this._wikiSearchQuery = "";
+          this.refreshWikiPanelV2();
+        }, 0x3b2e2e, 0xff5555, controls);
+        resetBtn.label.setFontSize(13);
+      }
+    }
+
+    let tabY = 0; // Content starts at 0 relative to wikiContent
+
+    // ---- UNIT DETAIL VIEW ----
+    if (this._wikiDetailUnit) {
+      const unit = this._wikiDetailUnit;
+      const visual = getUnitVisual(unit.id, unit.classType);
+      const skill = SKILL_LIBRARY?.[unit.skillId];
+
+      const backBtn = this.add.text(0, tabY, "← Quay lại danh sách", {
+        fontFamily: "Consolas", fontSize: "15px", color: "#7ab8f5"
+      }).setInteractive({ useHandCursor: true });
+      backBtn.on("pointerdown", () => { this._wikiDetailUnit = null; this.refreshWikiPanelV2(); });
+      this.wikiContent.add(backBtn);
+      tabY += 30;
+
+      const detailBg = this.add.rectangle(0, tabY, vw - 14, 320, 0x0f1e30, 0.95).setOrigin(0, 0);
+      detailBg.setStrokeStyle(1, 0x5a8ab0, 0.8);
+      this.wikiContent.add(detailBg);
+
+      const nameText = this.add.text(16, tabY + 14, `${visual.icon}  ${visual.nameVi}`, {
+        fontFamily: "Consolas", fontSize: "26px", color: "#ffeab0", fontStyle: "bold"
+      });
+      this.wikiContent.add(nameText);
+
+      const tierText = this.add.text(vw - 30, tabY + 14, `Bậc ${unit.tier}`, {
+        fontFamily: "Consolas", fontSize: "18px", color: "#8df2ff"
+      }).setOrigin(1, 0);
+      this.wikiContent.add(tierText);
+
+      const rangeTypeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const metaText = this.add.text(16, tabY + 50, [
+        `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
+        `HP: ${unit.hp ?? "?"}   ATK: ${unit.atk ?? "?"}   DEF: ${unit.def ?? "?"}   SPD: ${unit.spd ?? "?"}`,
+        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${unit.evasion ?? 0}%`
+      ].join("\n"), {
+        fontFamily: "Consolas", fontSize: "15px", color: "#c0ddf5", lineSpacing: 6
+      });
+      this.wikiContent.add(metaText);
+
+      const skillTitle = this.add.text(16, tabY + 130, "⚡ KỸ NĂNG:", {
+        fontFamily: "Consolas", fontSize: "16px", color: "#ffd580", fontStyle: "bold"
+      });
+      this.wikiContent.add(skillTitle);
+
+      const skillName = this.add.text(16, tabY + 154, skill?.name ?? unit.skillId, {
+        fontFamily: "Consolas", fontSize: "18px", color: "#8df2ff", fontStyle: "bold"
+      });
+      this.wikiContent.add(skillName);
+
+      const skillDesc = this.add.text(16, tabY + 180, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
+        fontFamily: "Consolas", fontSize: "14px", color: "#d0eaff", lineSpacing: 5,
+        wordWrap: { width: vw - 44 }
+      });
+      this.wikiContent.add(skillDesc);
+
+      const atkPatternY = tabY + 180 + skillDesc.height + 16;
+      const atkTitle = this.add.text(16, atkPatternY, "⚔️ ĐÁNH THƯỜNG:", {
+        fontFamily: "Consolas", fontSize: "16px", color: "#ffd580", fontStyle: "bold"
+      });
+      this.wikiContent.add(atkTitle);
+
+      const rangeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const atkDesc = this.add.text(16, atkPatternY + 24, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
+        fontFamily: "Consolas", fontSize: "14px", color: "#d0eaff", lineSpacing: 4,
+        wordWrap: { width: vw - 44 }
+      });
+      this.wikiContent.add(atkDesc);
+
+      tabY += 340;
+      this.wikiScrollMax = Math.max(0, tabY - (this.wikiViewport.height - 12));
+
+      // Update Detail View Scroll Hint
+      if (this.wikiScrollHint) {
+        this.wikiScrollHint.setText("Lăn chuột để cuộn • ESC hoặc Đóng để thoát");
+      }
+      return;
+    }
+
+    // ---- UNITS TAB ----
+    if (this._wikiTab === "units") {
+      // Filter Logic
+      let units = [...UNIT_CATALOG];
+
+      if (this._wikiFilterClass) {
+        units = units.filter(u => u.classType === this._wikiFilterClass);
+      }
+      if (this._wikiFilterTribe) {
+        units = units.filter(u => u.tribe === this._wikiFilterTribe);
+      }
+      if (this._wikiFilterTier) {
+        units = units.filter(u => (u.tier ?? 1) === this._wikiFilterTier);
+      }
+      if (this._wikiSearchQuery) {
+        const q = this._wikiSearchQuery.toLowerCase();
+        units = units.filter(u => {
+          const visual = getUnitVisual(u.id, u.classType);
+          const name = visual.nameVi || u.name || u.id;
+          return name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q);
+        });
+      }
+
+      // Sort Logic
+      units.sort((a, b) => a.tier - b.tier || a.classType.localeCompare(b.classType) || a.name.localeCompare(b.name));
+
+      const intro = this.add.text(0, tabY, `Tìm thấy: ${units.length} thú`, {
+        fontFamily: "Consolas", fontSize: "15px", color: "#d8edff", lineSpacing: 5, wordWrap: { width: vw - 22 }
+      });
+      this.wikiContent.add(intro);
+      tabY += intro.height + 10;
+
+      const columns = vw > 820 ? 2 : 1;
+      const gap = 12;
+      const cardW = Math.floor((vw - 14 - gap * (columns - 1)) / columns);
+      const cardH = columns === 2 ? 92 : 100;
+      const skillNameMax = columns === 2 ? 26 : 34;
+
+      // Render Grid
+      units.forEach((unit, idx) => {
+        const visual = getUnitVisual(unit.id, unit.classType);
+        const skillNameRaw = SKILL_LIBRARY?.[unit.skillId]?.name ?? unit.skillId;
+        const skillName = skillNameRaw.length > skillNameMax ? `${skillNameRaw.slice(0, skillNameMax - 1)}…` : skillNameRaw;
+        const col = idx % columns;
+        const row = Math.floor(idx / columns);
+        const cardX = col * (cardW + gap);
+        const cardY = tabY + row * (cardH + 8);
+        const bg = this.add.rectangle(cardX, cardY, cardW, cardH, idx % 2 === 0 ? 0x182b44 : 0x16273f, 0.88).setOrigin(0, 0);
+        bg.setStrokeStyle(1, 0x7ab8f5, 0.45);
+        bg.setInteractive({ useHandCursor: true });
+        bg.on("pointerover", () => bg.setStrokeStyle(1, 0xffeab0, 0.9));
+        bg.on("pointerout", () => bg.setStrokeStyle(1, 0x7ab8f5, 0.45));
+        bg.on("pointerdown", () => { this._wikiDetailUnit = unit; this.refreshWikiPanelV2(); });
+        const label = this.add.text(cardX + 10, cardY + 8,
+          `${String(idx + 1).padStart(2, "0")}  ${visual.icon} ${visual.nameVi}\nBậc ${unit.tier} • ${getTribeLabelVi(unit.tribe)} • ${getClassLabelVi(unit.classType)}\nKỹ năng: ${skillName}`,
+          { fontFamily: "Consolas", fontSize: "15px", color: "#d7ecff", lineSpacing: 4, wordWrap: { width: cardW - 20 } }
+        );
+        this.wikiContent.add([bg, label]);
+      });
+
+      const totalRows = Math.ceil(units.length / columns);
+      tabY += totalRows * (cardH + 8);
+
+      // Update Scroll Hint
+      if (this.wikiScrollHint) {
+        this.wikiScrollHint.setText(`Lăn chuột để cuộn • Đang hiển thị ${units.length} kết quả`);
+      }
+    }
+
+    // ---- RECIPES TAB ----
+    if (this._wikiTab === "recipes") {
+      const recipeTitle = this.add.text(0, tabY, "Công thức chế tạo trang bị", {
+        fontFamily: "Consolas", fontSize: "20px", color: "#ffeab0"
+      });
+      this.wikiContent.add(recipeTitle);
+      tabY += recipeTitle.height + 8;
+
+      const hint = this.add.text(0, tabY, "Công thức có nhiều bậc. Bậc 2 dùng 3 nguyên liệu (có ít nhất 1 đồ đã ghép); bậc 4 dùng 4 nguyên liệu.", {
+        fontFamily: "Consolas", fontSize: "14px", color: "#9ec4e8", wordWrap: { width: vw - 14 }
+      });
+      this.wikiContent.add(hint);
+      tabY += hint.height + 12;
+
+      const recipes = this._craftRecipes ?? [];
+      const rcols = vw > 700 ? 2 : 1;
+      const rgap = 12;
+      const rcardW = Math.floor((vw - 14 - rgap * (rcols - 1)) / rcols);
+      const rcardH = 108;
+
+      recipes.forEach((recipe, idx) => {
+        const col = idx % rcols;
+        const row = Math.floor(idx / rcols);
+        const cardX = col * (rcardW + rgap);
+        const cardY = tabY + row * (rcardH + 8);
+        const bg = this.add.rectangle(cardX, cardY, rcardW, rcardH, idx % 2 === 0 ? 0x1a2e44 : 0x162840, 0.9).setOrigin(0, 0);
+        bg.setStrokeStyle(1, 0x5a8ab0, 0.5);
+        const tierText = `Bậc ${recipe.tier ?? 1}`;
+        const label = this.add.text(cardX + 10, cardY + 8,
+          `${recipe.icon} ${recipe.name}  •  ${tierText}\nNguyên liệu: ${recipe._requiredLabel || "?"}\n${recipe.description}`,
+          { fontFamily: "Consolas", fontSize: "13px", color: "#d7ecff", lineSpacing: 3, wordWrap: { width: rcardW - 20 } }
+        );
+        this.wikiContent.add([bg, label]);
+      });
+
+      const totalRRows = Math.ceil(recipes.length / rcols);
+      tabY += totalRRows * (rcardH + 8);
+
+      // Update Scroll Hint for recipes
+      if (this.wikiScrollHint) {
+        this.wikiScrollHint.setText("Lăn chuột để cuộn • ESC hoặc Đóng để thoát");
+      }
+    }
+
+    this.wikiScrollY = 0;
+    this.wikiScrollMax = Math.max(0, tabY - (this.wikiViewport.height - 12));
+    this.wikiContent.y = this.wikiContentBaseY;
+    if (this.wikiScrollHint) {
+      this.wikiScrollHint.setText(`Lăn chuột để cuộn • ESC hoặc Đóng để thoát`);
+    }
   }
 }
 

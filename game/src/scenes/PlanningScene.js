@@ -23,6 +23,7 @@ import {
   clamp,
   createUnitUid,
   getDeployCapByLevel,
+  getEffectiveSkillId,
   getXpToLevelUp,
   gridKey,
   manhattan,
@@ -470,7 +471,6 @@ export class PlanningScene extends Phaser.Scene {
 
   startPlanningMusic() {
     const weights = {
-      bgm_gunny: 15,
       bgm_planning: 25,
       bgm_nature_1: 12,
       bgm_nature_2: 12,
@@ -1930,7 +1930,7 @@ export class PlanningScene extends Phaser.Scene {
     this.modalButtons.clear = makeModalBtn(0, -28, 260, 44, "Xóa tiến trình lưu", () => this.onClearClick());
     this.modalButtons.audio = makeModalBtn(0, 24, 260, 44, "Âm thanh: Bật", () => this.toggleAudio());
     this.modalButtons.volumeDown = makeModalBtn(-92, 76, 78, 44, "-", () => this.changeVolumeLevel(-1));
-    this.modalButtons.volume = makeModalBtn(0, 76, 168, 44, "Âm lượng: 10/10", () => {});
+    this.modalButtons.volume = makeModalBtn(0, 76, 168, 44, "Âm lượng: 10/10", () => { });
     this.modalButtons.volumeUp = makeModalBtn(92, 76, 78, 44, "+", () => this.changeVolumeLevel(1));
     this.modalButtons.resolution = makeModalBtn(0, 128, 260, 44, "Độ phân giải: 1600x900", () => this.changeResolution());
     this.modalButtons.menu = makeModalBtn(-136, 242, 230, 44, "Về trang chủ", () => this.goMainMenu());
@@ -4142,7 +4142,7 @@ export class PlanningScene extends Phaser.Scene {
 
   gainXp(value) {
     let amount = value;
-    while (amount > 0 && this.player.level < 9) {
+    while (amount > 0 && this.player.level < 25) {
       const need = getXpToLevelUp(this.player.level) - this.player.xp;
       if (amount >= need) {
         amount -= need;
@@ -4405,7 +4405,7 @@ export class PlanningScene extends Phaser.Scene {
     const sandbox = this.player.gameMode === "PVE_SANDBOX";
     const ai = AI_SETTINGS[this.aiMode] ?? AI_SETTINGS.MEDIUM;
     const modeFactor = ai.budgetMult ?? 1;
-    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 9);
+    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 15);
     const teamSize = this.computeEnemyTeamSize(ai, estLevel, sandbox);
     const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
     const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
@@ -4653,9 +4653,9 @@ export class PlanningScene extends Phaser.Scene {
 
   spawnEnemyCombatUnits() {
     const ai = this.getAI();
-    const estimateLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 9);
+    const estimateLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 15);
     const count = this.computeEnemyTeamSize(ai, estimateLevel, this.player?.gameMode === "PVE_SANDBOX");
-    const maxTier = clamp(1 + Math.floor(this.player.round / 2) + (ai.maxTierBonus ?? 0), 1, 4);
+    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
     const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
 
     const positions = [];
@@ -4690,9 +4690,25 @@ export class PlanningScene extends Phaser.Scene {
     if (!owned?.base?.stats) return null;
     const baseStats = scaledBaseStats(owned.base.stats, owned.star);
     const ai = this.getAI();
-    const hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
-    const atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
-    const matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
+    let hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
+    let atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
+    let matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
+
+    // Apply Endless mode scaling for AI units when round > 30
+    if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
+      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+      hpBase = Math.round(hpBase * scaleFactor);
+      atkBase = Math.round(atkBase * scaleFactor);
+      matkBase = Math.round(matkBase * scaleFactor);
+    }
+
+    // Apply Easy mode difficulty scaling for AI units when round > 30
+    if (side === "RIGHT" && ai.difficulty === "EASY" && this.player.round > 30) {
+      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+      hpBase = Math.round(hpBase * scaleFactor);
+      atkBase = Math.round(atkBase * scaleFactor);
+      matkBase = Math.round(matkBase * scaleFactor);
+    }
 
     const hpWithAug = side === "LEFT" ? Math.round(hpBase * (1 + this.player.teamHpPct)) : hpBase;
     const atkWithAug = side === "LEFT" ? Math.round(atkBase * (1 + this.player.teamAtkPct)) : atkBase;
@@ -4749,7 +4765,7 @@ export class PlanningScene extends Phaser.Scene {
       homeCol: col,
       classType: owned.base.classType,
       tribe: owned.base.tribe,
-      skillId: owned.base.skillId,
+      skillId: getEffectiveSkillId(owned.base.skillId, owned.base.classType, owned.star, SKILL_LIBRARY),
       maxHp: hpWithAug,
       hp: hpWithAug,
       atk: atkWithAug,
@@ -6385,7 +6401,7 @@ export class PlanningScene extends Phaser.Scene {
     const growthCap = Math.max(0, ai?.teamGrowthCap ?? 2);
     const roundGrowth = clamp(Math.floor((this.player.round - 1) / growthEvery), 0, growthCap);
     const sandboxPenalty = sandbox ? 1 : 0;
-    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 12);
+    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 15);
   }
 
   getAiRoleProfile(mode) {
@@ -6792,6 +6808,10 @@ export class PlanningScene extends Phaser.Scene {
   async castSkill(attacker, target) {
     const skill = SKILL_LIBRARY[attacker.skillId];
     if (!skill) {
+      // Log error for missing skill (Requirement 18.3)
+      console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
+      
+      // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;
     }

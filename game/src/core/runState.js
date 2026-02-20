@@ -134,7 +134,7 @@ export function hydrateRunState(raw) {
     shop
   };
 
-  state.player.level = Math.max(1, Math.min(9, state.player.level));
+  state.player.level = Math.max(1, Math.min(25, state.player.level));
   state.player.round = Math.max(1, state.player.round);
   state.player.hp = Math.max(0, state.player.hp);
   state.player.loseCondition = normalizeLoseCondition(state.player.loseCondition);
