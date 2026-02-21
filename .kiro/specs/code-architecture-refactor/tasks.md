@@ -38,7 +38,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
     - Target: >= 80% coverage before starting extraction
     - _Requirements: 11.1, 11.2, 11.3_
 
-- [ ] 2. Checkpoint - Preparation complete
+- [x] 2. Checkpoint - Preparation complete
   - Ensure all tests pass, ask the user if questions arise.
 
 
@@ -91,13 +91,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 
   - [ ] 3.2 Extract UpgradeSystem (2-3 days)
-    - [ ] 3.2.1 Create UpgradeSystem file and interface
+    - [x] 3.2.1 Create UpgradeSystem file and interface
       - Create `src/systems/UpgradeSystem.js`
       - Define interface: canUpgrade, upgradeUnit, findUpgradeCandidates, combineUnits, transferEquipment
       - Add JSDoc comments
       - _Requirements: 1.1, 1.6, 13.4_
     
-    - [ ] 3.2.2 Extract upgrade logic from PlanningScene
+    - [x] 3.2.2 Extract upgrade logic from PlanningScene
       - Identify upgrade detection and combination logic
       - Extract to pure functions
       - Handle 3-unit combination logic
@@ -105,13 +105,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Remove Phaser dependencies
       - _Requirements: 1.2, 1.3, 1.4, 5.1, 5.2, 5.3, 5.4_
     
-    - [ ] 3.2.3 Update PlanningScene to use UpgradeSystem
+    - [x] 3.2.3 Update PlanningScene to use UpgradeSystem
       - Replace auto-upgrade logic with UpgradeSystem calls
       - Handle upgrade results
       - Update UI after upgrades
       - _Requirements: 8.1, 8.6_
     
-    - [ ] 3.2.4 Write unit tests for UpgradeSystem
+    - [x] 3.2.4 Write unit tests for UpgradeSystem
       - **Property 27: Upgrade Detection**
       - **Property 28: Upgrade Transformation**
       - **Property 29: Equipment Transfer on Upgrade**
@@ -124,7 +124,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test findUpgradeCandidates on bench and board
       - _Requirements: 11.1, 11.2_
     
-    - [ ] 3.2.5 Verify and commit UpgradeSystem extraction
+    - [-] 3.2.5 Verify and commit UpgradeSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test unit upgrades in game

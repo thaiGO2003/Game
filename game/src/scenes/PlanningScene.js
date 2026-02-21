@@ -5,6 +5,7 @@ import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { BoardSystem } from "../systems/BoardSystem.js";
+import { UpgradeSystem } from "../systems/UpgradeSystem.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -3831,130 +3832,34 @@ export class PlanningScene extends Phaser.Scene {
     this.persistProgress();
   }
 
-  getMergeSpeciesKey(unit) {
-    const raw = unit?.base?.species ?? unit?.base?.name ?? unit?.baseId ?? "linh-thu";
-    const normalized = String(raw)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    return normalized || String(unit?.baseId ?? "linh-thu");
-  }
-
-  getMergeSpeciesLabel(unit) {
-    const baseName = String(unit?.base?.name ?? unit?.baseId ?? "Linh thú").trim();
-    return baseName.replace(/\s+\d+\s*$/u, "");
-  }
-
   tryAutoMerge() {
-    let merged = true;
-    while (merged) {
-      merged = false;
-      const refs = this.collectOwnedUnitRefs();
-      const groups = new Map();
-      refs.forEach((ref) => {
-        const key = `${this.getMergeSpeciesKey(ref.unit)}:${ref.unit.star}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(ref);
-      });
+    // Use UpgradeSystem for auto-merge logic
+    const result = UpgradeSystem.tryAutoMerge(
+      this.player.board,
+      this.player.bench,
+      ITEM_BY_ID,
+      UNIT_BY_ID,
+      this.createOwnedUnit.bind(this)
+    );
 
-      for (const [, group] of groups) {
-        if (group.length < 3) continue;
-        const picked = group.slice(0, 3);
-        const star = picked[0].unit.star;
-        const baseId = picked
-          .map((ref) => ref.unit.baseId)
-          .sort((a, b) => (UNIT_BY_ID[b]?.tier ?? 0) - (UNIT_BY_ID[a]?.tier ?? 0))[0];
-        const mergedEquip = this.collectMergeEquips(picked);
-        this.removeOwnedUnitRefs(picked);
-        const upgraded = this.createOwnedUnit(baseId, Math.min(3, star + 1), mergedEquip.kept);
-        if (!upgraded) continue;
-        this.placeMergedUnit(upgraded, picked[0]);
-        if (mergedEquip.overflow.length) {
-          this.player.itemBag.push(...mergedEquip.overflow);
-          this.addLog(`Nâng sao hoàn trả ${mergedEquip.overflow.length} trang bị dư vào túi đồ.`);
+    // Handle merge results
+    if (result.mergeCount > 0) {
+      // Process each merge log entry
+      result.log.forEach((entry) => {
+        // Get unit label for logging
+        const unit = UNIT_BY_ID[entry.baseId];
+        const label = unit?.name || entry.baseId;
+        
+        // Log the merge
+        this.addLog(`Nâng sao: ${label} -> ${entry.toStar}★`);
+        
+        // Handle overflow equipment by returning to item bag
+        if (entry.overflowItems && entry.overflowItems.length > 0) {
+          this.player.itemBag.push(...entry.overflowItems);
+          this.addLog(`Nâng sao hoàn trả ${entry.overflowItems.length} trang bị dư vào túi đồ.`);
         }
-        this.addLog(`Nâng sao: ${this.getMergeSpeciesLabel(picked[0].unit)} -> ${upgraded.star}★`);
-        merged = true;
-        break;
-      }
-    }
-  }
-
-  collectMergeEquips(refs) {
-    const all = [];
-    refs.forEach((ref) => {
-      const equips = Array.isArray(ref?.unit?.equips) ? ref.unit.equips : [];
-      equips.forEach((itemId) => {
-        if (ITEM_BY_ID[itemId]?.kind === "equipment") all.push(itemId);
       });
-    });
-    const seen = new Set();
-    const kept = [];
-    const overflow = [];
-    all.forEach((itemId) => {
-      const key = this.getEquipmentNameKey(itemId);
-      if (!key) return;
-      if (seen.has(key)) {
-        overflow.push(itemId);
-        return;
-      }
-      seen.add(key);
-      if (kept.length < 3) {
-        kept.push(itemId);
-      } else {
-        overflow.push(itemId);
-      }
-    });
-    return {
-      kept,
-      overflow
-    };
-  }
-
-  collectOwnedUnitRefs() {
-    const refs = [];
-    this.player.bench.forEach((unit, index) => {
-      refs.push({ unit, location: "BENCH", index });
-    });
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
-        if (unit) refs.push({ unit, location: "BOARD", row, col });
-      }
     }
-    return refs;
-  }
-
-  removeOwnedUnitRefs(refs) {
-    if (!Array.isArray(refs) || !refs.length) return;
-    
-    const result = BoardSystem.removeOwnedUnitRefs(this.player.board, this.player.bench, refs);
-    
-    if (!result.success && result.error) {
-      this.addLog(`Lỗi khi xóa thú: ${result.error}`);
-    }
-  }
-
-  placeMergedUnit(unit, preferredRef) {
-    if (preferredRef.location === "BOARD") {
-      this.player.board[preferredRef.row][preferredRef.col] = unit;
-      return;
-    }
-    if (this.player.bench.length < this.getBenchCap()) {
-      this.player.bench.push(unit);
-      return;
-    }
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        if (!this.player.board[row][col] && this.getDeployCount() < this.getDeployCap()) {
-          this.player.board[row][col] = unit;
-          return;
-        }
-      }
-    }
-    this.player.bench.push(unit);
   }
 
   enterPlanning(grantIncome) {
