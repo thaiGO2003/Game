@@ -1489,22 +1489,36 @@ export class BoardPrototypeScene extends Phaser.Scene {
   }
 
   scoreTarget(attacker, target) {
-    const sameRow = target.row === attacker.row ? 0 : 1;
-    const lineDist = manhattan(attacker, target);
-    const lateralDist = Math.abs(target.row - attacker.row);
-    const forwardDist = attacker.side === "LEFT" ? Math.max(0, target.col - attacker.col) : Math.max(0, attacker.col - target.col);
-    const frontlineDist = this.distanceToFrontline(target);
-    const backlineDist = this.distanceToBackline(target);
+    const myRow = attacker.row;
+    const myCol = attacker.col;
+    const targetRow = target.row;
+    const targetCol = target.col;
+    
+    // Khoảng cách cột và hàng
+    const colDist = Math.abs(targetCol - myCol);
+    const rowDist = Math.abs(targetRow - myRow);
+    const sameRow = targetRow === myRow ? 0 : 1;
+    const totalDist = colDist + rowDist;
+    
+    // HP tiebreaker
     const hpRatio = Math.round((target.hp / target.maxHp) * 1000);
     const hpRaw = target.hp;
-
-    if (attacker.classType === "ASSASSIN") {
-      return [backlineDist, hpRatio, lineDist, frontlineDist, hpRaw];
+    
+    // === THUẬT TOÁN 1: CẬN CHIẾN (Ưu tiên CỘT) ===
+    if (attacker.range <= 1) {
+      if (attacker.classType === "ASSASSIN") {
+        // Sát thủ: Cột XA NHẤT → Cùng hàng → Lên trên → Xuống dưới
+        const farthestCol = attacker.side === "LEFT" ? -targetCol : targetCol;
+        return [farthestCol, sameRow, rowDist, totalDist, hpRatio, hpRaw];
+      } else {
+        // Tank/Fighter: Cột GẦN NHẤT → Cùng hàng → Lên trên → Xuống dưới
+        return [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw];
+      }
     }
-    if (attacker.classType === "ARCHER" || attacker.classType === "MAGE") {
-      return [sameRow, lineDist, frontlineDist, hpRatio, hpRaw];
-    }
-    return [frontlineDist, forwardDist, lateralDist, hpRatio, hpRaw];
+    
+    // === THUẬT TOÁN 2: TẦM XA (Ưu tiên HÀNG) ===
+    // Archer/Mage/Support: Cùng hàng → Lên/xuống → Gần nhất trong hàng
+    return [sameRow, rowDist, colDist, totalDist, hpRatio, hpRaw];
   }
 
   distanceToFrontline(unit) {

@@ -3,6 +3,8 @@ import { SKILL_LIBRARY } from "../data/skills.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { RecipeDiagram } from "./RecipeDiagram.js";
+import { AttackPreview } from "./AttackPreview.js";
+import { SkillPreview } from "./SkillPreview.js";
 
 const UI_FONT = "Segoe UI";
 
@@ -11,7 +13,11 @@ function clamp(value, min, max) {
 }
 
 function toNumber(value, fallback = 0) {
-  return Number.isFinite(value) ? value : fallback;
+  if (value === null || value === undefined || value === '' || value === '?') {
+    return fallback;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
 }
 
 function normalizeRecipes() {
@@ -48,6 +54,8 @@ export class LibraryModal {
     this.visible = false;
     this.overlayParts = [];
     this.recipeDiagram = null;
+    this.attackPreview = null;
+    this.skillPreview = null;
     this.recipes = normalizeRecipes();
     this.build();
     this.setVisible(false);
@@ -209,6 +217,7 @@ export class LibraryModal {
     this.overlayParts.forEach((part) => part?.setVisible(this.visible));
     if (!this.visible) {
       this.destroyRecipeDiagram();
+      this.destroyPreviews();
     }
     if (!this.visible && this.options.onClose) {
       this.options.onClose();
@@ -254,6 +263,7 @@ export class LibraryModal {
     if (!this.visible) return;
     this.contentContainer.removeAll(true);
     this.destroyRecipeDiagram();
+    this.destroyPreviews();
     this.refreshTabStyles();
     this.refreshSearchUi();
 
@@ -371,10 +381,30 @@ export class LibraryModal {
       this.detailUnitId = null;
       return this.renderUnitsTab(y);
     }
+
     const visual = getUnitVisual(unit.id, unit.classType);
     const skill = SKILL_LIBRARY[unit.skillId];
-    const stats = unit.stats ?? {};
+
+    // Lấy stats từ unit.stats (không fallback sang unit.hp vì không tồn tại)
+    const stats = unit.stats || {};
+    const hp = toNumber(stats.hp, 100);
+    const atk = toNumber(stats.atk, 50);
+    const def = toNumber(stats.def, 20);
+    const matk = toNumber(stats.matk, 20);
+    const mdef = toNumber(stats.mdef, 20);
     const range = toNumber(stats.range, 1);
+    const rageMax = toNumber(stats.rageMax, 3);
+
+    // Tính toán Accuracy và Evasion
+    const accuracyMap = {
+      TANKER: 85, FIGHTER: 95, ASSASSIN: 105,
+      ARCHER: 110, MAGE: 100, SUPPORT: 90
+    };
+    const accuracy = accuracyMap[unit.classType] || 100;
+
+    // Evasion dựa trên ATK (proxy cho speed)
+    const baseSpeed = atk;
+    const evasion = Math.min(35, Math.max(5, Math.floor(baseSpeed / 10)));
 
     const back = this.scene.add.text(0, y, "← Quay lại danh sách", {
       fontFamily: UI_FONT,
@@ -408,9 +438,10 @@ export class LibraryModal {
 
     const desc = [
       `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
-      `HP: ${toNumber(stats.hp, 0)}   ATK: ${toNumber(stats.atk, 0)}   DEF: ${toNumber(stats.def, 0)}`,
-      `MATK: ${toNumber(stats.matk, 0)}   MDEF: ${toNumber(stats.mdef, 0)}`,
-      `Tầm đánh: ${range} ô (${range >= 2 ? "Đánh xa" : "Cận chiến"})   Nộ tối đa: ${toNumber(stats.rageMax, 0)}`
+      `HP: ${hp}   ATK: ${atk}   DEF: ${def}`,
+      `SPD: ${matk}   MDEF: ${mdef}`,
+      `Chính xác: ${accuracy}%   Né tránh: ${evasion}%`,
+      `Tầm đánh: ${range} ô (${range >= 2 ? "Đánh xa" : "Cận chiến"})   Nộ: ${rageMax}`
     ].join("\n");
     const meta = this.scene.add.text(16, y + 52, desc, {
       fontFamily: UI_FONT,
@@ -419,28 +450,68 @@ export class LibraryModal {
       lineSpacing: 6
     });
 
-    const skillTitle = this.scene.add.text(16, y + 154, "⚡ KỸ NĂNG:", {
+    const skillTitle = this.scene.add.text(16, y + 160, "⚡ KỸ NĂNG:", {
       fontFamily: UI_FONT,
       fontSize: "15px",
       color: "#ffd580",
       fontStyle: "bold"
     });
-    const skillName = this.scene.add.text(16, y + 178, skill?.name ?? unit.skillId, {
+    const skillName = this.scene.add.text(16, y + 184, skill?.name ?? unit.skillId, {
       fontFamily: UI_FONT,
       fontSize: "18px",
       color: "#8df2ff",
       fontStyle: "bold"
     });
-    const skillDesc = this.scene.add.text(16, y + 206, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
+    const skillDesc = this.scene.add.text(16, y + 212, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
       fontFamily: UI_FONT,
       fontSize: "13px",
       color: "#d0eaff",
-      lineSpacing: 4,
+      lineSpacing: 5,
       wordWrap: { width: this.layout.viewportW - 48 }
     });
 
     this.contentContainer.add([title, tier, meta, skillTitle, skillName, skillDesc]);
-    return y + panelH + 8;
+
+    let currentY = y + panelH + 16;
+
+    // Add preview section
+    const previewTitle = this.scene.add.text(16, currentY, "🎯 PREVIEW TARGETING:", {
+      fontFamily: UI_FONT,
+      fontSize: "15px",
+      color: "#ffd580",
+      fontStyle: "bold"
+    });
+    this.contentContainer.add(previewTitle);
+    currentY += 28;
+
+    // Create previews side by side
+    const previewW = Math.floor((this.layout.viewportW - 48) / 2);
+    const previewH = 180;
+
+    this.attackPreview = new AttackPreview(
+      this.scene,
+      16,
+      currentY,
+      previewW,
+      previewH,
+      unit
+    );
+    this.contentContainer.add(this.attackPreview.container);
+
+    this.skillPreview = new SkillPreview(
+      this.scene,
+      16 + previewW + 16,
+      currentY,
+      previewW,
+      previewH,
+      unit,
+      skill
+    );
+    this.contentContainer.add(this.skillPreview.container);
+
+    currentY += previewH + 16;
+
+    return currentY;
   }
 
   renderRecipesTab(y) {
@@ -476,8 +547,20 @@ export class LibraryModal {
     }
   }
 
+  destroyPreviews() {
+    if (this.attackPreview) {
+      this.attackPreview.destroy();
+      this.attackPreview = null;
+    }
+    if (this.skillPreview) {
+      this.skillPreview.destroy();
+      this.skillPreview = null;
+    }
+  }
+
   destroy() {
     this.destroyRecipeDiagram();
+    this.destroyPreviews();
     this.overlayParts.forEach((part) => part?.destroy?.());
     this.overlayParts = [];
   }

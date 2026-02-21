@@ -18,6 +18,7 @@ import { SKILL_LIBRARY } from "../data/skills.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
+import { LibraryModal } from "../ui/LibraryModal.js";
 
 const AI_LABELS = {
   EASY: "Dễ",
@@ -851,11 +852,11 @@ export class MainMenuScene extends Phaser.Scene {
       }).setOrigin(1, 0);
       this.wikiContent.add(tierText);
 
-      const rangeTypeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const rangeTypeLabel = (unit.stats?.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
       const metaText = this.add.text(16, tabY + 50, [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
-        `HP: ${unit.hp ?? "?"}   ATK: ${unit.atk ?? "?"}   DEF: ${unit.def ?? "?"}   SPD: ${unit.spd ?? "?"}`,
-        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${unit.evasion ?? 0}%`
+        `HP: ${unit.stats?.hp ?? "?"}   ATK: ${unit.stats?.atk ?? "?"}   DEF: ${unit.stats?.def ?? "?"}   SPD: ${unit.stats?.matk ?? "?"}`,
+        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({"TANKER":5,"FIGHTER":10,"ASSASSIN":25,"ARCHER":15,"MAGE":5,"SUPPORT":10}[unit.classType] ?? 10)}%`
       ].join("\n"), {
         fontFamily: "Consolas", fontSize: "15px", color: "#c0ddf5", lineSpacing: 6
       });
@@ -883,7 +884,7 @@ export class MainMenuScene extends Phaser.Scene {
       });
       this.wikiContent.add(atkTitle);
 
-      const rangeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const rangeLabel = (unit.stats?.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
       const atkDesc = this.add.text(16, atkPatternY + 24, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
         fontFamily: "Consolas", fontSize: "14px", color: "#d0eaff", lineSpacing: 4,
         wordWrap: { width: vw - 44 }
@@ -1403,11 +1404,11 @@ export class MainMenuScene extends Phaser.Scene {
       }).setOrigin(1, 0);
       this.wikiContent.add(tierText);
 
-      const rangeTypeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const rangeTypeLabel = (unit.stats?.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
       const metaText = this.add.text(16, tabY + 50, [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
-        `HP: ${unit.hp ?? "?"}   ATK: ${unit.atk ?? "?"}   DEF: ${unit.def ?? "?"}   SPD: ${unit.spd ?? "?"}`,
-        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${unit.evasion ?? 0}%`
+        `HP: ${unit.stats?.hp ?? "?"}   ATK: ${unit.stats?.atk ?? "?"}   DEF: ${unit.stats?.def ?? "?"}   SPD: ${unit.stats?.matk ?? "?"}`,
+        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({"TANKER":5,"FIGHTER":10,"ASSASSIN":25,"ARCHER":15,"MAGE":5,"SUPPORT":10}[unit.classType] ?? 10)}%`
       ].join("\n"), {
         fontFamily: "Consolas", fontSize: "15px", color: "#c0ddf5", lineSpacing: 6
       });
@@ -1435,7 +1436,7 @@ export class MainMenuScene extends Phaser.Scene {
       });
       this.wikiContent.add(atkTitle);
 
-      const rangeLabel = (unit.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
+      const rangeLabel = (unit.stats?.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
       const atkDesc = this.add.text(16, atkPatternY + 24, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
         fontFamily: "Consolas", fontSize: "14px", color: "#d0eaff", lineSpacing: 4,
         wordWrap: { width: vw - 44 }

@@ -158,7 +158,7 @@ export function calculateHitChance(attacker, defender) {
   const baseAccuracy = 0.95; // 95% base hit chance
   const defenderEvasion = getEffectiveEvasion(defender);
   const hitChance = baseAccuracy - defenderEvasion;
-  
+
   // Ensure minimum 10% hit chance
   return Math.max(0.1, hitChance);
 }
@@ -262,3 +262,66 @@ export function manhattan(a, b) {
   return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
 }
 
+export function findClosest(targets, myCol) {
+  return targets.reduce((closest, target) => {
+    const distCurrent = Math.abs(target.col - myCol);
+    const distClosest = Math.abs(closest.col - myCol);
+    return distCurrent < distClosest ? target : closest;
+  });
+}
+
+export function findTargetMeleeFrontline(myRow, myCol, enemies) {
+  // 1. Tìm cùng hàng
+  const sameRow = enemies.filter(e => e.row === myRow);
+  if (sameRow.length > 0) {
+    return findClosest(sameRow, myCol); // Gần nhất theo cột
+  }
+
+  // 2. Tìm theo thứ tự: lên 1, xuống 1, lên 2, xuống 2
+  const searchOrder = [
+    myRow - 1,  // Lên 1
+    myRow + 1,  // Xuống 1
+    myRow - 2,  // Lên 2
+    myRow + 2   // Xuống 2
+  ];
+
+  for (const row of searchOrder) {
+    const targets = enemies.filter(e => e.row === row);
+    if (targets.length > 0) {
+      return findClosest(targets, myCol);
+    }
+  }
+
+  return null; // Không tìm thấy
+}
+
+export function findTargetAssassin(myRow, enemies) {
+  // Chỉ tìm cùng hàng
+  const sameRow = enemies.filter(e => e.row === myRow);
+  if (sameRow.length === 0) return null;
+
+  // Chọn xa nhất theo cự ly cột
+  return sameRow.reduce((farthest, target) => {
+    // Vì không có myCol, ta đơn giản tìm mục tiêu có cột lớn nhất (thường là hàng sau của enemy bên trái đánh phải)
+    // Nhưng để chính xác cho bất kể bên nào: cột xa nhất là cột khác biệt nhiều nhất so với 4.5 (giữa bàn cờ)
+    // Hoặc nếu enemies là phe phải, cột của nó là 5..9. Xa nhất với phe trái đánh phải là cột 9 (max).
+    // Phe phải đánh trái, xa nhất là cột 0 (min).
+    // "xa nhất cùng hàng"
+    // Nếu side chưa biết, dùng giả định: phe trái tiến sang phải (tìm max col), phe phải tiến trái (tìm min col)
+    // Thực tế unit có target.col. Ta sẽ tìm target.col lớn nhất.
+    return target.col > farthest.col ? target : farthest;
+  });
+}
+
+export function findTargetRanged(myRow, myCol, range, enemies) {
+  // Chỉ tìm cùng hàng và trong tầm
+  const sameRow = enemies.filter(e =>
+    e.row === myRow &&
+    Math.abs(e.col - myCol) <= range
+  );
+
+  if (sameRow.length === 0) return null;
+
+  // Chọn gần nhất
+  return findClosest(sameRow, myCol);
+}
