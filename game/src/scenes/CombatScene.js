@@ -12,6 +12,7 @@ import { VfxController } from "../core/vfx.js";
 import { clearProgress } from "../core/persistence.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
+import { CombatSystem } from "../systems/CombatSystem.js";
 import { generateEnemyTeam, computeEnemyTeamSize, getAISettings, selectTarget as aiSelectTarget } from "../systems/AISystem.js";
 import {
   RESOLUTION_PRESETS,
@@ -1948,7 +1949,16 @@ export class CombatScene extends Phaser.Scene {
 
     this.applySynergyBonuses("LEFT");
     this.applySynergyBonuses("RIGHT");
-    this.buildTurnQueue();
+    
+    // Use CombatSystem to initialize combat state (Requirements 8.1, 8.3, 8.4, 8.6)
+    const playerUnits = this.combatUnits.filter(u => u.side === "LEFT");
+    const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT");
+    this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
+    
+    // Use turn order from CombatSystem
+    this.turnQueue = this.combatState.turnOrder;
+    this.turnIndex = 0;
+    
     this.combatRound = this.turnQueue.length ? 1 : 0;
     this.refreshHeader();
     this.refreshSynergyPreview();
@@ -3494,10 +3504,10 @@ export class CombatScene extends Phaser.Scene {
       if (this.isActing) return;
       this.clearAttackPreview();
 
-      const leftAlive = this.getCombatUnits("LEFT").length;
-      const rightAlive = this.getCombatUnits("RIGHT").length;
-      if (!leftAlive || !rightAlive) {
-        this.resolveCombat(leftAlive > 0 ? "LEFT" : "RIGHT");
+      // Use CombatSystem to check combat end (Requirements 8.1, 8.3, 8.4, 8.6)
+      const combatEndResult = CombatSystem.checkCombatEnd(this.combatState);
+      if (combatEndResult.isFinished) {
+        this.resolveCombat(combatEndResult.winner === "player" ? "LEFT" : combatEndResult.winner === "enemy" ? "RIGHT" : "DRAW");
         return;
       }
 
@@ -3506,7 +3516,14 @@ export class CombatScene extends Phaser.Scene {
           this.resolveCombat("DRAW");
           return;
         }
-        this.buildTurnQueue();
+        
+        // Rebuild turn queue using CombatSystem
+        const playerUnits = this.combatUnits.filter(u => u.side === "LEFT" && u.alive);
+        const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT" && u.alive);
+        this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
+        this.turnQueue = this.combatState.turnOrder;
+        this.turnIndex = 0;
+        
         this.combatRound = Math.max(1, this.combatRound + 1);
         if (!this.turnQueue.length) {
           this.resolveCombat("RIGHT");
@@ -3531,23 +3548,66 @@ export class CombatScene extends Phaser.Scene {
       this.highlightUnit(actor, 0xffef9f);
 
       try {
-        const skipped = this.processStartTurn(actor);
-        if (skipped) {
-          this.addLog(`${actor.name} bỏ lượt (${skipped}).`);
-        } else {
+        // Use CombatSystem to tick status effects (Requirements 8.1, 8.3, 8.4, 8.6)
+        const statusResult = CombatSystem.tickStatusEffects(actor, this.combatState);
+        
+        // Apply damage from DoT effects
+        if (statusResult.success && statusResult.triggeredEffects) {
+          for (const effect of statusResult.triggeredEffects) {
+            if (effect.damage > 0) {
+              const damageResult = CombatSystem.applyDamage(actor, effect.damage, this.combatState);
+              this.resolveDamage(null, actor, effect.damage, "true", effect.type.toUpperCase(), { noRage: true, noReflect: true });
+              
+              // Handle disease spreading
+              if (effect.spreads && effect.type === 'disease') {
+                const neighbors = [
+                  { r: actor.row - 1, c: actor.col },
+                  { r: actor.row + 1, c: actor.col },
+                  { r: actor.row, c: actor.col - 1 },
+                  { r: actor.row, c: actor.col + 1 }
+                ];
+                neighbors.forEach((pos) => {
+                  const neighbor = this.getCombatUnitAt(actor.side, pos.r, pos.c);
+                  if (neighbor && neighbor.alive && !neighbor.statuses.diseaseTurns) {
+                    CombatSystem.applyStatusEffect(neighbor, { type: 'disease', duration: 2, value: effect.damage }, this.combatState);
+                    this.showFloatingText(neighbor.sprite.x, neighbor.sprite.y - 45, "LÂY BỆNH", "#880088");
+                    this.updateCombatUnitUi(neighbor);
+                  }
+                });
+              }
+            }
+          }
+        }
+        
+        // Check if unit died from DoT
+        if (!actor.alive) {
+          this.addLog(`${actor.name} bỏ lượt (dot).`);
+        }
+        // Check for control effects
+        else if (statusResult.controlStatus) {
+          this.addLog(`${actor.name} bỏ lượt (${statusResult.controlStatus}).`);
+          this.updateCombatUnitUi(actor);
+        }
+        // Execute action
+        else {
           const target = this.selectTarget(actor);
           if (target) {
-            if (actor.rage >= actor.rageMax && actor.statuses.silence <= 0) {
-              if (actor.classType !== "MAGE") {
-                actor.rage = 0;
-              }
-              this.updateCombatUnitUi(actor);
-              await this.castSkill(actor, target);
-            } else {
-              if ((actor.statuses.disarmTurns ?? 0) <= 0) {
-                await this.basicAttack(actor, target);
-              } else {
+            // Use CombatSystem to determine action type (Requirements 8.1, 8.3, 8.4, 8.6)
+            const actionResult = CombatSystem.executeAction(this.combatState, actor);
+            
+            if (actionResult.success) {
+              if (actionResult.actionType === 'SKILL') {
+                // Reset rage if needed
+                if (actionResult.resetRage) {
+                  actor.rage = 0;
+                }
+                this.updateCombatUnitUi(actor);
+                await this.castSkill(actor, target);
+              } else if (actionResult.actionType === 'DISARMED') {
                 this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
+              } else {
+                // Basic attack
+                await this.basicAttack(actor, target);
               }
             }
           }
@@ -3563,10 +3623,10 @@ export class CombatScene extends Phaser.Scene {
       this.refreshHeader();
       this.isActing = false;
 
-      const leftNow = this.getCombatUnits("LEFT").length;
-      const rightNow = this.getCombatUnits("RIGHT").length;
-      if (!leftNow || !rightNow) {
-        this.resolveCombat(leftNow > 0 ? "LEFT" : "RIGHT");
+      // Check combat end again after action
+      const endCheck = CombatSystem.checkCombatEnd(this.combatState);
+      if (endCheck.isFinished) {
+        this.resolveCombat(endCheck.winner === "player" ? "LEFT" : endCheck.winner === "enemy" ? "RIGHT" : "DRAW");
       }
     } catch (error) {
       // Critical error recovery - log and continue to next turn (Requirement 26.5)

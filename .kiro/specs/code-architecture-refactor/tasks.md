@@ -279,7 +279,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test diverse team compositions
       - _Requirements: 11.1, 11.2_
     
-    - [-] 3.5.6 Verify and commit AISystem extraction
+    - [x] 3.5.6 Verify and commit AISystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test AI opponents in game
@@ -288,20 +288,20 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 
   - [ ] 3.6 Extract CombatSystem (4-5 days)
-    - [~] 3.6.1 Create CombatSystem file and interface
+    - [x] 3.6.1 Create CombatSystem file and interface
       - Create `src/systems/CombatSystem.js`
       - Define interface: initializeCombat, getNextActor, executeAction, executeSkill, calculateDamage, applyDamage, applyStatusEffect, tickStatusEffects, checkCombatEnd
       - Add JSDoc comments
       - _Requirements: 1.1, 1.6, 13.4_
     
-    - [~] 3.6.2 Extract combat initialization and turn order
+    - [x] 3.6.2 Extract combat initialization and turn order
       - Extract initializeCombat logic
       - Extract turn order calculation based on speed
       - Extract getNextActor logic
       - Remove Phaser dependencies
       - _Requirements: 1.2, 1.3, 1.4, 4.1, 4.2, 4.3_
     
-    - [~] 3.6.3 Extract skill and attack execution
+    - [x] 3.6.3 Extract skill and attack execution
       - Extract executeAction logic (skill vs basic attack)
       - Extract executeSkill with target selection
       - Extract rage gain and consumption logic
@@ -309,14 +309,14 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Handle rage < 100 for basic attack
       - _Requirements: 4.4, 4.5_
     
-    - [~] 3.6.4 Extract damage calculation and application
+    - [x] 3.6.4 Extract damage calculation and application
       - Extract calculateDamage with all modifiers
       - Apply attack, defense, elemental modifiers
       - Extract applyDamage ensuring HP >= 0
       - Handle unit death (mark dead, remove from turn order)
       - _Requirements: 4.6, 4.7, 4.8_
     
-    - [~] 3.6.5 Extract status effects and combat end
+    - [x] 3.6.5 Extract status effects and combat end
       - Extract applyStatusEffect logic
       - Extract tickStatusEffects for each turn
       - Extract checkCombatEnd logic
@@ -325,14 +325,14 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Add combat event logging
       - _Requirements: 4.9, 4.10, 4.11, 4.12, 4.13_
     
-    - [~] 3.6.6 Update CombatScene to use CombatSystem
+    - [x] 3.6.6 Update CombatScene to use CombatSystem
       - Replace combat logic with CombatSystem calls
       - Keep only animation and rendering in scene
       - Handle combat events for UI updates
       - Display combat log
       - _Requirements: 8.1, 8.3, 8.4, 8.6_
     
-    - [~] 3.6.7 Write unit tests for CombatSystem
+    - [x] 3.6.7 Write unit tests for CombatSystem
       - **Property 17: Combat Initialization Includes All Units**
       - **Property 18: Turn Order Based on Speed**
       - **Property 19: Skill Execution at Full Rage**
@@ -356,13 +356,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test combat event logging
       - _Requirements: 11.1, 11.2_
     
-    - [~] 3.6.8 Write property tests for CombatSystem
+    - [x] 3.6.8 Write property tests for CombatSystem
       - Property: Combat always ends within max rounds
       - Property: Turn order is always sorted by speed
       - Property: Damage is always non-negative
       - _Requirements: 11.2_
     
-    - [~] 3.6.9 Verify and commit CombatSystem extraction
+    - [-] 3.6.9 Verify and commit CombatSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test combat in game
