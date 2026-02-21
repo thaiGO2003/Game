@@ -4,6 +4,7 @@ import { SKILL_LIBRARY } from "../data/skills.js";
 import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
+import { BoardSystem } from "../systems/BoardSystem.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -864,7 +865,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   normalizeBoard(rawBoard) {
-    const board = this.createEmptyBoard();
+    const board = BoardSystem.createEmptyBoard();
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         board[row][col] = this.normalizeOwnedUnit(rawBoard?.[row]?.[col]);
@@ -1040,7 +1041,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   createEmptyBoard() {
-    return Array.from({ length: ROWS }, () => Array.from({ length: PLAYER_COLS }, () => null));
+    return BoardSystem.createEmptyBoard();
   }
 
   seedStarterUnits() {
@@ -3248,14 +3249,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   checkDuplicateUnit(baseId, ignoreRow = -1, ignoreCol = -1) {
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < PLAYER_COLS; c++) {
-        if (r === ignoreRow && c === ignoreCol) continue;
-        const u = this.player.board[r][c];
-        if (u && u.baseId === baseId) return true;
-      }
-    }
-    return false;
+    return BoardSystem.checkDuplicateUnit(this.player.board, baseId, ignoreRow, ignoreCol);
   }
 
   onBenchClick(index) {
@@ -3338,89 +3332,54 @@ export class PlanningScene extends Phaser.Scene {
 
     const board = this.player.board;
     const bench = this.player.bench;
-    const validBoardCell = (row, col) =>
-      Number.isInteger(row) &&
-      Number.isInteger(col) &&
-      row >= 0 &&
-      row < ROWS &&
-      col >= 0 &&
-      col < PLAYER_COLS;
-    const validBenchIndex = (index) => Number.isInteger(index) && index >= 0 && index < this.getBenchCap();
-    let moved = false;
+    let result = null;
 
     if (from.region === "BOARD" && to.region === "BOARD") {
-      if (!validBoardCell(from.row, from.col) || !validBoardCell(to.row, to.col)) return false;
-      if (from.row === to.row && from.col === to.col) return false;
-      const moving = board[from.row][from.col];
-      if (!moving) return false;
-      const target = board[to.row][to.col];
-      if (target && !allowSwap) return false;
-      board[to.row][to.col] = moving;
-      board[from.row][from.col] = target ?? null;
-      moved = true;
+      // Board to Board movement
+      result = BoardSystem.moveUnit(board, from.row, from.col, to.row, to.col, allowSwap);
     } else if (from.region === "BENCH" && to.region === "BOARD") {
-      if (!validBenchIndex(from.index) || from.index >= bench.length) return false;
-      if (!validBoardCell(to.row, to.col)) return false;
-      const moving = bench[from.index];
-      if (!moving) return false;
-      if (this.checkDuplicateUnit(moving.baseId, to.row, to.col)) {
-        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
-        return false;
-      }
-      const target = board[to.row][to.col];
-      if (!target && this.getDeployCount() >= this.getDeployCap()) {
-        this.addLog(
-          `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
-        );
-        return false;
-      }
-      if (target && !allowSwap) return false;
-      board[to.row][to.col] = moving;
-      if (target) {
-        bench[from.index] = target;
-      } else {
-        bench.splice(from.index, 1);
-      }
-      moved = true;
+      // Bench to Board movement
+      result = BoardSystem.placeBenchUnitOnBoard(
+        board,
+        bench,
+        from.index,
+        to.row,
+        to.col,
+        this.getDeployCap(),
+        allowSwap
+      );
     } else if (from.region === "BOARD" && to.region === "BENCH") {
-      if (!validBoardCell(from.row, from.col) || !validBenchIndex(to.index)) return false;
-      const moving = board[from.row][from.col];
-      if (!moving) return false;
-      const target = bench[to.index] ?? null;
-      if (target && !allowSwap) return false;
-      if (!target && bench.length >= this.getBenchCap()) {
-        this.addLog("Hàng dự bị đã đầy.");
-        return false;
-      }
-      if (target) {
-        board[from.row][from.col] = target;
-        bench[to.index] = moving;
-      } else {
-        board[from.row][from.col] = null;
-        if (to.index >= bench.length) bench.push(moving);
-        else if (bench[to.index] == null) bench[to.index] = moving;
-        else bench.splice(to.index, 0, moving);
-      }
-      moved = true;
+      // Board to Bench movement
+      result = BoardSystem.moveBoardUnitToBench(
+        board,
+        bench,
+        from.row,
+        from.col,
+        to.index,
+        this.getBenchCap(),
+        allowSwap
+      );
     } else if (from.region === "BENCH" && to.region === "BENCH") {
-      if (!validBenchIndex(from.index) || from.index >= bench.length || !validBenchIndex(to.index)) return false;
-      if (from.index === to.index) return false;
-      const moving = bench[from.index];
-      if (!moving) return false;
-      const target = bench[to.index] ?? null;
-      if (target) {
-        if (!allowSwap) return false;
-        bench[to.index] = moving;
-        bench[from.index] = target;
-      } else {
-        bench.splice(from.index, 1);
-        const insertIndex = Math.max(0, Math.min(to.index, bench.length));
-        bench.splice(insertIndex, 0, moving);
-      }
-      moved = true;
+      // Bench to Bench movement
+      result = BoardSystem.moveBenchUnit(bench, from.index, to.index, allowSwap);
     }
 
-    if (!moved) return false;
+    if (!result || !result.success) {
+      if (result?.error) {
+        // Map BoardSystem errors to user-friendly messages
+        if (result.error === 'Deploy limit reached') {
+          this.addLog(
+            `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
+          );
+        } else if (result.error === 'Duplicate unit on board') {
+          this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        } else if (result.error === 'Bench is full') {
+          this.addLog("Hàng dự bị đã đầy.");
+        }
+      }
+      return false;
+    }
+
     this.selectedBenchIndex = null;
     this.tryAutoMerge();
     this.refreshPlanningUi();
@@ -3773,13 +3732,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getDeployCount() {
-    let count = 0;
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        if (this.player.board[row][col]) count += 1;
-      }
-    }
-    return count;
+    return BoardSystem.getDeployCount(this.player.board);
   }
 
   rollShop() {
@@ -3976,34 +3929,12 @@ export class PlanningScene extends Phaser.Scene {
 
   removeOwnedUnitRefs(refs) {
     if (!Array.isArray(refs) || !refs.length) return;
-
-    const benchUidSet = new Set();
-    const benchIndexFallback = [];
-
-    refs.forEach((ref) => {
-      if (!ref) return;
-      if (ref.location === "BOARD") {
-        this.player.board[ref.row][ref.col] = null;
-        return;
-      }
-      const uid = ref.unit?.uid;
-      if (uid) {
-        benchUidSet.add(uid);
-      } else if (Number.isInteger(ref.index)) {
-        benchIndexFallback.push(ref.index);
-      }
-    });
-
-    if (benchUidSet.size) {
-      this.player.bench = this.player.bench.filter((unit) => !benchUidSet.has(unit?.uid));
+    
+    const result = BoardSystem.removeOwnedUnitRefs(this.player.board, this.player.bench, refs);
+    
+    if (!result.success && result.error) {
+      this.addLog(`Lỗi khi xóa thú: ${result.error}`);
     }
-
-    // Fallback path for legacy units without uid.
-    benchIndexFallback
-      .sort((a, b) => b - a)
-      .forEach((index) => {
-        if (index >= 0 && index < this.player.bench.length) this.player.bench.splice(index, 1);
-      });
   }
 
   placeMergedUnit(unit, preferredRef) {
