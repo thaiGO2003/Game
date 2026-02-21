@@ -14,22 +14,22 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 ## Tasks
 
-- [ ] 1. Phase 1: Preparation (1-2 days)
-  - [ ] 1.1 Run baseline tests and establish metrics
+- [x] 1. Phase 1: Preparation (1-2 days)
+  - [x] 1.1 Run baseline tests and establish metrics
     - Run full test suite and verify 100% pass
     - Document current test coverage percentage
     - Run performance benchmarks for combat, shop, synergy operations
     - Document baseline metrics (combat < 16ms, shop < 50ms, synergy < 10ms)
     - _Requirements: 11.6, 12.1, 12.2, 12.3_
   
-  - [ ] 1.2 Create refactor branch and setup
+  - [x] 1.2 Create refactor branch and setup
     - Create branch: `git checkout -b refactor/code-architecture`
     - Document current behavior and feature list
     - Create rollback plan document
     - Set up performance monitoring hooks
     - _Requirements: 14.7, 19.1_
   
-  - [ ] 1.3 Review and add missing test coverage
+  - [x] 1.3 Review and add missing test coverage
     - Analyze test coverage for PlanningScene, CombatScene, MainMenuScene
     - Identify critical paths without tests
     - Add tests for shop operations (refresh, buy, sell, lock)
@@ -44,26 +44,26 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 - [ ] 3. Phase 2: Extract Systems (2-3 weeks)
   - [ ] 3.1 Extract BoardSystem (2-3 days)
-    - [ ] 3.1.1 Create BoardSystem file and interface
+    - [x] 3.1.1 Create BoardSystem file and interface
       - Create `src/systems/BoardSystem.js`
       - Define interface: placeUnit, removeUnit, moveUnit, getUnitAt, getDeployedUnits, getDeployCount, canDeploy, isValidPosition, isPositionEmpty, calculateSynergies
       - Add JSDoc comments for all functions
       - _Requirements: 1.1, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 13.4_
     
-    - [ ] 3.1.2 Extract board logic from PlanningScene
+    - [x] 3.1.2 Extract board logic from PlanningScene
       - Identify all board-related methods in PlanningScene
       - Extract placeUnit, removeUnit, moveUnit logic
       - Convert to pure functions (no `this.` references)
       - Remove Phaser dependencies from extracted code
       - _Requirements: 1.2, 1.3, 1.4, 8.1, 8.5_
     
-    - [ ] 3.1.3 Update PlanningScene to use BoardSystem
+    - [x] 3.1.3 Update PlanningScene to use BoardSystem
       - Replace direct board manipulation with BoardSystem calls
       - Update method signatures to pass board state
       - Handle success/error results from BoardSystem
       - _Requirements: 8.1, 8.6, 8.7_
     
-    - [ ]* 3.1.4 Write unit tests for BoardSystem
+    - [x] 3.1.4 Write unit tests for BoardSystem
       - **Property 5: Board Position Validation**
       - **Validates: Requirements 2.1, 2.2, 17.6**
       - Test placeUnit with valid/invalid positions
@@ -75,14 +75,14 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test isValidPosition boundary cases
       - _Requirements: 11.1, 11.2, 11.8_
     
-    - [ ]* 3.1.5 Write property tests for BoardSystem
+    - [x] 3.1.5 Write property tests for BoardSystem
       - **Property 6: Board Query Correctness**
       - **Property 7: Deploy Count Accuracy**
       - **Property 8: Deploy Limit Enforcement**
       - **Validates: Requirements 2.4, 2.5, 2.6**
       - _Requirements: 11.2_
     
-    - [ ] 3.1.6 Verify and commit BoardSystem extraction
+    - [x] 3.1.6 Verify and commit BoardSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test board operations in game
@@ -111,7 +111,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Update UI after upgrades
       - _Requirements: 8.1, 8.6_
     
-    - [ ]* 3.2.4 Write unit tests for UpgradeSystem
+    - [ ] 3.2.4 Write unit tests for UpgradeSystem
       - **Property 27: Upgrade Detection**
       - **Property 28: Upgrade Transformation**
       - **Property 29: Equipment Transfer on Upgrade**
@@ -154,7 +154,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Update UI to use SynergySystem for descriptions and icons
       - _Requirements: 8.1, 8.6_
     
-    - [ ]* 3.3.4 Write unit tests for SynergySystem
+    - [ ] 3.3.4 Write unit tests for SynergySystem
       - **Property 9: Synergy Calculation Correctness**
       - **Property 31: Synergy Bonus Application**
       - **Validates: Requirements 2.7, 6.1, 6.2, 6.3, 6.6**
@@ -208,7 +208,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Display error messages for insufficient gold
       - _Requirements: 8.1, 8.6, 8.7, 16.4_
     
-    - [ ]* 3.4.6 Write unit tests for ShopSystem
+    - [ ] 3.4.6 Write unit tests for ShopSystem
       - **Property 10: Shop Refresh Deducts Gold**
       - **Property 11: Shop Offers Respect Tier Odds**
       - **Property 12: Buy Unit Deducts Cost and Adds to Bench**
@@ -224,7 +224,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test shop lock preserves offers across rounds
       - _Requirements: 11.1, 11.2_
     
-    - [ ]* 3.4.7 Write property tests for ShopSystem
+    - [ ] 3.4.7 Write property tests for ShopSystem
       - Property: Gold never goes negative after operations
       - Property: Tier odds always sum to 100
       - Property: Shop offers always valid units
@@ -265,7 +265,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Pass difficulty from game mode config
       - _Requirements: 8.1, 8.6_
     
-    - [ ]* 3.5.5 Write unit tests for AISystem
+    - [ ] 3.5.5 Write unit tests for AISystem
       - **Property 32: AI Budget Constraint**
       - **Property 33: AI Difficulty Scaling**
       - **Property 34: AI Team Validity**
@@ -332,7 +332,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Display combat log
       - _Requirements: 8.1, 8.3, 8.4, 8.6_
     
-    - [ ]* 3.6.7 Write unit tests for CombatSystem
+    - [ ] 3.6.7 Write unit tests for CombatSystem
       - **Property 17: Combat Initialization Includes All Units**
       - **Property 18: Turn Order Based on Speed**
       - **Property 19: Skill Execution at Full Rage**
@@ -356,7 +356,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test combat event logging
       - _Requirements: 11.1, 11.2_
     
-    - [ ]* 3.6.8 Write property tests for CombatSystem
+    - [ ] 3.6.8 Write property tests for CombatSystem
       - Property: Combat always ends within max rounds
       - Property: Turn order is always sorted by speed
       - Property: Damage is always non-negative
@@ -411,7 +411,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles success/error results from systems
       - _Requirements: 8.2, 8.3, 8.4, 8.6, 8.7_
     
-    - [ ]* 5.1.6 Write integration tests for PlanningScene
+    - [ ] 5.1.6 Write integration tests for PlanningScene
       - Test full planning flow: buy units → deploy → upgrade → start combat
       - Test shop operations through scene
       - Test board operations through scene
@@ -456,7 +456,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles combat events for rendering
       - _Requirements: 8.2, 8.3, 8.4, 8.6_
     
-    - [ ]* 5.2.5 Write integration tests for CombatScene
+    - [ ] 5.2.5 Write integration tests for CombatScene
       - Test full combat flow: initialize → turns → end
       - Test combat through scene with animations
       - Test player victory and enemy victory
@@ -487,7 +487,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles game start with game mode selection
       - _Requirements: 8.2, 8.3, 8.4_
     
-    - [ ]* 5.3.3 Write integration tests for MainMenuScene
+    - [ ] 5.3.3 Write integration tests for MainMenuScene
       - Test menu navigation
       - Test game start flow
       - Test scene transitions
@@ -534,7 +534,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Register mode in registry
       - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 20.2_
     
-    - [ ]* 7.1.4 Write unit tests for Game Mode layer
+    - [ ] 7.1.4 Write unit tests for Game Mode layer
       - **Property 37: Game Mode Configuration Completeness**
       - **Property 38: Game Mode Configuration Validation**
       - **Property 39: Multiple Game Modes Support**
@@ -555,7 +555,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Initialize systems based on mode config
       - _Requirements: 9.8_
     
-    - [ ]* 7.2.2 Write integration tests for main entry point
+    - [ ] 7.2.2 Write integration tests for main entry point
       - Test game starts with PVEJourneyMode
       - Test game mode passed to scenes correctly
       - _Requirements: 11.4_
@@ -581,7 +581,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Default to PVEJourneyMode
       - _Requirements: 9.8_
     
-    - [ ]* 7.3.4 Write integration tests for scenes with game modes
+    - [ ] 7.3.4 Write integration tests for scenes with game modes
       - Test scenes adapt to different configs
       - Test conditional system usage
       - Test scene flow based on mode.scenes
@@ -612,7 +612,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Document all config options
       - _Requirements: 18.5, 18.8_
     
-    - [ ]* 7.4.4 Write tests for example modes
+    - [ ] 7.4.4 Write tests for example modes
       - Test EndlessMode config is valid
       - Test PVPMode config is valid
       - Test switching between modes
@@ -748,7 +748,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Verify no browser-specific issues
       - _Requirements: 10.4_
     
-    - [ ]* 9.4.5 Write final integration tests
+    - [ ] 9.4.5 Write final integration tests
       - **Property 40: Save Data Round Trip**
       - **Validates: Requirements 10.2, 10.3**
       - Test full game flow from start to finish

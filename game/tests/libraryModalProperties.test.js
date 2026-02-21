@@ -39,15 +39,20 @@ function createMockScene(width = 1920, height = 1080) {
       text: vi.fn((x, y, text) => makeObj({ x, y, text, height: 20 })),
       container: vi.fn((x, y) => makeObj({ x, y })),
       zone: vi.fn((x, y, w, h) => makeObj({ x, y, width: w, height: h })),
-      line: vi.fn(() => makeObj())
+      line: vi.fn(() => makeObj()),
+      circle: vi.fn((x, y, radius, color, alpha) => makeObj({ x, y, radius, fillColor: color, fillAlpha: alpha }))
     },
     make: {
       graphics: vi.fn(() => ({
         fillStyle: vi.fn(),
         fillRect: vi.fn(),
         createGeometryMask: vi.fn(() => ({})),
-        destroy: vi.fn()
+        destroy: vi.fn(),
+        setVisible: vi.fn()
       }))
+    },
+    tweens: {
+      add: vi.fn(() => ({ stop: vi.fn(), remove: vi.fn() }))
     }
   };
 }
@@ -73,6 +78,9 @@ describe("Property 9: Library Scene Return", () => {
     const onClose = vi.fn();
     const scene = createMockScene();
     const modal = new LibraryModal(scene, { onClose });
+    // Constructor calls setVisible(false) which triggers onClose once
+    expect(onClose).toHaveBeenCalledTimes(1);
+    onClose.mockClear(); // Reset the call count
     modal.show();
     expect(modal.isOpen()).toBe(true);
     modal.hide();

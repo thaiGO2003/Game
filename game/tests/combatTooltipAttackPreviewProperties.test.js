@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
 import { TooltipController } from "../src/core/tooltip.js";
-import { CombatScene } from "../src/scenes/CombatScene.js";
+
+// Mock CombatScene to avoid Phaser initialization issues
+vi.mock("../src/scenes/CombatScene.js", () => ({
+  CombatScene: class MockCombatScene {}
+}));
 
 function dedupe(cells) {
   const map = new Map();

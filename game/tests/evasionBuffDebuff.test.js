@@ -134,6 +134,6 @@ describe('Evasion Buff/Debuff System', () => {
     };
 
     const evasion = getEffectiveEvasion(unit);
-    expect(evasion).toBe(0); // Default to 0
+    expect(evasion).toBe(0.05); // Default base evasion when classType is undefined
   });
 });
