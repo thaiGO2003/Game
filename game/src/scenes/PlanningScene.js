@@ -7,6 +7,7 @@ import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { BoardSystem } from "../systems/BoardSystem.js";
 import { UpgradeSystem } from "../systems/UpgradeSystem.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
+import { ShopSystem } from "../systems/ShopSystem.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -3396,20 +3397,32 @@ export class PlanningScene extends Phaser.Scene {
 
   sellUnit(uid) {
     if (!uid) return false;
+    
+    // Check board for unit
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const unit = this.player?.board?.[row]?.[col];
         if (!unit || unit.uid !== uid) continue;
-        const salePrice = this.getUnitSalePrice(unit);
-        this.player.board[row][col] = null;
-        this.player.gold += salePrice;
-        this.selectedBenchIndex = null;
-        this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
-        this.refreshPlanningUi();
-        this.persistProgress();
-        return true;
+        
+        // Use ShopSystem to sell unit
+        const result = ShopSystem.sellUnit(this.player, unit);
+        
+        if (result.success) {
+          this.player = result.player;
+          this.player.board[row][col] = null;
+          this.selectedBenchIndex = null;
+          this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${result.sellValue} vàng.`);
+          this.refreshPlanningUi();
+          this.persistProgress();
+          return true;
+        } else {
+          this.addLog(result.error || "Không thể bán linh thú.");
+          return false;
+        }
       }
     }
+    
+    // Check bench for unit
     const benchIndex = this.player?.bench?.findIndex((unit) => unit?.uid === uid) ?? -1;
     if (benchIndex >= 0) return this.sellBenchIndex(benchIndex);
     return false;
@@ -3418,15 +3431,23 @@ export class PlanningScene extends Phaser.Scene {
   sellBenchIndex(index) {
     const unit = this.player?.bench?.[index];
     if (!unit) return false;
-    const salePrice = this.getUnitSalePrice(unit);
-    this.player.gold += salePrice;
-    this.player.bench.splice(index, 1);
-    if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
-    if (this.selectedBenchIndex != null && this.selectedBenchIndex > index) this.selectedBenchIndex -= 1;
-    this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
-    this.refreshPlanningUi();
-    this.persistProgress();
-    return true;
+    
+    // Use ShopSystem to sell unit
+    const result = ShopSystem.sellUnit(this.player, unit);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.player.bench.splice(index, 1);
+      if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
+      if (this.selectedBenchIndex != null && this.selectedBenchIndex > index) this.selectedBenchIndex -= 1;
+      this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${result.sellValue} vàng.`);
+      this.refreshPlanningUi();
+      this.persistProgress();
+      return true;
+    } else {
+      this.addLog(result.error || "Không thể bán linh thú.");
+      return false;
+    }
   }
 
   sellSelectedUnit() {
@@ -3741,14 +3762,18 @@ export class PlanningScene extends Phaser.Scene {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const cost = Math.max(1, 2 + this.player.rollCostDelta);
-    if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để đổi cửa hàng.");
-      return;
+    
+    // Use ShopSystem to refresh shop
+    const result = ShopSystem.refreshShop(this.player, cost);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.refreshPlanningUi();
+      this.persistProgress();
+    } else {
+      // Display error message for insufficient gold or other errors
+      this.addLog(result.error || "Không thể đổi cửa hàng.");
     }
-    this.player.gold -= cost;
-    this.refreshShop(true);
-    this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   buyXp() {
@@ -3784,53 +3809,50 @@ export class PlanningScene extends Phaser.Scene {
   toggleLock() {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    this.player.shopLocked = !this.player.shopLocked;
-    this.refreshPlanningUi();
-    this.persistProgress();
+    
+    // Use ShopSystem to lock/unlock shop
+    const result = this.player.shopLocked 
+      ? ShopSystem.unlockShop(this.player)
+      : ShopSystem.lockShop(this.player);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.refreshPlanningUi();
+      this.persistProgress();
+    } else {
+      this.addLog(result.error || "Không thể thay đổi trạng thái khóa shop.");
+    }
   }
 
   refreshShop(forceRoll = false) {
     if (this.player.shopLocked && !forceRoll) return;
-    const offers = [];
-    for (let i = 0; i < 5; i += 1) {
-      const tier = rollTierForLevel(this.player.level);
-      const pool = UNIT_CATALOG.filter((u) => u.tier === tier);
-      const fallback = UNIT_CATALOG.filter((u) => u.tier <= tier);
-      const base = randomItem(pool.length ? pool : fallback.length ? fallback : UNIT_CATALOG);
-      offers.push({ slot: i, baseId: base.id });
-    }
+    
+    // Use ShopSystem to generate shop offers
+    const offers = ShopSystem.generateShopOffers(this.player.level);
     this.player.shop = offers;
   }
 
   buyFromShop(index) {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    const offer = this.player.shop[index];
-    if (!offer) return;
-    const base = UNIT_BY_ID[offer.baseId];
-    if (!base) {
-      this.player.shop[index] = null;
-      this.addLog("Dữ liệu thú trong shop không hợp lệ, đã bỏ qua.");
+    
+    // Use ShopSystem to buy unit
+    const result = ShopSystem.buyUnit(
+      this.player, 
+      index, 
+      this.createOwnedUnit.bind(this),
+      this.getBenchCap()
+    );
+    
+    if (result.success) {
+      this.player = result.player;
+      this.tryAutoMerge();
       this.refreshPlanningUi();
       this.persistProgress();
-      return;
+    } else {
+      // Display error message for insufficient gold, full bench, or other errors
+      this.addLog(result.error || "Không thể mua linh thú.");
     }
-    const cost = base.tier;
-    if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để mua linh thú.");
-      return;
-    }
-    if (this.player.bench.length >= this.getBenchCap()) {
-      this.addLog("Hàng dự bị đã đầy.");
-      return;
-    }
-    this.player.gold -= cost;
-    const owned = this.createOwnedUnit(base.id, 1);
-    if (owned) this.player.bench.push(owned);
-    this.player.shop[index] = null;
-    this.tryAutoMerge();
-    this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   tryAutoMerge() {
