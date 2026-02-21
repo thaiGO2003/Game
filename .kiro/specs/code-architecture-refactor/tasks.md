@@ -124,7 +124,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test findUpgradeCandidates on bench and board
       - _Requirements: 11.1, 11.2_
     
-    - [-] 3.2.5 Verify and commit UpgradeSystem extraction
+    - [x] 3.2.5 Verify and commit UpgradeSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test unit upgrades in game
@@ -133,13 +133,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 
   - [ ] 3.3 Extract SynergySystem (2-3 days)
-    - [ ] 3.3.1 Create SynergySystem file and interface
+    - [x] 3.3.1 Create SynergySystem file and interface
       - Create `src/systems/SynergySystem.js`
       - Define interface: calculateSynergies, applySynergiesToUnit, getSynergyDescription, getSynergyIcon
       - Add JSDoc comments
       - _Requirements: 1.1, 1.6, 13.4_
     
-    - [ ] 3.3.2 Extract synergy logic from multiple locations
+    - [x] 3.3.2 Extract synergy logic from multiple locations
       - Identify synergy calculation in PlanningScene
       - Identify synergy application in CombatScene
       - Centralize synergy counting logic (by type and class)
@@ -148,13 +148,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Remove Phaser dependencies
       - _Requirements: 1.2, 1.3, 1.4, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
     
-    - [ ] 3.3.3 Update scenes to use SynergySystem
+    - [x] 3.3.3 Update scenes to use SynergySystem
       - Update PlanningScene to use SynergySystem.calculateSynergies
       - Update CombatScene to use SynergySystem.applySynergiesToUnit
       - Update UI to use SynergySystem for descriptions and icons
       - _Requirements: 8.1, 8.6_
     
-    - [ ] 3.3.4 Write unit tests for SynergySystem
+    - [x] 3.3.4 Write unit tests for SynergySystem
       - **Property 9: Synergy Calculation Correctness**
       - **Property 31: Synergy Bonus Application**
       - **Validates: Requirements 2.7, 6.1, 6.2, 6.3, 6.6**
@@ -165,7 +165,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test applySynergiesToUnit cumulative bonuses
       - _Requirements: 11.1, 11.2_
     
-    - [ ] 3.3.5 Verify and commit SynergySystem extraction
+    - [-] 3.3.5 Verify and commit SynergySystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test synergies in game

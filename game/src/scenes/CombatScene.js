@@ -11,6 +11,7 @@ import { AudioFx } from "../core/audioFx.js";
 import { VfxController } from "../core/vfx.js";
 import { clearProgress } from "../core/persistence.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
+import { SynergySystem } from "../systems/SynergySystem.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -3006,11 +3007,8 @@ export class CombatScene extends Phaser.Scene {
   }
 
   getSynergyTier(count, thresholds) {
-    let idx = -1;
-    for (let i = 0; i < thresholds.length; i += 1) {
-      if (count >= thresholds[i]) idx = i;
-    }
-    return idx;
+    // Delegate to SynergySystem
+    return SynergySystem.getSynergyTier(count, thresholds);
   }
 
   formatBonusSet(bonus) {
@@ -3392,78 +3390,39 @@ export class CombatScene extends Phaser.Scene {
   }
 
   computeSynergyCounts(units, side) {
-    const classCounts = {};
-    const tribeCounts = {};
-    units.forEach((unit) => {
-      classCounts[unit.classType] = (classCounts[unit.classType] ?? 0) + 1;
-      tribeCounts[unit.tribe] = (tribeCounts[unit.tribe] ?? 0) + 1;
-    });
+    // Delegate to SynergySystem
+    const options = {};
     if (side === "LEFT" && units.length > 0) {
-      if (this.player.extraClassCount > 0) {
-        const topClass = Object.keys(classCounts).sort((a, b) => classCounts[b] - classCounts[a])[0];
-        if (topClass) classCounts[topClass] += this.player.extraClassCount;
-      }
-      if (this.player.extraTribeCount > 0) {
-        const topTribe = Object.keys(tribeCounts).sort((a, b) => tribeCounts[b] - tribeCounts[a])[0];
-        if (topTribe) tribeCounts[topTribe] += this.player.extraTribeCount;
-      }
+      options.extraClassCount = this.player.extraClassCount || 0;
+      options.extraTribeCount = this.player.extraTribeCount || 0;
     }
-    return { classCounts, tribeCounts };
+    return SynergySystem.calculateSynergies(units, side, options);
   }
 
   applySynergyBonuses(side) {
+    // Delegate to SynergySystem
     const team = this.getCombatUnits(side);
-    const summary = this.computeSynergyCounts(team, side);
-
+    const options = {};
+    if (side === "LEFT") {
+      options.extraClassCount = this.player.extraClassCount || 0;
+      options.extraTribeCount = this.player.extraTribeCount || 0;
+    }
+    SynergySystem.applySynergyBonusesToTeam(team, side, options);
+    
+    // Update UI for all units
     team.forEach((unit) => {
-      const classDef = CLASS_SYNERGY[unit.classType];
-      if (classDef) {
-        const bonus = this.getSynergyBonus(classDef, summary.classCounts[unit.classType] ?? 0);
-        this.applyBonusToUnit(unit, bonus);
-      }
-
-      const tribeDef = TRIBE_SYNERGY[unit.tribe];
-      if (tribeDef) {
-        const bonus = this.getSynergyBonus(tribeDef, summary.tribeCounts[unit.tribe] ?? 0);
-        this.applyBonusToUnit(unit, bonus);
-      }
-
-      unit.rage = Math.min(unit.rageMax, unit.rage + (unit.mods.startingRage || 0));
-      unit.shield += unit.mods.shieldStart || 0;
       this.updateCombatUnitUi(unit);
     });
   }
 
   getSynergyBonus(def, count) {
-    let bonus = null;
-    for (let i = 0; i < def.thresholds.length; i += 1) {
-      if (count >= def.thresholds[i]) bonus = def.bonuses[i];
-    }
-    return bonus;
+    // Delegate to SynergySystem
+    return SynergySystem.getSynergyBonus(def, count);
   }
 
   applyBonusToUnit(unit, bonus) {
-    if (!bonus) return;
-    const hpPct = bonus.hpPct ?? bonus.teamHpPct ?? 0;
-    const atkPct = bonus.atkPct ?? bonus.teamAtkPct ?? 0;
-    const matkPct = bonus.matkPct ?? bonus.teamMatkPct ?? 0;
-    if (bonus.defFlat) unit.def += bonus.defFlat;
-    if (bonus.mdefFlat) unit.mdef += bonus.mdefFlat;
-    if (hpPct) {
-      const add = Math.round(unit.maxHp * hpPct);
-      unit.maxHp += add;
-      unit.hp += add;
-    }
-    if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
-    if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
-    if (bonus.healPct) unit.mods.healPct += bonus.healPct;
-    if (bonus.lifestealPct) unit.mods.lifestealPct += bonus.lifestealPct;
-    if (bonus.evadePct) unit.mods.evadePct += bonus.evadePct;
-    if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
-    if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
-    if (bonus.critPct) unit.mods.critPct += bonus.critPct;
-    if (bonus.burnOnHit) unit.mods.burnOnHit += bonus.burnOnHit;
-    if (bonus.poisonOnHit) unit.mods.poisonOnHit += bonus.poisonOnHit;
+    // Delegate to SynergySystem
+    SynergySystem.applyBonusToCombatUnit(unit, bonus);
   }
 
   applyOwnedEquipmentBonuses(unit, owned) {
