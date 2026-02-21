@@ -230,7 +230,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Property: Shop offers always valid units
       - _Requirements: 11.2_
     
-    - [-] 3.4.8 Verify and commit ShopSystem extraction
+    - [x] 3.4.8 Verify and commit ShopSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test shop operations in game
@@ -239,13 +239,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 
   - [ ] 3.5 Extract AISystem (3-4 days)
-    - [~] 3.5.1 Create AISystem file and interface
+    - [x] 3.5.1 Create AISystem file and interface
       - Create `src/systems/AISystem.js`
       - Define interface: generateEnemyTeam, makeAIDecision, getAIDifficultyMultiplier
       - Add JSDoc comments
       - _Requirements: 1.1, 1.6, 13.4_
     
-    - [~] 3.5.2 Extract enemy team generation logic
+    - [x] 3.5.2 Extract enemy team generation logic
       - Extract enemy generation from CombatScene
       - Extract budget-based team composition
       - Extract difficulty scaling logic (EASY, MEDIUM, HARD)
@@ -253,19 +253,19 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Remove Phaser dependencies
       - _Requirements: 1.2, 1.3, 1.4, 7.1, 7.2, 7.3, 7.6_
     
-    - [~] 3.5.3 Extract AI decision making logic
+    - [x] 3.5.3 Extract AI decision making logic
       - Extract AI target selection logic
       - Extract AI skill usage decisions
       - Ensure tactical decision making
       - _Requirements: 7.4_
     
-    - [~] 3.5.4 Update CombatScene to use AISystem
+    - [x] 3.5.4 Update CombatScene to use AISystem
       - Replace enemy generation with AISystem.generateEnemyTeam
       - Replace AI decisions with AISystem.makeAIDecision
       - Pass difficulty from game mode config
       - _Requirements: 8.1, 8.6_
     
-    - [~] 3.5.5 Write unit tests for AISystem
+    - [x] 3.5.5 Write unit tests for AISystem
       - **Property 32: AI Budget Constraint**
       - **Property 33: AI Difficulty Scaling**
       - **Property 34: AI Team Validity**
@@ -279,7 +279,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test diverse team compositions
       - _Requirements: 11.1, 11.2_
     
-    - [~] 3.5.6 Verify and commit AISystem extraction
+    - [-] 3.5.6 Verify and commit AISystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test AI opponents in game
@@ -369,7 +369,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Commit: "Extract CombatSystem from CombatScene"
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
-- [ ] 4. Checkpoint - Systems extraction complete
+- [~] 4. Checkpoint - Systems extraction complete
   - Ensure all tests pass, ask the user if questions arise.
 
 

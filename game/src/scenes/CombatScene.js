@@ -12,6 +12,7 @@ import { VfxController } from "../core/vfx.js";
 import { clearProgress } from "../core/persistence.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
+import { generateEnemyTeam, computeEnemyTeamSize, getAISettings, selectTarget as aiSelectTarget } from "../systems/AISystem.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -25,9 +26,6 @@ import { hydrateRunState } from "../core/runState.js";
 import {
   clamp,
   createUnitUid,
-  findTargetMeleeFrontline,
-  findTargetAssassin,
-  findTargetRanged,
   getBaseEvasion,
   getEffectiveEvasion,
   calculateHitChance,
@@ -66,60 +64,6 @@ const PHASE = {
   AUGMENT: "AUGMENT",
   COMBAT: "COMBAT",
   GAME_OVER: "GAME_OVER"
-};
-
-const AI_SETTINGS = {
-  EASY: {
-    label: "Dễ",
-    difficulty: "EASY",
-    hpMult: 0.84,
-    atkMult: 0.82,
-    matkMult: 0.82,
-    rageGain: 1,
-    randomTargetChance: 0.58,
-    teamSizeBonus: 0,
-    teamGrowthEvery: 5,
-    teamGrowthCap: 1,
-    budgetMult: 0.9,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: -0.05,
-    star3Bonus: -0.02
-  },
-  MEDIUM: {
-    label: "Thường",
-    difficulty: "MEDIUM",
-    hpMult: 1.0,
-    atkMult: 1.0,
-    matkMult: 1.0,
-    rageGain: 1,
-    randomTargetChance: 0.35,
-    teamSizeBonus: 0,
-    teamGrowthEvery: 4,
-    teamGrowthCap: 2,
-    budgetMult: 1.0,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: 0,
-    star3Bonus: 0
-  },
-  HARD: {
-    label: "Khó",
-    difficulty: "HARD",
-    hpMult: 1.15,
-    atkMult: 1.15,
-    matkMult: 1.15,
-    rageGain: 2,
-    randomTargetChance: 0.1,
-    teamSizeBonus: 1,
-    teamGrowthEvery: 3,
-    teamGrowthCap: 3,
-    budgetMult: 1.1,
-    levelBonus: 1,
-    maxTierBonus: 1,
-    star2Bonus: 0.1,
-    star3Bonus: 0.05
-  }
 };
 
 const CLASS_COLORS = {
@@ -2036,35 +1980,19 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
 
-    const ai = this.getAI();
-    const estimateLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 9);
-    const count = this.computeEnemyTeamSize(ai, estimateLevel, this.player?.gameMode === "PVE_SANDBOX");
-    const maxTier = clamp(1 + Math.floor(this.player.round / 2) + (ai.maxTierBonus ?? 0), 1, 4);
-    const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
+    // Use AISystem to generate enemy team (Requirements 8.1, 8.6)
+    const sandbox = this.player?.gameMode === "PVE_SANDBOX";
+    const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)));
+    const enemyUnits = generateEnemyTeam(this.player.round, budget, this.aiMode, sandbox);
 
-    const positions = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-        positions.push({ row, col });
-      }
-    }
-    Phaser.Utils.Array.Shuffle(positions);
-    const picks = positions.slice(0, count);
-
-    picks.forEach((pos) => {
-      const tier = Math.min(maxTier, rollTierForLevel(estimateLevel));
-      const tierPool = pool.filter((u) => u.tier === tier);
-      const base = randomItem(tierPool.length ? tierPool : pool);
-
-      let star = 1;
-      const twoStarChance = clamp((this.player.round - 6) * 0.05 + (ai.star2Bonus ?? 0), 0, 0.42);
-      const threeStarChance = clamp((this.player.round - 11) * 0.02 + (ai.star3Bonus ?? 0), 0, 0.1);
-      const roll = Math.random();
-      if (roll < threeStarChance) star = 3;
-      else if (roll < threeStarChance + twoStarChance) star = 2;
-
-      const owned = this.createOwnedUnit(base.id, star);
-      // Chế độ khó: trang bị cho thú địch
+    // Create combat units from generated enemy team
+    enemyUnits.forEach((ref) => {
+      const base = UNIT_BY_ID[ref.baseId];
+      if (!base) return;
+      const owned = this.createOwnedUnit(base.id, ref.star ?? 1);
+      
+      // Apply equipment for HARD difficulty
+      const ai = this.getAI();
       if (ai.difficulty === "HARD" && EQUIPMENT_ITEMS.length > 0) {
         const equipChance = clamp(0.15 + (this.player.round - 5) * 0.04, 0, 0.65);
         if (Math.random() < equipChance) {
@@ -2072,7 +2000,8 @@ export class CombatScene extends Phaser.Scene {
           owned.equips = eq?.id ? [eq.id] : [];
         }
       }
-      const unit = this.createCombatUnit(owned, "RIGHT", pos.row, pos.col);
+      
+      const unit = this.createCombatUnit(owned, "RIGHT", ref.row, ref.col);
       if (unit) this.combatUnits.push(unit);
     });
   }
@@ -3376,17 +3305,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   getAI() {
-    return AI_SETTINGS[this.aiMode];
-  }
-
-  computeEnemyTeamSize(ai, estimateLevel, sandbox = false) {
-    const base = getDeployCapByLevel(estimateLevel);
-    const flatBonus = ai?.teamSizeBonus ?? 0;
-    const growthEvery = Math.max(1, ai?.teamGrowthEvery ?? 4);
-    const growthCap = Math.max(0, ai?.teamGrowthCap ?? 2);
-    const roundGrowth = clamp(Math.floor((this.player.round - 1) / growthEvery), 0, growthCap);
-    const sandboxPenalty = sandbox ? 1 : 0;
-    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 12);
+    return getAISettings(this.aiMode);
   }
 
   computeSynergyCounts(units, side) {
@@ -3768,87 +3687,12 @@ export class CombatScene extends Phaser.Scene {
   }
 
   selectTarget(attacker, options = {}) {
-    const enemySide = attacker.side === "LEFT" ? "RIGHT" : "LEFT";
-    const enemies = this.getCombatUnits(enemySide);
-    if (!enemies.length) return null;
-
-    if (attacker.statuses.tauntTargetId) {
-      const forced = enemies.find((e) => e.uid === attacker.statuses.tauntTargetId);
-      if (forced) return forced;
-    }
-
-    const ai = this.getAI();
-    const keepFrontline = attacker.range <= 1 && attacker.classType !== "ASSASSIN";
-    const allowRandomTarget = attacker.classType !== "ASSASSIN";
-    if (
-      attacker.side === "RIGHT" &&
-      allowRandomTarget &&
-      !keepFrontline &&
-      !options.deterministic &&
-      Math.random() < ai.randomTargetChance
-    ) {
-      return randomItem(enemies);
-    }
-
-    let target = null;
-    if (attacker.range <= 1 && attacker.classType !== "ASSASSIN") {
-      target = findTargetMeleeFrontline(attacker.row, attacker.col, enemies);
-    } else if (attacker.classType === "ASSASSIN") {
-      target = findTargetAssassin(attacker.row, enemies);
-    } else {
-      target = findTargetRanged(attacker.row, attacker.col, attacker.range, enemies);
-    }
-
-    if (!target) {
-      const sorted = [...enemies].sort((a, b) => this.compareTargets(attacker, a, b));
-      return sorted[0] || null;
-    }
-
-    return target;
+    // Use AISystem for target selection (Requirements 8.1, 8.6)
+    const state = {
+      units: this.combatUnits || []
+    };
+    return aiSelectTarget(attacker, state, this.aiMode, options);
   }
-
-  compareTargets(attacker, a, b) {
-    const sa = this.scoreTarget(attacker, a);
-    const sb = this.scoreTarget(attacker, b);
-    for (let i = 0; i < sa.length; i += 1) {
-      if (sa[i] !== sb[i]) return sa[i] - sb[i];
-    }
-    return 0;
-  }
-
-  scoreTarget(attacker, target) {
-    const myRow = attacker.row;
-    const myCol = attacker.col;
-    const targetRow = target.row;
-    const targetCol = target.col;
-
-    // Khoảng cách cột và hàng
-    const colDist = Math.abs(targetCol - myCol);
-    const rowDist = Math.abs(targetRow - myRow);
-    const sameRow = targetRow === myRow ? 0 : 1;
-    const totalDist = colDist + rowDist;
-
-    // HP tiebreaker
-    const hpRatio = Math.round((target.hp / target.maxHp) * 1000);
-    const hpRaw = target.hp;
-
-    // === THUẬT TOÁN 1: CẬN CHIẾN (Ưu tiên CỘT) ===
-    if (attacker.range <= 1) {
-      if (attacker.classType === "ASSASSIN") {
-        // Sát thủ: Cột XA NHẤT → Cùng hàng → Lên trên → Xuống dưới
-        const farthestCol = attacker.side === "LEFT" ? -targetCol : targetCol;
-        return [farthestCol, sameRow, rowDist, totalDist, hpRatio, hpRaw];
-      } else {
-        // Tank/Fighter: Cột GẦN NHẤT → Cùng hàng → Lên trên → Xuống dưới
-        return [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw];
-      }
-    }
-
-    // === THUẬT TOÁN 2: TẦM XA (Ưu tiên HÀNG) ===
-    // Archer/Mage/Support: Cùng hàng → Lên/xuống → Gần nhất trong hàng
-    return [sameRow, rowDist, colDist, totalDist, hpRatio, hpRaw];
-  }
-
 
   distanceToFrontline(unit) {
     if (unit.side === "LEFT") return 4 - unit.col;

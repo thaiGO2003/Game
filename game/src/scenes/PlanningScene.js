@@ -8,6 +8,7 @@ import { BoardSystem } from "../systems/BoardSystem.js";
 import { UpgradeSystem } from "../systems/UpgradeSystem.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
 import { ShopSystem } from "../systems/ShopSystem.js";
+import { generateEnemyTeam, computeEnemyTeamSize, getAISettings } from "../systems/AISystem.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -61,57 +62,6 @@ const PHASE = {
   AUGMENT: "AUGMENT",
   COMBAT: "COMBAT",
   GAME_OVER: "GAME_OVER"
-};
-
-const AI_SETTINGS = {
-  EASY: {
-    label: "Dễ",
-    hpMult: 0.84,
-    atkMult: 0.82,
-    matkMult: 0.82,
-    rageGain: 1,
-    randomTargetChance: 0.58,
-    teamSizeBonus: 0,
-    teamGrowthEvery: 5,
-    teamGrowthCap: 1,
-    budgetMult: 0.9,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: -0.05,
-    star3Bonus: -0.02
-  },
-  MEDIUM: {
-    label: "Trung bình",
-    hpMult: 0.95,
-    atkMult: 0.93,
-    matkMult: 0.93,
-    rageGain: 1,
-    randomTargetChance: 0.3,
-    teamSizeBonus: 1,
-    teamGrowthEvery: 4,
-    teamGrowthCap: 2,
-    budgetMult: 1,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: -0.01,
-    star3Bonus: -0.01
-  },
-  HARD: {
-    label: "Khó",
-    hpMult: 1.05,
-    atkMult: 1.04,
-    matkMult: 1.04,
-    rageGain: 1,
-    randomTargetChance: 0.12,
-    teamSizeBonus: 2,
-    teamGrowthEvery: 3,
-    teamGrowthCap: 3,
-    budgetMult: 1.08,
-    levelBonus: 1,
-    maxTierBonus: 1,
-    star2Bonus: 0,
-    star3Bonus: 0.01
-  }
 };
 
 const CLASS_COLORS = {
@@ -3932,110 +3882,12 @@ export class PlanningScene extends Phaser.Scene {
 
   generateEnemyPreviewPlan() {
     const sandbox = this.player.gameMode === "PVE_SANDBOX";
-    const ai = AI_SETTINGS[this.aiMode] ?? AI_SETTINGS.MEDIUM;
+    const ai = getAISettings(this.aiMode);
     const modeFactor = ai.budgetMult ?? 1;
-    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 15);
-    const teamSize = this.computeEnemyTeamSize(ai, estLevel, sandbox);
     const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
-    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
-    const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
-
-    const picks = [];
-    let coins = budget;
-    let frontCount = 0;
-    const roleCounts = {
-      TANKER: 0,
-      FIGHTER: 0,
-      ASSASSIN: 0,
-      ARCHER: 0,
-      MAGE: 0,
-      SUPPORT: 0
-    };
-    const roleProfile = this.getAiRoleProfile(this.aiMode);
-    let guard = 0;
-    while (picks.length < teamSize && guard < 260) {
-      guard += 1;
-      let candidates = pool.filter((u) => u.tier <= Math.max(1, coins));
-      if (!candidates.length) candidates = pool.filter((u) => u.tier === 1);
-      if (!candidates.length) break;
-
-      let pick = null;
-      const targetClass = this.pickClassByWeights(roleProfile.weights);
-      const byClass = candidates.filter((u) => u.classType === targetClass);
-      if (byClass.length) {
-        const minRoleCount = Math.min(...Object.values(roleCounts));
-        const diversityPool = byClass.filter((u) => roleCounts[u.classType] <= minRoleCount + 1);
-        pick = randomItem(diversityPool.length ? diversityPool : byClass);
-      }
-      if (!pick && frontCount < Math.ceil(teamSize * roleProfile.minFrontRatio)) {
-        const frontPool = candidates.filter((u) => u.classType === "TANKER" || u.classType === "FIGHTER");
-        if (frontPool.length) pick = randomItem(frontPool);
-      }
-      if (!pick && Math.random() < roleProfile.nonFrontBias) {
-        const nonFrontPool = candidates.filter((u) => u.classType !== "TANKER" && u.classType !== "FIGHTER");
-        if (nonFrontPool.length) pick = randomItem(nonFrontPool);
-      }
-      if (!pick) pick = randomItem(candidates);
-
-      let star = 1;
-      const starRoll = Math.random();
-      const twoStarChance = clamp((this.player.round - 6) * 0.045 + (ai.star2Bonus ?? 0), 0, 0.38);
-      const threeStarChance = clamp((this.player.round - 11) * 0.018 + (ai.star3Bonus ?? 0), 0, 0.08);
-      if (starRoll < threeStarChance) star = 3;
-      else if (starRoll < threeStarChance + twoStarChance) star = 2;
-
-      picks.push({ baseId: pick.id, classType: pick.classType, tier: pick.tier, star });
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
-      roleCounts[pick.classType] = (roleCounts[pick.classType] ?? 0) + 1;
-      coins -= Math.max(1, pick.tier - (star - 1));
-      if (coins <= 0 && picks.length >= Math.ceil(teamSize * 0.7)) break;
-    }
-
-    if (!picks.length) {
-      const fallback = randomItem(UNIT_CATALOG.filter((u) => u.tier === 1));
-      picks.push({ baseId: fallback.id, classType: fallback.classType, tier: fallback.tier, star: 1 });
-    }
-
-    const frontSlots = [
-      { row: 2, col: 5 }, { row: 1, col: 5 }, { row: 3, col: 5 }, { row: 2, col: 6 }, { row: 0, col: 5 }, { row: 4, col: 5 },
-      { row: 1, col: 6 }, { row: 3, col: 6 }, { row: 2, col: 7 }, { row: 0, col: 6 }, { row: 4, col: 6 }, { row: 1, col: 7 }
-    ];
-    const backSlots = [
-      { row: 2, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 2, col: 8 }, { row: 0, col: 9 }, { row: 4, col: 9 },
-      { row: 1, col: 8 }, { row: 3, col: 8 }, { row: 0, col: 8 }, { row: 4, col: 8 }, { row: 2, col: 7 }, { row: 1, col: 7 }
-    ];
-    const assassinSlots = [
-      { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 0, col: 8 }, { row: 4, col: 8 }
-    ];
-    const used = new Set();
-    const takeSlot = (list) => {
-      for (let i = 0; i < list.length; i += 1) {
-        const key = `${list[i].row}:${list[i].col}`;
-        if (used.has(key)) continue;
-        used.add(key);
-        return list[i];
-      }
-      return null;
-    };
-
-    const units = [];
-    const ordered = [
-      ...picks.filter((p) => p.classType === "TANKER" || p.classType === "FIGHTER"),
-      ...picks.filter((p) => p.classType === "SUPPORT" || p.classType === "MAGE" || p.classType === "ARCHER"),
-      ...picks.filter((p) => p.classType === "ASSASSIN")
-    ];
-    ordered.forEach((pick) => {
-      let slot = null;
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") {
-        slot = takeSlot(frontSlots) ?? takeSlot(backSlots);
-      } else if (pick.classType === "ASSASSIN") {
-        slot = takeSlot(assassinSlots) ?? takeSlot(backSlots) ?? takeSlot(frontSlots);
-      } else {
-        slot = takeSlot(backSlots) ?? takeSlot(frontSlots);
-      }
-      if (!slot) return;
-      units.push({ baseId: pick.baseId, star: pick.star, row: slot.row, col: slot.col });
-    });
+    
+    // Use AISystem to generate enemy team
+    const units = generateEnemyTeam(this.player.round, budget, this.aiMode, sandbox);
 
     return { budget, units };
   }
@@ -6113,52 +5965,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getAI() {
-    return AI_SETTINGS[this.aiMode];
-  }
-
-  computeEnemyTeamSize(ai, estimateLevel, sandbox = false) {
-    const base = getDeployCapByLevel(estimateLevel);
-    const flatBonus = ai?.teamSizeBonus ?? 0;
-    const growthEvery = Math.max(1, ai?.teamGrowthEvery ?? 4);
-    const growthCap = Math.max(0, ai?.teamGrowthCap ?? 2);
-    const roundGrowth = clamp(Math.floor((this.player.round - 1) / growthEvery), 0, growthCap);
-    const sandboxPenalty = sandbox ? 1 : 0;
-    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 15);
-  }
-
-  getAiRoleProfile(mode) {
-    if (mode === "EASY") {
-      return {
-        minFrontRatio: 0.55,
-        nonFrontBias: 0.18,
-        weights: { TANKER: 0.36, FIGHTER: 0.28, ARCHER: 0.14, SUPPORT: 0.1, MAGE: 0.07, ASSASSIN: 0.05 }
-      };
-    }
-    if (mode === "HARD") {
-      return {
-        minFrontRatio: 0.34,
-        nonFrontBias: 0.45,
-        weights: { TANKER: 0.19, FIGHTER: 0.19, ARCHER: 0.18, SUPPORT: 0.15, MAGE: 0.16, ASSASSIN: 0.13 }
-      };
-    }
-    return {
-      minFrontRatio: 0.42,
-      nonFrontBias: 0.32,
-      weights: { TANKER: 0.24, FIGHTER: 0.24, ARCHER: 0.17, SUPPORT: 0.13, MAGE: 0.13, ASSASSIN: 0.09 }
-    };
-  }
-
-  pickClassByWeights(weights) {
-    const entries = Object.entries(weights ?? {}).filter(([, weight]) => Number.isFinite(weight) && weight > 0);
-    if (!entries.length) return "FIGHTER";
-    const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
-    let needle = Math.random() * total;
-    for (let i = 0; i < entries.length; i += 1) {
-      const [classType, weight] = entries[i];
-      needle -= weight;
-      if (needle <= 0) return classType;
-    }
-    return entries[entries.length - 1][0];
+    return getAISettings(this.aiMode);
   }
 
   computeSynergyCounts(units, side) {
