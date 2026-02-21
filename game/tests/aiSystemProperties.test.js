@@ -469,8 +469,11 @@ describe('Property 35: AI Strength Increases with Rounds', () => {
         fc.integer({ min: 20, max: 30 }),
         difficultyLevel(),
         (earlyRound, lateRound, difficulty) => {
-          const earlyTeam = generateEnemyTeam(earlyRound, 100, difficulty, false);
-          const lateTeam = generateEnemyTeam(lateRound, 100, difficulty, false);
+          // Let generateEnemyTeam use its actual budget calculation
+          // Budget is calculated as: Math.round((8 + round * 2.6) * modeFactor)
+          // Pass 0 as budget parameter (it's not used in the actual implementation)
+          const earlyTeam = generateEnemyTeam(earlyRound, 0, difficulty, false);
+          const lateTeam = generateEnemyTeam(lateRound, 0, difficulty, false);
           
           // Late round teams should have more higher-star units
           const earlyHighStar = earlyTeam.filter(u => u.star >= 2).length;

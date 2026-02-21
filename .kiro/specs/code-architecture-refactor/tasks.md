@@ -362,20 +362,20 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Property: Damage is always non-negative
       - _Requirements: 11.2_
     
-    - [-] 3.6.9 Verify and commit CombatSystem extraction
+    - [x] 3.6.9 Verify and commit CombatSystem extraction
       - Run full test suite
       - Verify all tests pass
       - Manual test combat in game
       - Commit: "Extract CombatSystem from CombatScene"
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
-- [~] 4. Checkpoint - Systems extraction complete
+- [x] 4. Checkpoint - Systems extraction complete
   - Ensure all tests pass, ask the user if questions arise.
 
 
 - [ ] 5. Phase 3: Refactor Scenes (1-2 weeks)
   - [ ] 5.1 Refactor PlanningScene (4-5 days)
-    - [~] 5.1.1 Remove shop logic from PlanningScene
+    - [x] 5.1.1 Remove shop logic from PlanningScene
       - Remove refreshShop implementation (use ShopSystem)
       - Remove buyUnit implementation (use ShopSystem)
       - Remove sellUnit implementation (use ShopSystem)
@@ -383,7 +383,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Keep only UI orchestration and event handlers
       - _Requirements: 8.1, 8.2, 8.5_
     
-    - [~] 5.1.2 Remove board logic from PlanningScene
+    - [x] 5.1.2 Remove board logic from PlanningScene
       - Remove placeUnit implementation (use BoardSystem)
       - Remove moveUnit implementation (use BoardSystem)
       - Remove removeUnit implementation (use BoardSystem)
@@ -391,19 +391,19 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Keep only drag-and-drop UI handling
       - _Requirements: 8.1, 8.2, 8.5_
     
-    - [~] 5.1.3 Remove upgrade logic from PlanningScene
+    - [x] 5.1.3 Remove upgrade logic from PlanningScene
       - Remove auto-upgrade detection (use UpgradeSystem)
       - Remove unit combination logic (use UpgradeSystem)
       - Remove equipment transfer logic (use UpgradeSystem)
       - Keep only upgrade animation and UI updates
       - _Requirements: 8.1, 8.2, 8.5_
     
-    - [~] 5.1.4 Remove synergy logic from PlanningScene
+    - [x] 5.1.4 Remove synergy logic from PlanningScene
       - Remove synergy calculation (use SynergySystem)
       - Keep only synergy display UI
       - _Requirements: 8.1, 8.2, 8.5_
     
-    - [~] 5.1.5 Refactor PlanningScene to orchestration only
+    - [x] 5.1.5 Refactor PlanningScene to orchestration only
       - Scene contains only Phaser lifecycle methods (create, update, init, shutdown)
       - Scene contains only rendering and animation code
       - Scene contains only user input handling
@@ -411,14 +411,14 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles success/error results from systems
       - _Requirements: 8.2, 8.3, 8.4, 8.6, 8.7_
     
-    - [~] 5.1.6 Write integration tests for PlanningScene
+    - [x] 5.1.6 Write integration tests for PlanningScene
       - Test full planning flow: buy units → deploy → upgrade → start combat
       - Test shop operations through scene
       - Test board operations through scene
       - Test error handling (insufficient gold, invalid placement)
       - _Requirements: 11.4, 11.5_
     
-    - [~] 5.1.7 Verify and commit PlanningScene refactor
+    - [-] 5.1.7 Verify and commit PlanningScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test planning phase in game
@@ -500,7 +500,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Commit: "Refactor MainMenuScene to use systems"
       - _Requirements: 8.8, 14.1, 14.2, 14.3_
 
-- [ ] 6. Checkpoint - Scenes refactored
+- [~] 6. Checkpoint - Scenes refactored
   - Ensure all tests pass, ask the user if questions arise.
 
 
@@ -626,7 +626,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Commit: "Add game mode support layer"
       - _Requirements: 14.1, 14.2, 14.3_
 
-- [ ] 8. Checkpoint - Game mode support complete
+- [~] 8. Checkpoint - Game mode support complete
   - Ensure all tests pass, ask the user if questions arise.
 
 
@@ -756,7 +756,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test all systems working together
       - _Requirements: 11.4, 11.5_
 
-- [ ] 10. Checkpoint - Documentation and cleanup complete
+- [~] 10. Checkpoint - Documentation and cleanup complete
   - Ensure all tests pass, ask the user if questions arise.
 
 
@@ -876,7 +876,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Delete refactor branch
       - _Requirements: 14.8_
 
-- [ ] 12. Final Checkpoint - Refactor complete
+- [~] 12. Final Checkpoint - Refactor complete
   - Ensure all tests pass, refactor merged to main.
 
 

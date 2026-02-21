@@ -442,6 +442,26 @@ export function getActiveSynergies(units, side = "LEFT", options = {}) {
 }
 
 /**
+ * Gets the class synergy definition for a given class type
+ * 
+ * @param {string} classType - Class type identifier
+ * @returns {Object|null} Synergy definition or null if not found
+ */
+export function getClassSynergyDef(classType) {
+  return CLASS_SYNERGY[classType] || null;
+}
+
+/**
+ * Gets the tribe synergy definition for a given tribe
+ * 
+ * @param {string} tribe - Tribe identifier
+ * @returns {Object|null} Synergy definition or null if not found
+ */
+export function getTribeSynergyDef(tribe) {
+  return TRIBE_SYNERGY[tribe] || null;
+}
+
+/**
  * SynergySystem - Main export object with all synergy operations
  */
 export const SynergySystem = {
@@ -458,7 +478,12 @@ export const SynergySystem = {
   
   // UI/Display helpers
   getSynergyDescription,
-  getSynergyIcon
+  getSynergyIcon,
+  formatBonusSet,
+  
+  // Synergy definition getters
+  getClassSynergyDef,
+  getTribeSynergyDef
 };
 
 export default SynergySystem;

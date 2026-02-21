@@ -2,13 +2,12 @@ import Phaser from "phaser";
 import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
-import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
 import { BoardSystem } from "../systems/BoardSystem.js";
 import { UpgradeSystem } from "../systems/UpgradeSystem.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
 import { ShopSystem } from "../systems/ShopSystem.js";
-import { generateEnemyTeam, computeEnemyTeamSize, getAISettings } from "../systems/AISystem.js";
+import { generateEnemyTeam, computeEnemyTeamSize, AI_SETTINGS, getAISettings } from "../systems/AISystem.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -3146,7 +3145,7 @@ export class PlanningScene extends Phaser.Scene {
     }
     if (this.overlaySprites.length) return;
 
-    const occupant = this.player.board[row][col];
+    const occupant = BoardSystem.getUnitAt(this.player.board, row, col);
     const selected = this.selectedBenchIndex != null ? this.player.bench[this.selectedBenchIndex] : null;
     if (this.selectedInventoryItemId) {
       if (!occupant) {
@@ -3158,30 +3157,31 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (selected) {
-      // Check for duplicate unit type on board
-      if (this.checkDuplicateUnit(selected.baseId, row, col)) {
-        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
-        return;
-      }
+      // Use BoardSystem to place bench unit on board
+      const result = BoardSystem.placeBenchUnitOnBoard(
+        this.player.board,
+        this.player.bench,
+        this.selectedBenchIndex,
+        row,
+        col,
+        this.getDeployCap(),
+        true // allowSwap
+      );
 
-      if (!occupant) {
-        if (this.getDeployCount() >= this.getDeployCap()) {
+      if (!result.success) {
+        // Map BoardSystem errors to user-friendly messages
+        if (result.error === 'Deploy limit reached') {
           this.addLog(
             `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
           );
-          return;
+        } else if (result.error === 'Duplicate unit on board') {
+          this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        } else if (result.error) {
+          this.addLog(result.error);
         }
-        this.player.board[row][col] = selected;
-        this.player.bench.splice(this.selectedBenchIndex, 1);
-        this.selectedBenchIndex = null;
-        this.tryAutoMerge();
-        this.refreshPlanningUi();
-        this.persistProgress();
         return;
       }
 
-      this.player.board[row][col] = selected;
-      this.player.bench[this.selectedBenchIndex] = occupant;
       this.selectedBenchIndex = null;
       this.tryAutoMerge();
       this.refreshPlanningUi();
@@ -3190,12 +3190,26 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (occupant) {
-      if (this.player.bench.length >= this.getBenchCap()) {
-        this.addLog("Hàng dự bị đã đầy.");
+      // Use BoardSystem to move board unit to bench
+      const result = BoardSystem.moveBoardUnitToBench(
+        this.player.board,
+        this.player.bench,
+        row,
+        col,
+        this.player.bench.length, // Add to end of bench
+        this.getBenchCap(),
+        false // Don't swap, just add to bench
+      );
+
+      if (!result.success) {
+        if (result.error === 'Bench is full') {
+          this.addLog("Hàng dự bị đã đầy.");
+        } else if (result.error) {
+          this.addLog(result.error);
+        }
         return;
       }
-      this.player.board[row][col] = null;
-      this.player.bench.push(occupant);
+
       this.refreshPlanningUi();
       this.persistProgress();
     }
@@ -3351,7 +3365,7 @@ export class PlanningScene extends Phaser.Scene {
     // Check board for unit
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player?.board?.[row]?.[col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!unit || unit.uid !== uid) continue;
         
         // Use ShopSystem to sell unit
@@ -3359,7 +3373,8 @@ export class PlanningScene extends Phaser.Scene {
         
         if (result.success) {
           this.player = result.player;
-          this.player.board[row][col] = null;
+          // Use BoardSystem to remove unit from board
+          BoardSystem.removeUnit(this.player.board, row, col);
           this.selectedBenchIndex = null;
           this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${result.sellValue} vàng.`);
           this.refreshPlanningUi();
@@ -3415,11 +3430,8 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getEquipmentNameKey(itemId) {
-    const item = ITEM_BY_ID[itemId];
-    if (!item || item.kind !== "equipment") return null;
-    const byName = String(item.name ?? "").trim().toLowerCase();
-    if (byName) return byName;
-    return String(item.id ?? itemId).trim().toLowerCase();
+    // Delegate to UpgradeSystem for equipment name key logic
+    return UpgradeSystem.getEquipmentNameKey(itemId, ITEM_BY_ID);
   }
 
   normalizeEquipIds(equips) {
@@ -3775,9 +3787,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   refreshShop(forceRoll = false) {
+    // Only generate new offers if shop is not locked (or forceRoll is true)
     if (this.player.shopLocked && !forceRoll) return;
     
-    // Use ShopSystem to generate shop offers
+    // Use ShopSystem to generate shop offers (no cost, just generation)
     const offers = ShopSystem.generateShopOffers(this.player.level);
     this.player.shop = offers;
   }
@@ -4024,7 +4037,7 @@ export class PlanningScene extends Phaser.Scene {
   spawnPlayerCombatUnits() {
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const owned = this.player.board[row][col];
+        const owned = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!owned) continue;
         const unit = this.createCombatUnit(owned, "LEFT", row, col);
         if (unit) this.combatUnits.push(unit);
@@ -4573,7 +4586,7 @@ export class PlanningScene extends Phaser.Scene {
     if (this.player.board) {
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < PLAYER_COLS; c++) {
-          const u = this.player.board[r][c];
+          const u = BoardSystem.getUnitAt(this.player.board, r, c);
           if (u && u.baseId === baseId) count++;
         }
       }
@@ -4615,7 +4628,7 @@ export class PlanningScene extends Phaser.Scene {
     if (hit) {
       const r = hit.row;
       const c = hit.col;
-      const unit = this.player.board[r][c];
+      const unit = BoardSystem.getUnitAt(this.player.board, r, c);
       if (unit) {
         this.showContextMenu(unit, "BOARD", r, c, pointer.x, pointer.y);
         return;
@@ -5141,7 +5154,7 @@ export class PlanningScene extends Phaser.Scene {
     const startingShield = Number.isFinite(this.player?.startingShield) ? this.player.startingShield : 0;
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!unit) continue;
         const point = this.gridToScreen(col, row);
         const roleTheme = this.getRoleTheme(unit.base.classType);
@@ -5229,7 +5242,7 @@ export class PlanningScene extends Phaser.Scene {
     const deployed = [];
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (unit) deployed.push(unit);
       }
     }
@@ -5452,8 +5465,8 @@ export class PlanningScene extends Phaser.Scene {
     if (!base) return { title: "Không rõ", body: "Không có dữ liệu linh thú." };
     const visual = getUnitVisual(baseId, base.classType);
     const skill = SKILL_LIBRARY[base.skillId];
-    const classDef = CLASS_SYNERGY[base.classType];
-    const tribeDef = TRIBE_SYNERGY[base.tribe];
+    const classDef = SynergySystem.getClassSynergyDef(base.classType);
+    const tribeDef = SynergySystem.getTribeSynergyDef(base.tribe);
     const classMarks = classDef ? classDef.thresholds.join("/") : "-";
     const tribeMarks = tribeDef ? tribeDef.thresholds.join("/") : "-";
     const statScale = star === 1 ? 1 : star === 2 ? 1.6 : 2.5;
@@ -5544,20 +5557,20 @@ export class PlanningScene extends Phaser.Scene {
     Object.entries(summary.classCounts)
       .sort((a, b) => b[1] - a[1])
       .forEach(([key, count]) => {
-        const def = CLASS_SYNERGY[key];
+        const def = SynergySystem.getClassSynergyDef(key);
         if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
+        const tier = SynergySystem.getSynergyTier(count, def.thresholds);
+        const activeBonus = tier >= 0 ? SynergySystem.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
         lines.push(`Nghề ${getClassLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
       });
 
     Object.entries(summary.tribeCounts)
       .sort((a, b) => b[1] - a[1])
       .forEach(([key, count]) => {
-        const def = TRIBE_SYNERGY[key];
+        const def = SynergySystem.getTribeSynergyDef(key);
         if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
+        const tier = SynergySystem.getSynergyTier(count, def.thresholds);
+        const activeBonus = tier >= 0 ? SynergySystem.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
         lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
       });
 
@@ -5585,10 +5598,8 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   formatBonusSet(bonus) {
-    if (!bonus) return "chưa có hiệu ứng";
-    return Object.entries(bonus)
-      .map(([k, v]) => `${k}:${typeof v === "number" && v < 1 ? `${Math.round(v * 100)}%` : v}`)
-      .join(", ");
+    // Delegate to SynergySystem
+    return SynergySystem.formatBonusSet(bonus);
   }
 
   inferBasicActionPattern(classType, range) {

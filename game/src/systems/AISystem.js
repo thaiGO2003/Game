@@ -16,7 +16,7 @@ import { getDeployCapByLevel } from '../core/gameUtils.js';
 /**
  * AI difficulty settings configuration
  */
-const AI_SETTINGS = {
+export const AI_SETTINGS = {
   EASY: {
     label: "Dễ",
     hpMult: 0.84,
@@ -66,6 +66,15 @@ const AI_SETTINGS = {
     star3Bonus: 0.01
   }
 };
+
+/**
+ * Get AI settings for a specific difficulty
+ * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
+ * @returns {Object} AI settings object
+ */
+export function getAISettings(difficulty = 'MEDIUM') {
+  return AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
+}
 
 /**
  * Role composition profiles for different difficulty levels
@@ -585,16 +594,6 @@ function assignPositions(picks) {
   });
 
   return units;
-}
-
-/**
- * Get AI settings for a specific difficulty
- * 
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @returns {Object} AI settings object
- */
-export function getAISettings(difficulty = 'MEDIUM') {
-  return AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
 }
 
 // Export AI_SETTINGS for backward compatibility
