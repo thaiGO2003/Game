@@ -116,12 +116,51 @@ export function starMultiplier(star) {
 }
 
 const BASE_EVASION_BY_CLASS = {
-  ASSASSIN: 0.20, ARCHER: 0.12, FIGHTER: 0.08,
-  MAGE: 0.05, SUPPORT: 0.05, TANKER: 0.02
+  TANKER: 0.05,
+  FIGHTER: 0.08,
+  ASSASSIN: 0.15,
+  ARCHER: 0.10,
+  MAGE: 0.05,
+  SUPPORT: 0.07
 };
 
 export function getBaseEvasion(classType) {
   return BASE_EVASION_BY_CLASS[classType] ?? 0.05;
+}
+
+export function getEffectiveEvasion(unit) {
+  const classType = unit?.classType ?? unit?.base?.classType;
+  const baseEvasion = getBaseEvasion(classType);
+  let evasion = Number.isFinite(unit?.mods?.evadePct) ? unit.mods.evadePct : baseEvasion;
+  const statuses = unit?.statuses ?? {};
+
+  // Apply buffs
+  if ((statuses.evadeBuffTurns ?? 0) > 0) {
+    evasion += statuses.evadeBuffValue ?? 0;
+  }
+
+  // Apply debuffs
+  if ((statuses.evadeDebuffTurns ?? 0) > 0) {
+    evasion -= statuses.evadeDebuffValue ?? 0;
+  }
+
+  // Clamp to 0-75% range
+  return Math.max(0, Math.min(0.75, evasion));
+}
+
+/**
+ * Calculate hit chance based on attacker accuracy and target evasion
+ * @param {Object} attacker - Attacking unit (unused for now, but available for future accuracy modifiers)
+ * @param {Object} defender - Defending unit
+ * @returns {number} Hit chance as a decimal (0.1 to 1.0)
+ */
+export function calculateHitChance(attacker, defender) {
+  const baseAccuracy = 0.95; // 95% base hit chance
+  const defenderEvasion = getEffectiveEvasion(defender);
+  const hitChance = baseAccuracy - defenderEvasion;
+  
+  // Ensure minimum 10% hit chance
+  return Math.max(0.1, hitChance);
 }
 
 export function starEffectChanceMultiplier(star) {
@@ -138,6 +177,15 @@ export function starTargetBonus(star) {
 
 export function starAreaBonus(star) {
   return Math.max(0, star - 1);
+}
+
+export function getWaspMaxTargets(unit, skill) {
+  // For wasp_triple_strike skill, maxHits scales with star level
+  if (skill.id === "wasp_triple_strike") {
+    return Math.max(1, Math.min(3, unit.star ?? 1));
+  }
+  // For other skills, return the skill's default maxHits
+  return skill.maxHits;
 }
 
 export function scaledBaseStats(baseStats, star, classType) {

@@ -1,0 +1,1442 @@
+
+### 1. Nhóm skill: rhino_counter
+
+**Số unit sử dụng**: 6
+
+**Chi tiết**:
+
+**Đấu sĩ**:
+- 🦏 Tê Giác Địa Chấn (Bậc 2 - Nham)
+  - Skill: Phản Đòn Tê Giác - Tê Giác Địa Chấn
+
+**Đỡ đòn**:
+- 🦡 Lửng Đá (Bậc 1 - Nham)
+  - Skill: Phản Đòn Tê Giác - Lửng Đá
+- 🐌 Ốc Sên Pháo Đài (Bậc 2 - Thủy)
+  - Skill: Phản Đòn Tê Giác - Ốc Sên Pháo Đài
+- 🦭 Hải Mã Băng (Bậc 3 - Thủy)
+  - Skill: Phản Đòn Tê Giác - Hải Mã Băng
+- 🦬 Bò Tây Tạng (Bậc 4 - Phong)
+  - Skill: Phản Đòn Tê Giác - Bò Tây Tạng
+- 🐙 Mực Khổng Lồ (Bậc 5 - Thủy)
+  - Skill: Phản Đòn Tê Giác - Mực Khổng Lồ
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Đấu sĩ, Đỡ đòn), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦏 Tê Giác Địa Chấn** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦡 Lửng Đá** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐌 Ốc Sên Pháo Đài** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦭 Hải Mã Băng** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦬 Bò Tây Tạng** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐙 Mực Khổng Lồ** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 2. Nhóm skill: dual_heal
+
+**Số unit sử dụng**: 6
+
+**Chi tiết**:
+
+**Hỗ trợ**:
+- 🫎 Nai Thần Ca (Bậc 1 - Linh)
+  - Skill: Khúc Ca Tái Sinh - Nai Thần Ca
+- 🐦‍🔥 Phượng Hoàng Lửa (Bậc 5 - Hỏa)
+  - Skill: Lửa Phượng Hoàng - Phượng Hoàng Lửa
+- 🧚 Tiên Rừng (Bậc 2 - Mộc)
+  - Skill: Khúc Ca Tái Sinh - Tiên Rừng
+- 🌟 Hồn Ma Sáng (Bậc 3 - Linh)
+  - Skill: Khúc Ca Tái Sinh - Hồn Ma Sáng
+- 👼 Thiên Thần Hộ Vệ (Bậc 4 - Linh)
+  - Skill: Lửa Phượng Hoàng - Thiên Thần Hộ Vệ
+- 😇 Seraphim Ánh Sáng (Bậc 5 - Linh)
+  - Skill: Khúc Ca Tái Sinh - Seraphim Ánh Sáng
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Hỗ trợ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🫎 Nai Thần Ca** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐦‍🔥 Phượng Hoàng Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🧚 Tiên Rừng** (Mộc): Thêm hiệu ứng **Hút máu**
+  - Hút 15% sát thương thành máu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Hút máu: ⭐ 15% → ⭐⭐ 25% → ⭐⭐⭐ 30%
+- **🌟 Hồn Ma Sáng** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **👼 Thiên Thần Hộ Vệ** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **😇 Seraphim Ánh Sáng** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 3. Nhóm skill: cross_5
+
+**Số unit sử dụng**: 5
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🦅 Đại Bàng Xạ Thủ (Bậc 2 - Phong)
+  - Skill: Tên Thập Tự - Đại Bàng Xạ Thủ
+- 🐟 Cắt Lao (Bậc 1 - Hỏa)
+  - Skill: Tên Thập Tự - Cắt Lao
+- 🦤 Bồ Nông Bom (Bậc 3 - Thủy)
+  - Skill: Tên Thập Tự - Bồ Nông Bom
+- 🦆 Hải Âu Gió (Bậc 4 - Phong)
+  - Skill: Tên Thập Tự - Hải Âu Gió
+- 🐖 Đại Bàng Huyền Thoại (Bậc 5 - Linh)
+  - Skill: Tên Thập Tự - Đại Bàng Huyền Thoại
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Xạ thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦅 Đại Bàng Xạ Thủ** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐟 Cắt Lao** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🦤 Bồ Nông Bom** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦆 Hải Âu Gió** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐖 Đại Bàng Huyền Thoại** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 4. Nhóm skill: row_multi
+
+**Số unit sử dụng**: 5
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🐒 Khỉ Lao Cành (Bậc 1 - Phong)
+  - Skill: Xuyên Hàng - Khỉ Lao Cành
+- 🐋 Diệc Xuyên (Bậc 2 - Thủy)
+  - Skill: Xuyên Hàng - Diệc Xuyên
+- 🦩 Cò Bắn Tỉa (Bậc 3 - Thủy)
+  - Skill: Xuyên Hàng - Cò Bắn Tỉa
+- 🐬 Diều Hâu Khổng Lồ (Bậc 4 - Phong)
+  - Skill: Xuyên Hàng - Diều Hâu Khổng Lồ
+- 🌩️ Chim Sấm Sét (Bậc 5 - Phong)
+  - Skill: Xuyên Hàng - Chim Sấm Sét
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Xạ thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐒 Khỉ Lao Cành** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐋 Diệc Xuyên** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦩 Cò Bắn Tỉa** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🐬 Diều Hâu Khổng Lồ** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🌩️ Chim Sấm Sét** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 5. Nhóm skill: global_poison_team
+
+**Số unit sử dụng**: 5
+
+**Chi tiết**:
+
+**Pháp sư**:
+- 👾 Bọ Dịch Hạch (Bậc 4 - Trùng)
+  - Skill: Độc Tố Lan Tràn - Bọ Dịch Hạch
+- 🐉 Rồng Lửa (Bậc 5 - Hỏa)
+  - Skill: Hỏa Ngục Rồng - Rồng Lửa
+- 🐫 Kỳ Nhông Lửa (Bậc 1 - Hỏa)
+  - Skill: Hỏa Ngục Rồng - Kỳ Nhông Lửa
+- 💡 Đom Đóm Sáng (Bậc 3 - Hỏa)
+  - Skill: Hỏa Ngục Rồng - Đom Đóm Sáng
+
+**Đấu sĩ**:
+- 🐅 Chimera Lửa (Bậc 5 - Hỏa)
+  - Skill: Hỏa Ngục Rồng - Chimera Lửa
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Pháp sư, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **👾 Bọ Dịch Hạch** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐉 Rồng Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🐅 Chimera Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🐫 Kỳ Nhông Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **💡 Đom Đóm Sáng** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+
+---
+
+### 6. Nhóm skill: turtle_protection
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🐢 Rùa Đầm Lầy (Bậc 3 - Thủy)
+  - Skill: Bảo Vệ Rùa Thần - Rùa Đầm Lầy
+- 🦀 Cua Giáp (Bậc 2 - Thủy)
+  - Skill: Bảo Vệ Rùa Thần - Cua Giáp
+- 🦣 Voi Ma Mút (Bậc 4 - Nham)
+  - Skill: Bảo Vệ Rùa Thần - Voi Ma Mút
+- 🐪 Hydra Đầm Lầy (Bậc 5 - Thủy)
+  - Skill: Bảo Vệ Rùa Thần - Hydra Đầm Lầy
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đỡ đòn, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐢 Rùa Đầm Lầy** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦀 Cua Giáp** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦣 Voi Ma Mút** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐪 Hydra Đầm Lầy** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 7. Nhóm skill: ally_row_def_buff
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🐃 Trâu Sương Mù (Bậc 4 - Phong)
+  - Skill: Khí Tức Dày - Trâu Sương Mù
+- 🐜 Kiến Hộ Vệ (Bậc 1 - Trùng)
+  - Skill: Kiến Trận Đồ - Kiến Hộ Vệ
+- 🐂 Bò Núi (Bậc 2 - Nham)
+  - Skill: Khí Tức Dày - Bò Núi
+- 🗿 Golem Đá (Bậc 3 - Nham)
+  - Skill: Kiến Trận Đồ - Golem Đá
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đỡ đòn, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐃 Trâu Sương Mù** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐜 Kiến Hộ Vệ** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐂 Bò Núi** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🗿 Golem Đá** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 8. Nhóm skill: single_burst
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🦃 Kền Kền Ăn Xác (Bậc 4 - Phong)
+  - Skill: Tiệc Xác Thối - Kền Kền Ăn Xác
+- 🦨 Chồn Hương Bóng (Bậc 3 - Dạ)
+  - Skill: Tất Sát Bóng Tối - Chồn Hương Bóng
+- 🦪 Quạ Tử Thần (Bậc 5 - Dạ)
+  - Skill: Tất Sát Bóng Tối - Quạ Tử Thần
+- 💀 Tử Thần Hư Không (Bậc 5 - Linh)
+  - Skill: Tiệc Xác Thối - Tử Thần Hư Không
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦃 Kền Kền Ăn Xác** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦨 Chồn Hương Bóng** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦪 Quạ Tử Thần** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **💀 Tử Thần Hư Không** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 9. Nhóm skill: single_armor_break
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🏹 Ong Lửa (Bậc 4 - Hỏa)
+  - Skill: Phá Giáp Tiễn - Ong Lửa
+- 🐦 Chim Mỏ To (Bậc 2 - Phong)
+  - Skill: Phá Giáp Tiễn - Chim Mỏ To
+- 🐑 Hồng Hạc Bắn (Bậc 3 - Hỏa)
+  - Skill: Phá Giáp Tiễn - Hồng Hạc Bắn
+
+**Đấu sĩ**:
+- 🦖 Bạo Chúa T-Rex (Bậc 5 - Nham)
+  - Skill: Hàm Bạo Chúa - Bạo Chúa T-Rex
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Xạ thủ, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🏹 Ong Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🦖 Bạo Chúa T-Rex** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐦 Chim Mỏ To** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐑 Hồng Hạc Bắn** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+
+---
+
+### 10. Nhóm skill: column_freeze
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Pháp sư**:
+- 🧊 Chuồn Chuồn Băng (Bậc 2 - Thủy)
+  - Skill: Cột Băng Hệ - Chuồn Chuồn Băng
+- 🪼 Sứa Điện (Bậc 1 - Thủy)
+  - Skill: Cột Băng Hệ - Sứa Điện
+- 🦞 Ong Phép (Bậc 4 - Linh)
+  - Skill: Cột Băng Hệ - Ong Phép
+- ☠️ Lich Bất Tử (Bậc 5 - Dạ)
+  - Skill: Cột Băng Hệ - Lich Bất Tử
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Pháp sư, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🧊 Chuồn Chuồn Băng** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🪼 Sứa Điện** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦞 Ong Phép** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **☠️ Lich Bất Tử** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 11. Nhóm skill: shield_cleanse
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Hỗ trợ**:
+- 🪰 Bướm Kính (Bậc 2 - Linh)
+  - Skill: Kính Mộng - Bướm Kính
+- 🦢 Thiên Nga Trắng (Bậc 4 - Thủy)
+  - Skill: Khiên Thiên Nga - Thiên Nga Trắng
+- 🦓 Hạc Phước (Bậc 1 - Linh)
+  - Skill: Kính Mộng - Hạc Phước
+- 🧜 Tiên Nước (Bậc 3 - Thủy)
+  - Skill: Khiên Thiên Nga - Tiên Nước
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Hỗ trợ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🪰 Bướm Kính** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦢 Thiên Nga Trắng** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦓 Hạc Phước** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🧜 Tiên Nước** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 12. Nhóm skill: column_bless
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Hỗ trợ**:
+- 🦄 Kỳ Lân Gió (Bậc 4 - Linh)
+  - Skill: Lối Gió - Kỳ Lân Gió
+- ✨ Đom Đóm Chữa (Bậc 1 - Linh)
+  - Skill: Lối Gió - Đom Đóm Chữa
+- 🐎 Kỳ Lân Sáng (Bậc 2 - Linh)
+  - Skill: Lối Gió - Kỳ Lân Sáng
+- 🧚‍♀️ Yêu Tinh Gió (Bậc 3 - Phong)
+  - Skill: Lối Gió - Yêu Tinh Gió
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Hỗ trợ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦄 Kỳ Lân Gió** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **✨ Đom Đóm Chữa** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐎 Kỳ Lân Sáng** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🧚‍♀️ Yêu Tinh Gió** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 13. Nhóm skill: random_multi
+
+**Số unit sử dụng**: 4
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🐝 Ong Bắp Cày (Bậc 1 - Trùng)
+  - Skill: Bão Kim Ong Bắp Cày - Ong Bắp Cày
+- 🪽 Garuda Thần (Bậc 5 - Linh)
+  - Skill: Bão Kim Ong Bắp Cày - Garuda Thần
+
+**Pháp sư**:
+- 🦑 Kraken Hư Không (Bậc 5 - Thủy)
+  - Skill: Xúc Tu Hư Không - Kraken Hư Không
+- 🦐 Mực Mực (Bậc 2 - Thủy)
+  - Skill: Xúc Tu Hư Không - Mực Mực
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Xạ thủ, Pháp sư), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐝 Ong Bắp Cày** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦑 Kraken Hư Không** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🪽 Garuda Thần** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦐 Mực Mực** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 14. Nhóm skill: damage_shield_taunt
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🐻 Gấu Cổ Thụ (Bậc 1 - Nham)
+  - Skill: Mai Gai Cổ Mộc - Gấu Cổ Thụ
+
+**Đấu sĩ**:
+- 🐏 Cừu Núi Húc (Bậc 1 - Nham)
+  - Skill: Mai Gai Cổ Mộc - Cừu Núi Húc
+- 🐲 Rồng Đất (Bậc 5 - Nham)
+  - Skill: Mai Gai Cổ Mộc - Rồng Đất
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Đỡ đòn, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐻 Gấu Cổ Thụ** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐏 Cừu Núi Húc** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐲 Rồng Đất** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 15. Nhóm skill: single_delayed_echo
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🦟 Châu Chấu Gió (Bậc 4 - Phong)
+  - Skill: Ảnh Trảm - Châu Chấu Gió
+- 🐿️ Chồn Nhanh (Bậc 1 - Phong)
+  - Skill: Ảnh Trảm - Chồn Nhanh
+- 🦒 Tắc Kè Ẩn (Bậc 2 - Mộc)
+  - Skill: Ảnh Trảm - Tắc Kè Ẩn
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦟 Châu Chấu Gió** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐿️ Chồn Nhanh** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦒 Tắc Kè Ẩn** (Mộc): Thêm hiệu ứng **Hút máu**
+  - Hút 15% sát thương thành máu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Hút máu: ⭐ 15% → ⭐⭐ 25% → ⭐⭐⭐ 30%
+
+---
+
+### 16. Nhóm skill: single_sleep
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🦉 Cú Đêm (Bậc 3 - Dạ)
+  - Skill: Mũi Tên Ngủ - Cú Đêm
+- 🪶 Diều Hâu Săn (Bậc 1 - Phong)
+  - Skill: Mũi Tên Ngủ - Diều Hâu Săn
+- 🐄 Gõ Kiến Khoan (Bậc 2 - Mộc)
+  - Skill: Mũi Tên Ngủ - Gõ Kiến Khoan
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Xạ thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦉 Cú Đêm** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🪶 Diều Hâu Săn** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐄 Gõ Kiến Khoan** (Mộc): Thêm hiệu ứng **Hút máu**
+  - Hút 15% sát thương thành máu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Hút máu: ⭐ 15% → ⭐⭐ 25% → ⭐⭐⭐ 30%
+
+---
+
+### 17. Nhóm skill: aoe_circle
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Pháp sư**:
+- ❄️ Cóc Băng (Bậc 2 - Thủy)
+  - Skill: Băng Vụ Nén - Cóc Băng
+- 🦗 Kỳ Giông Lửa (Bậc 1 - Hỏa)
+  - Skill: Băng Vụ Nén - Kỳ Giông Lửa
+- 🐞 Bọ Huyền (Bậc 4 - Linh)
+  - Skill: Băng Vụ Nén - Bọ Huyền
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Pháp sư, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **❄️ Cóc Băng** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦗 Kỳ Giông Lửa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🐞 Bọ Huyền** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 18. Nhóm skill: aoe_poison
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Pháp sư**:
+- 🦠 Nhện Bào Tử (Bậc 4 - Trùng)
+  - Skill: Mưa Bào Tử - Nhện Bào Tử
+- 🐸 Cóc Độc (Bậc 1 - Trùng)
+  - Skill: Mưa Bào Tử - Cóc Độc
+- 🦋 Bướm Đêm Bụi (Bậc 3 - Dạ)
+  - Skill: Mưa Bào Tử - Bướm Đêm Bụi
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Pháp sư, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦠 Nhện Bào Tử** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐸 Cóc Độc** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦋 Bướm Đêm Bụi** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 19. Nhóm skill: team_rage
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Hỗ trợ**:
+- 🦜 Vẹt Linh Hô (Bậc 3 - Phong)
+  - Skill: Tiếng Hô Kích Nộ - Vẹt Linh Hô
+- 🕊️ Bồ Câu Hòa Bình (Bậc 1 - Linh)
+  - Skill: Tiếng Hô Kích Nộ - Bồ Câu Hòa Bình
+- 🔮 Tiên Tri Trí Tuệ (Bậc 5 - Linh)
+  - Skill: Tiếng Hô Kích Nộ - Tiên Tri Trí Tuệ
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Hỗ trợ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦜 Vẹt Linh Hô** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🕊️ Bồ Câu Hòa Bình** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🔮 Tiên Tri Trí Tuệ** (Linh): Thêm hiệu ứng **Thanh tẩy**
+  - Xóa 1 debuff khỏi bản thân sau khi tấn công
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 20. Nhóm skill: self_atk_and_assist
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🐺 Sói Thủ Lĩnh (Bậc 2 - Dạ)
+  - Skill: Tru Hào - Sói Thủ Lĩnh
+
+**Đấu sĩ**:
+- 🐆 Báo Đốm Săn (Bậc 1 - Dạ)
+  - Skill: Tru Hào - Báo Đốm Săn
+- 🐕 Linh Cẩu Bầy (Bậc 2 - Dạ)
+  - Skill: Tru Hào - Linh Cẩu Bầy
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Sát thủ, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐺 Sói Thủ Lĩnh** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐆 Báo Đốm Săn** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐕 Linh Cẩu Bầy** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 21. Nhóm skill: knockback_charge
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🦬 Bò Rừng Xung Phong (Bậc 1 - Nham)
+  - Skill: Sừng Ba Mũi - Bò Rừng Xung Phong
+
+**Đấu sĩ**:
+- 🦘 Kangaroo Đấm (Bậc 2 - Phong)
+  - Skill: Lao Lợn Rừng - Kangaroo Đấm
+- 🦫 Chồn Sói Cuồng (Bậc 3 - Hỏa)
+  - Skill: Lao Lợn Rừng - Chồn Sói Cuồng
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Đỡ đòn, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦬 Bò Rừng Xung Phong** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦘 Kangaroo Đấm** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦫 Chồn Sói Cuồng** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+
+---
+
+### 22. Nhóm skill: single_strong_poison
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🐍 Rắn Hổ Mang (Bậc 4 - Trùng)
+  - Skill: Nọc Độc Tử Thần - Rắn Hổ Mang
+- 🕷️ Bọ Cạp Bóng (Bậc 1 - Dạ)
+  - Skill: Nọc Độc Tử Thần - Bọ Cạp Bóng
+- 🪱 Rắn Lục Tấn (Bậc 2 - Trùng)
+  - Skill: Nọc Độc Tử Thần - Rắn Lục Tấn
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐍 Rắn Hổ Mang** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🕷️ Bọ Cạp Bóng** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🪱 Rắn Lục Tấn** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 23. Nhóm skill: team_def_buff
+
+**Số unit sử dụng**: 3
+
+**Chi tiết**:
+
+**Hỗ trợ**:
+- 🦕 Rồng Đất Cổ (Bậc 5 - Nham)
+  - Skill: Phúc Lành Cổ Thụ - Rồng Đất Cổ
+- 🌳 Yêu Tinh Cây (Bậc 2 - Mộc)
+  - Skill: Phúc Lành Cổ Thụ - Yêu Tinh Cây
+
+**Đỡ đòn**:
+- ⛰️ Titan Đất (Bậc 5 - Nham)
+  - Skill: Phúc Lành Cổ Thụ - Titan Đất
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Hỗ trợ, Đỡ đòn), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦕 Rồng Đất Cổ** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **⛰️ Titan Đất** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🌳 Yêu Tinh Cây** (Mộc): Thêm hiệu ứng **Hút máu**
+  - Hút 15% sát thương thành máu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Hút máu: ⭐ 15% → ⭐⭐ 25% → ⭐⭐⭐ 30%
+
+---
+
+### 24. Nhóm skill: pangolin_reflect
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🛡️ Tê Tê Thiết Giáp (Bậc 3 - Nham)
+  - Skill: Vảy Tê Tê - Tê Tê Thiết Giáp
+- 🦔 Tatu Cuộn (Bậc 2 - Nham)
+  - Skill: Vảy Tê Tê - Tatu Cuộn
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đỡ đòn, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🛡️ Tê Tê Thiết Giáp** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦔 Tatu Cuộn** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 25. Nhóm skill: assassin_execute_rage_refund
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🐈‍⬛ Báo Hư Không (Bậc 5 - Dạ)
+  - Skill: Tất Sát Hư Không - Hoàn Nộ - Báo Hư Không
+- 🦝 Chồn Mink Im (Bậc 3 - Phong)
+  - Skill: Tất Sát Hư Không - Hoàn Nộ - Chồn Mink Im
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐈‍⬛ Báo Hư Không** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦝 Chồn Mink Im** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 26. Nhóm skill: double_hit
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🦊 Cáo Hỏa (Bậc 1 - Hỏa)
+  - Skill: Hỏa Ấn Liên Kích - Cáo Hỏa
+- 👻 Ma Bóng Tối (Bậc 5 - Dạ)
+  - Skill: Hỏa Ấn Liên Kích - Ma Bóng Tối
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦊 Cáo Hỏa** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **👻 Ma Bóng Tối** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 27. Nhóm skill: single_burst_lifesteal
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🦇 Dơi Huyết (Bậc 3 - Dạ)
+  - Skill: Cắn Mạch Hút Máu - Dơi Huyết
+- 🕸️ Nhện Độc (Bậc 1 - Trùng)
+  - Skill: Cắn Mạch Hút Máu - Nhện Độc
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦇 Dơi Huyết** (Dạ): Thêm hiệu ứng **Mù**
+  - Giảm 15% chính xác của mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🕸️ Nhện Độc** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 28. Nhóm skill: column_plus_splash
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Pháp sư**:
+- ⚡ Rắn Lôi (Bậc 3 - Phong)
+  - Skill: Lôi Trụ Tách Nhánh - Rắn Lôi
+- 🦧 Bạch Tuộc Tâm (Bậc 2 - Thủy)
+  - Skill: Lôi Trụ Tách Nhánh - Bạch Tuộc Tâm
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Pháp sư, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **⚡ Rắn Lôi** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦧 Bạch Tuộc Tâm** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 29. Nhóm skill: cone_smash
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đấu sĩ**:
+- 🦛 Hà Mã Nện (Bậc 3 - Thủy)
+  - Skill: Nện Bùn - Hà Mã Nện
+- 🦦 Rái Cá Sông (Bậc 2 - Thủy)
+  - Skill: Nện Bùn - Rái Cá Sông
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đấu sĩ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦛 Hà Mã Nện** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦦 Rái Cá Sông** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 30. Nhóm skill: global_stun
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đấu sĩ**:
+- 🦁 Sư Tử Chiến Tướng (Bậc 5 - Hỏa)
+  - Skill: Sư Tử Hống - Sư Tử Chiến Tướng
+
+**Pháp sư**:
+- 🐴 Kỳ Lân Lôi (Bậc 5 - Phong)
+  - Skill: Phán Quyết Kỳ Lân - Kỳ Lân Lôi
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Đấu sĩ, Pháp sư), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦁 Sư Tử Chiến Tướng** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+- **🐴 Kỳ Lân Lôi** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 31. Nhóm skill: single_burst_armor_pen
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Sát thủ**:
+- 🪳 Bọ Ngựa Kiếm (Bậc 3 - Trùng)
+  - Skill: Lưỡi Kiếm Tử Thần - Bọ Ngựa Kiếm
+- 🐡 Ong Bắp Cày Sát (Bậc 4 - Trùng)
+  - Skill: Lưỡi Kiếm Tử Thần - Ong Bắp Cày Sát
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Sát thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🪳 Bọ Ngựa Kiếm** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🐡 Ong Bắp Cày Sát** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 32. Nhóm skill: single_poison_slow
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đấu sĩ**:
+- 🦂 Vua Bọ Cạp (Bậc 4 - Trùng)
+  - Skill: Đuôi Độc Bọ Cạp - Vua Bọ Cạp
+- 🦎 Kỳ Đà Khổng Lồ (Bậc 1 - Trùng)
+  - Skill: Đuôi Độc Bọ Cạp - Kỳ Đà Khổng Lồ
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đấu sĩ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🦂 Vua Bọ Cạp** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦎 Kỳ Đà Khổng Lồ** (Trùng): Thêm hiệu ứng **Nhiễm độc**
+  - Gây sát thương độc theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 33. Nhóm skill: aoe_circle_stun
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đỡ đòn**:
+- 🐘 Voi Thiết Giáp (Bậc 4 - Nham)
+  - Skill: Voi Giẫm Đạp - Voi Thiết Giáp
+
+**Đấu sĩ**:
+- 🦌 Bò Rừng Dẫm (Bậc 3 - Nham)
+  - Skill: Voi Giẫm Đạp - Bò Rừng Dẫm
+
+**💡 Đề xuất**:
+
+✅ **Chấp nhận được** - Các unit thuộc vai trò khác nhau (Đỡ đòn, Đấu sĩ), nhưng nên:
+- Điều chỉnh hệ số sát thương phù hợp với vai trò
+- Thêm hiệu ứng phụ khác nhau dựa trên nguyên tố
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐘 Voi Thiết Giáp** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🦌 Bò Rừng Dẫm** (Nham): Thêm hiệu ứng **Choáng**
+  - Có cơ hội làm choáng mục tiêu
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+
+---
+
+### 34. Nhóm skill: single_bleed
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Đấu sĩ**:
+- 🐊 Cá Sấu Đầm (Bậc 4 - Thủy)
+  - Skill: Cá Sấu Tử Thần - Cá Sấu Đầm
+- 🦈 Cá Mập Điên (Bậc 3 - Thủy)
+  - Skill: Cá Sấu Tử Thần - Cá Mập Điên
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Đấu sĩ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐊 Cá Sấu Đầm** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+- **🦈 Cá Mập Điên** (Thủy): Thêm hiệu ứng **Làm chậm**
+  - Giảm tốc độ đánh 20%
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Giảm tốc: ⭐ 20% → ⭐⭐ 30% → ⭐⭐⭐ 40%
+
+---
+
+### 35. Nhóm skill: cone_shot
+
+**Số unit sử dụng**: 2
+
+**Chi tiết**:
+
+**Xạ thủ**:
+- 🐦‍⬛ Quạ Bão Táp (Bậc 4 - Phong)
+  - Skill: Lông Vũ Bão Táp - Quạ Bão Táp
+- 🔥 Phượng Hoàng Tên (Bậc 5 - Hỏa)
+  - Skill: Lông Vũ Bão Táp - Phượng Hoàng Tên
+
+**💡 Đề xuất**:
+
+⚠️ **Cần thay đổi** - Tất cả cùng vai trò Xạ thủ, nên:
+- Thiết kế skill hoàn toàn khác nhau
+- Hoặc thêm hiệu ứng nguyên tố để phân biệt
+
+**🌟 Đề xuất hiệu ứng nguyên tố**:
+
+- **🐦‍⬛ Quạ Bão Táp** (Phong): Thêm hiệu ứng **Đẩy lùi**
+  - Có cơ hội đẩy lùi mục tiêu 1 ô
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+- **🔥 Phượng Hoàng Tên** (Hỏa): Thêm hiệu ứng **Cháy**
+  - Gây sát thương lửa theo thời gian
+  - Tỷ lệ: ⭐ 25% → ⭐⭐ 40% → ⭐⭐⭐ 60%
+  - Sát thương: ⭐ 12/lượt → ⭐⭐ 17/lượt → ⭐⭐⭐ 22/lượt
+
+---
+
+## PHÂN TÍCH NGUYÊN TỐ VÀ HIỆU ỨNG
+
+### Phân bố nguyên tố
+
+- **Nham** (STONE): 17 unit
+- **Thủy** (TIDE): 22 unit
+- **Phong** (WIND): 20 unit
+- **Trùng** (SWARM): 14 unit
+- **Dạ** (NIGHT): 12 unit
+- **Hỏa** (FIRE): 14 unit
+- **Linh** (SPIRIT): 16 unit
+- **Mộc** (WOOD): 5 unit
+
+### Đề xuất hiệu ứng nguyên tố cho skill
+
+Mỗi nguyên tố nên có hiệu ứng đặc trưng khi sử dụng skill, tỷ lệ kích hoạt tăng theo số sao:
+
+#### Hỏa (FIRE)
+
+**Hiệu ứng**: Cháy
+**Mô tả**: Gây sát thương lửa theo thời gian
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Sát thương theo thời gian**:
+- ⭐ 1 sao: 12 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 17 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 22 sát thương/lượt (3 lượt)
+
+---
+
+#### Thủy (TIDE)
+
+**Hiệu ứng**: Làm chậm
+**Mô tả**: Giảm tốc độ đánh 20%
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng làm chậm**:
+- ⭐ 1 sao: Giảm 20% tốc độ (1 lượt)
+- ⭐⭐ 2 sao: Giảm 30% tốc độ (2 lượt)
+- ⭐⭐⭐ 3 sao: Giảm 40% tốc độ (2 lượt)
+
+---
+
+#### Phong (WIND)
+
+**Hiệu ứng**: Đẩy lùi
+**Mô tả**: Có cơ hội đẩy lùi mục tiêu 1 ô
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng đẩy lùi**:
+- ⭐ 1 sao: 25% cơ hội đẩy lùi 1 ô
+- ⭐⭐ 2 sao: 40% cơ hội đẩy lùi 1 ô
+- ⭐⭐⭐ 3 sao: 50% cơ hội đẩy lùi 1 ô
+
+---
+
+#### Nham (STONE)
+
+**Hiệu ứng**: Choáng
+**Mô tả**: Có cơ hội làm choáng mục tiêu
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng choáng**:
+- ⭐ 1 sao: 20% cơ hội choáng 1 lượt
+- ⭐⭐ 2 sao: 35% cơ hội choáng 1 lượt
+- ⭐⭐⭐ 3 sao: 45% cơ hội choáng 1 lượt
+
+---
+
+#### Mộc (WOOD)
+
+**Hiệu ứng**: Hút máu
+**Mô tả**: Hút 15% sát thương thành máu
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng hút máu**:
+- ⭐ 1 sao: Hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: Hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: Hút 30% sát thương thành máu
+
+---
+
+#### Trùng (SWARM)
+
+**Hiệu ứng**: Nhiễm độc
+**Mô tả**: Gây sát thương độc theo thời gian
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng nhiễm độc**:
+- ⭐ 1 sao: 10 sát thương độc/lượt (2 lượt)
+- ⭐⭐ 2 sao: 15 sát thương độc/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 18 sát thương độc/lượt (3 lượt)
+
+---
+
+#### Dạ (NIGHT)
+
+**Hiệu ứng**: Mù
+**Mô tả**: Giảm 15% chính xác của mục tiêu
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng giảm chính xác**:
+- ⭐ 1 sao: Giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: Giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: Giảm 30% chính xác (2 lượt)
+
+---
+
+#### Linh (SPIRIT)
+
+**Hiệu ứng**: Thanh tẩy
+**Mô tả**: Xóa 1 debuff khỏi bản thân sau khi tấn công
+
+**Tỷ lệ kích hoạt**:
+- ⭐ 1 sao: 25% cơ hội
+- ⭐⭐ 2 sao: 40% cơ hội
+- ⭐⭐⭐ 3 sao: 60% cơ hội
+
+**Hiệu ứng thanh tẩy**:
+- ⭐ 1 sao: Xóa 1 debuff sau khi tấn công
+- ⭐⭐ 2 sao: Xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: Xóa 2 debuff + hồi 40 HP
+
+---
+

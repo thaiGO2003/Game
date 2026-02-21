@@ -8,6 +8,8 @@ import {
   createUnitUid,
   getDeployCapByLevel,
   getEffectiveSkillId,
+  getEffectiveEvasion,
+  getWaspMaxTargets,
   getXpToLevelUp,
   gridKey,
   manhattan,
@@ -1007,7 +1009,11 @@ export class BoardPrototypeScene extends Phaser.Scene {
         defBuffTurns: 0,
         defBuffValue: 0,
         mdefBuffTurns: 0,
-        mdefBuffValue: 0
+        mdefBuffValue: 0,
+        evadeBuffTurns: 0,
+        evadeBuffValue: 0,
+        evadeDebuffTurns: 0,
+        evadeDebuffValue: 0
       }
     };
 
@@ -1651,7 +1657,8 @@ export class BoardPrototypeScene extends Phaser.Scene {
       }
       case "random_multi": {
         const pool = enemies.filter((enemy) => enemy.alive);
-        const count = Math.min(skill.maxHits ?? 3, pool.length);
+        const baseMaxHits = getWaspMaxTargets(attacker, skill) ?? skill.maxHits ?? 3;
+        const count = Math.min(baseMaxHits, pool.length);
         const victims = sampleWithoutReplacement(pool, count);
         victims.forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name));
         break;
@@ -1828,7 +1835,8 @@ export class BoardPrototypeScene extends Phaser.Scene {
     if (attacker && !attacker.alive) return 0;
 
     if (attacker && !options.forceHit) {
-      if (Math.random() < defender.mods.evadePct) {
+      const evadePct = getEffectiveEvasion(defender);
+      if (Math.random() < evadePct) {
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
         return 0;
       }

@@ -77,6 +77,43 @@ export class TooltipController {
     });
   }
 
+  showCombatUnitTooltip(pointer, content = {}, unit = null) {
+    if (!content && !unit) {
+      this.hide();
+      return;
+    }
+
+    const safeContent = content ?? {};
+    let title = safeContent.title ?? "";
+    let body = safeContent.body ?? "";
+    const rightBody = safeContent.rightBody ?? "";
+
+    if (!String(body).trim() && unit) {
+      const hp = `${unit.hp ?? 0}/${unit.maxHp ?? 0}`;
+      const atk = unit.atk ?? 0;
+      const def = unit.def ?? 0;
+      const matk = unit.matk ?? 0;
+      const mdef = unit.mdef ?? 0;
+      const range = unit.range ?? 1;
+      const role = unit.classType ?? "Không rõ";
+      const element = unit.tribe ?? "Không rõ";
+      body = [
+        `HP: ${hp}`,
+        `ATK: ${atk} | DEF: ${def}`,
+        `MATK: ${matk} | MDEF: ${mdef}`,
+        `Tầm đánh: ${range}`,
+        `Nghề: ${role}`,
+        `Hệ: ${element}`
+      ].join("\n");
+    }
+
+    if (!String(title).trim()) {
+      title = "Linh thú";
+    }
+
+    this.show(pointer, title, body, rightBody);
+  }
+
   show(pointer, title, body, rightBody = "") {
     const hasRightColumn = Boolean(String(rightBody ?? "").trim());
 

@@ -1,0 +1,121 @@
+id,name,species,icon,tribe,tribeVi,classType,classVi,tier,hp,atk,def,matk,mdef,range,rageMax,skillId
+bear_ancient,Gấu Cổ Thụ,gau,🐻,STONE,Nham,TANKER,Đỡ đòn,1,340,42,30,10,24,1,4,unit_skill_bear_ancient
+rhino_quake,Tê Giác Địa Chấn,te-giac,🦏,STONE,Nham,FIGHTER,Đấu sĩ,2,380,48,33,10,24,1,4,unit_skill_rhino_quake
+turtle_mire,Rùa Đầm Lầy,rua,🐢,TIDE,Thủy,TANKER,Đỡ đòn,3,410,50,36,16,30,1,5,unit_skill_turtle_mire
+buffalo_mist,Trâu Sương Mù,trau,🐃,WIND,Phong,TANKER,Đỡ đòn,4,450,55,38,18,31,1,4,unit_skill_buffalo_mist
+ant_guard,Kiến Hộ Vệ,kien,🐜,SWARM,Trùng,TANKER,Đỡ đòn,1,420,45,45,10,30,1,4,unit_skill_ant_guard
+panther_void,Báo Hư Không,bao,🐈‍⬛,NIGHT,Dạ,ASSASSIN,Sát thủ,5,320,95,14,14,12,1,2,unit_skill_panther_void
+fox_flame,Cáo Hỏa,cao,🦊,FIRE,Hỏa,ASSASSIN,Sát thủ,1,255,72,15,18,13,1,2,unit_skill_fox_flame
+bat_blood,Dơi Huyết,doi,🦇,NIGHT,Dạ,ASSASSIN,Sát thủ,3,275,78,16,20,15,1,3,unit_skill_bat_blood
+lynx_echo,Châu Chấu Gió,bo-ngua,🦟,WIND,Phong,ASSASSIN,Sát thủ,4,295,84,18,22,16,1,3,unit_skill_lynx_echo
+mantis_blade,Bọ Ngựa Kiếm,bo-ngua,🪳,SWARM,Trùng,ASSASSIN,Sát thủ,3,310,88,20,15,18,1,3,unit_skill_mantis_blade
+eagle_marksman,Đại Bàng Xạ Thủ,dai-bang,🦅,WIND,Phong,ARCHER,Xạ thủ,2,230,62,12,10,11,4,3,unit_skill_eagle_marksman
+monkey_spear,Khỉ Lao Cành,khi,🐒,WIND,Phong,ARCHER,Xạ thủ,1,250,68,12,12,12,4,3,unit_skill_monkey_spear
+owl_nightshot,Cú Đêm,cu,🦉,NIGHT,Dạ,ARCHER,Xạ thủ,3,265,74,13,14,13,4,3,unit_skill_owl_nightshot
+cat_goldbow,Ong Lửa,ong,🏹,FIRE,Hỏa,ARCHER,Xạ thủ,4,280,82,14,16,14,4,3,unit_skill_cat_goldbow
+wasp_sting,Ong Bắp Cày,ong,🐝,SWARM,Trùng,ARCHER,Xạ thủ,1,260,65,15,12,14,4,3,unit_skill_wasp_sting
+ice_mage,Chuồn Chuồn Băng,chuon-chuon,🧊,TIDE,Thủy,MAGE,Pháp sư,2,215,16,10,74,20,4,5,unit_skill_ice_mage
+worm_ice,Cóc Băng,coc,❄️,TIDE,Thủy,MAGE,Pháp sư,2,230,18,10,80,21,4,5,unit_skill_worm_ice
+storm_mage,Rắn Lôi,ran,⚡,WIND,Phong,MAGE,Pháp sư,3,245,20,11,88,22,4,5,unit_skill_storm_mage
+spore_mage,Nhện Bào Tử,nhen,🦠,SWARM,Trùng,MAGE,Pháp sư,4,260,22,11,96,23,4,5,unit_skill_spore_mage
+deer_song,Nai Thần Ca,nai,🫎,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,245,22,14,62,25,3,4,unit_skill_deer_song
+butterfly_mirror,Bướm Kính,buom,🪰,SPIRIT,Linh,SUPPORT,Hỗ trợ,2,260,24,15,68,26,3,4,unit_skill_butterfly_mirror
+parrot_roar,Vẹt Linh Hô,vet,🦜,WIND,Phong,SUPPORT,Hỗ trợ,3,280,26,16,72,27,3,4,unit_skill_parrot_roar
+qilin_breeze,Kỳ Lân Gió,ky-lan,🦄,SPIRIT,Linh,SUPPORT,Hỗ trợ,4,300,28,17,82,28,3,5,unit_skill_qilin_breeze
+tiger_fang,Hổ Nanh,ho,🐯,FIRE,Hỏa,FIGHTER,Đấu sĩ,1,305,58,20,14,16,1,3,unit_skill_tiger_fang
+wolf_alpha,Sói Thủ Lĩnh,soi,🐺,NIGHT,Dạ,ASSASSIN,Sát thủ,2,280,72,16,16,17,1,2,unit_skill_wolf_alpha
+hippo_maul,Hà Mã Nện,ha-ma,🦛,TIDE,Thủy,FIGHTER,Đấu sĩ,3,350,70,23,18,18,1,3,unit_skill_hippo_maul
+beetle_drill,Bọ Khoan Giáp,bo,🪲,SWARM,Trùng,FIGHTER,Đấu sĩ,4,370,76,24,20,19,1,3,unit_skill_beetle_drill
+lion_general,Sư Tử Chiến Tướng,su-tu,🦁,FIRE,Hỏa,FIGHTER,Đấu sĩ,5,550,95,40,30,35,1,4,unit_skill_lion_general
+scorpion_king,Vua Bọ Cạp,bo-cap,🦂,SWARM,Trùng,FIGHTER,Đấu sĩ,4,440,82,32,20,25,1,3,unit_skill_scorpion_king
+worm_queen,Sâu Xanh,sau,🐛,WOOD,Mộc,MAGE,Pháp sư,3,280,20,12,85,22,4,2,unit_skill_worm_queen
+mosquito_toxic,Muỗi Độc,muoi,🐠,SWARM,Trùng,ASSASSIN,Sát thủ,2,240,75,14,15,12,1,3,unit_skill_mosquito_toxic
+bug_plague,Bọ Dịch Hạch,bo,👾,SWARM,Trùng,MAGE,Pháp sư,4,260,22,13,92,24,4,4,unit_skill_bug_plague
+elephant_guard,Voi Thiết Giáp,voi,🐘,STONE,Nham,TANKER,Đỡ đòn,4,480,50,45,12,35,1,4,unit_skill_elephant_guard
+crocodile_bite,Cá Sấu Đầm,ca-sau,🐊,TIDE,Thủy,FIGHTER,Đấu sĩ,4,390,80,28,18,20,1,3,unit_skill_crocodile_bite
+crow_storm,Quạ Bão Táp,qua,🐦‍⬛,WIND,Phong,ARCHER,Xạ thủ,4,270,85,15,14,15,4,3,unit_skill_crow_storm
+peacock_dazzle,Khổng Tước Vũ,cong,🦚,WIND,Phong,SUPPORT,Hỗ trợ,4,290,30,18,75,28,3,4,unit_skill_peacock_dazzle
+triceratops_charge,Bò Rừng Xung Phong,bison,🦬,STONE,Nham,TANKER,Đỡ đòn,1,350,44,31,10,24,1,4,unit_skill_triceratops_charge
+gorilla_smash,Đười Ươi Phẫn Nộ,vuon,🦍,STONE,Nham,FIGHTER,Đấu sĩ,4,400,85,26,15,22,1,3,unit_skill_gorilla_smash
+cobra_venom,Rắn Hổ Mang,ran,🐍,SWARM,Trùng,ASSASSIN,Sát thủ,4,280,90,16,25,18,1,3,unit_skill_cobra_venom
+swan_grace,Thiên Nga Trắng,thien-nga,🦢,TIDE,Thủy,SUPPORT,Hỗ trợ,4,285,28,16,78,30,3,4,unit_skill_swan_grace
+vulture_scavunge,Kền Kền Ăn Xác,dai-bang,🦃,WIND,Phong,ASSASSIN,Sát thủ,4,260,88,15,15,16,1,3,unit_skill_vulture_scavunge
+dragon_breath,Rồng Lửa,long,🐉,FIRE,Hỏa,MAGE,Pháp sư,5,450,40,25,110,40,4,5,unit_skill_dragon_breath
+phoenix_rebirth,Phượng Hoàng Lửa,phuong,🐦‍🔥,FIRE,Hỏa,SUPPORT,Hỗ trợ,5,420,35,20,90,45,3,5,unit_skill_phoenix_rebirth
+trex_bite,Bạo Chúa T-Rex,khung-long,🦖,STONE,Nham,FIGHTER,Đấu sĩ,5,600,110,50,20,35,1,4,unit_skill_trex_bite
+whale_song,Cá Voi Cổ Đại,ca-voi,🐳,TIDE,Thủy,TANKER,Đỡ đòn,5,700,60,60,30,50,1,5,unit_skill_whale_song
+kraken_void,Kraken Hư Không,bach-tuoc,🦑,TIDE,Thủy,MAGE,Pháp sư,5,480,30,25,105,35,4,5,unit_skill_kraken_void
+kirin_thunder,Kỳ Lân Lôi,ky-lan,🐴,WIND,Phong,MAGE,Pháp sư,5,460,35,22,100,38,4,5,unit_skill_kirin_thunder
+lizard_elder,Rồng Đất Cổ,tac-ke,🦕,STONE,Nham,SUPPORT,Hỗ trợ,5,500,40,45,80,40,3,4,unit_skill_lizard_elder
+pangolin_plate,Tê Tê Thiết Giáp,te-te,🛡️,STONE,Nham,TANKER,Đỡ đòn,3,390,45,40,12,32,1,4,unit_skill_pangolin_plate
+badger_stone,Lửng Đá,lung,🦡,STONE,Nham,TANKER,Đỡ đòn,1,355,43,32,10,25,1,4,unit_skill_badger_stone
+crab_shell,Cua Giáp,cua,🦀,TIDE,Thủy,TANKER,Đỡ đòn,2,375,46,34,12,27,1,4,unit_skill_crab_shell
+armadillo_roll,Tatu Cuộn,tatu,🦔,STONE,Nham,TANKER,Đỡ đòn,2,370,45,35,11,26,1,4,unit_skill_armadillo_roll
+snail_fortress,Ốc Sên Pháo Đài,oc,🐌,TIDE,Thủy,TANKER,Đỡ đòn,2,380,44,36,13,28,1,5,unit_skill_snail_fortress
+ox_mountain,Bò Núi,bo,🐂,STONE,Nham,TANKER,Đỡ đòn,2,385,47,33,12,27,1,4,unit_skill_ox_mountain
+walrus_ice,Hải Mã Băng,hai-ma,🦭,TIDE,Thủy,TANKER,Đỡ đòn,3,405,48,38,15,31,1,5,unit_skill_walrus_ice
+golem_stone,Golem Đá,golem,🗿,STONE,Nham,TANKER,Đỡ đòn,3,420,52,42,14,33,1,4,unit_skill_golem_stone
+yak_highland,Bò Tây Tạng,yak,🦬,WIND,Phong,TANKER,Đỡ đòn,4,460,54,40,17,32,1,4,unit_skill_yak_highland
+mammoth_ancient,Voi Ma Mút,voi-long,🦣,STONE,Nham,TANKER,Đỡ đòn,4,470,56,43,16,34,1,4,unit_skill_mammoth_ancient
+kraken_deep,Mực Khổng Lồ,muc,🐙,TIDE,Thủy,TANKER,Đỡ đòn,5,680,58,58,28,48,1,5,unit_skill_kraken_deep
+titan_earth,Titan Đất,titan,⛰️,STONE,Nham,TANKER,Đỡ đòn,5,720,62,62,32,52,1,5,unit_skill_titan_earth
+hydra_swamp,Hydra Đầm Lầy,hydra,🐪,TIDE,Thủy,TANKER,Đỡ đòn,5,690,60,60,30,50,1,5,unit_skill_hydra_swamp
+ram_charge,Cừu Núi Húc,cuu,🐏,STONE,Nham,FIGHTER,Đấu sĩ,1,310,60,21,15,17,1,3,unit_skill_ram_charge
+jaguar_hunt,Báo Đốm Săn,bao-dom,🐆,NIGHT,Dạ,FIGHTER,Đấu sĩ,1,300,62,19,14,16,1,3,unit_skill_jaguar_hunt
+komodo_bite,Kỳ Đà Khổng Lồ,ky-da,🦎,SWARM,Trùng,FIGHTER,Đấu sĩ,1,315,59,22,16,18,1,3,unit_skill_komodo_bite
+otter_river,Rái Cá Sông,rai-ca,🦦,TIDE,Thủy,FIGHTER,Đấu sĩ,2,340,66,22,17,18,1,3,unit_skill_otter_river
+kangaroo_kick,Kangaroo Đấm,kangaroo,🦘,WIND,Phong,FIGHTER,Đấu sĩ,2,335,68,21,16,17,1,3,unit_skill_kangaroo_kick
+hyena_pack,Linh Cẩu Bầy,linh-cau,🐕,NIGHT,Dạ,FIGHTER,Đấu sĩ,2,345,65,23,18,19,1,3,unit_skill_hyena_pack
+wolverine_rage,Chồn Sói Cuồng,chon-soi,🦫,FIRE,Hỏa,FIGHTER,Đấu sĩ,3,360,72,24,19,19,1,3,unit_skill_wolverine_rage
+bison_stampede,Bò Rừng Dẫm,bo-rung,🦌,STONE,Nham,FIGHTER,Đấu sĩ,3,365,71,25,18,20,1,3,unit_skill_bison_stampede
+shark_frenzy,Cá Mập Điên,ca-map,🦈,TIDE,Thủy,FIGHTER,Đấu sĩ,3,355,74,23,20,18,1,3,unit_skill_shark_frenzy
+dragon_earth,Rồng Đất,rong-dat,🐲,STONE,Nham,FIGHTER,Đấu sĩ,5,580,105,45,28,33,1,4,unit_skill_dragon_earth
+chimera_flame,Chimera Lửa,chimera,🐅,FIRE,Hỏa,FIGHTER,Đấu sĩ,5,570,108,42,32,36,1,4,unit_skill_chimera_flame
+weasel_quick,Chồn Nhanh,chon,🐿️,WIND,Phong,ASSASSIN,Sát thủ,1,260,70,16,17,14,1,2,unit_skill_weasel_quick
+spider_venom,Nhện Độc,nhen-doc,🕸️,SWARM,Trùng,ASSASSIN,Sát thủ,1,250,73,15,16,13,1,2,unit_skill_spider_venom
+scorpion_shadow,Bọ Cạp Bóng,bo-cap-bong,🕷️,NIGHT,Dạ,ASSASSIN,Sát thủ,1,255,71,16,18,14,1,2,unit_skill_scorpion_shadow
+chameleon_stealth,Tắc Kè Ẩn,tac-ke,🦒,WOOD,Mộc,ASSASSIN,Sát thủ,2,265,74,17,19,15,1,2,unit_skill_chameleon_stealth
+viper_strike,Rắn Lục Tấn,ran-luc,🪱,SWARM,Trùng,ASSASSIN,Sát thủ,2,270,76,16,20,14,1,3,unit_skill_viper_strike
+ferret_shadow,Chồn Hương Bóng,chon-huong,🦨,NIGHT,Dạ,ASSASSIN,Sát thủ,3,280,80,18,21,16,1,3,unit_skill_ferret_shadow
+mink_silent,Chồn Mink Im,mink,🦝,WIND,Phong,ASSASSIN,Sát thủ,3,275,81,17,22,15,1,3,unit_skill_mink_silent
+wasp_assassin,Ong Bắp Cày Sát,ong-sat,🐡,SWARM,Trùng,ASSASSIN,Sát thủ,4,290,86,19,23,17,1,3,unit_skill_wasp_assassin
+raven_death,Quạ Tử Thần,qua-tu,🦪,NIGHT,Dạ,ASSASSIN,Sát thủ,5,315,92,20,24,18,1,2,unit_skill_raven_death
+wraith_shadow,Ma Bóng Tối,ma,👻,NIGHT,Dạ,ASSASSIN,Sát thủ,5,310,94,18,26,17,1,2,unit_skill_wraith_shadow
+reaper_void,Tử Thần Hư Không,tu-than,💀,SPIRIT,Linh,ASSASSIN,Sát thủ,5,305,96,19,25,19,1,2,unit_skill_reaper_void
+hawk_hunter,Diều Hâu Săn,dieu-hau,🪶,WIND,Phong,ARCHER,Xạ thủ,1,245,66,13,11,13,4,3,unit_skill_hawk_hunter
+falcon_dive,Cắt Lao,cat-lao,🐟,FIRE,Hỏa,ARCHER,Xạ thủ,1,240,67,12,12,12,4,3,unit_skill_falcon_dive
+toucan_snipe,Chim Mỏ To,chim-mo-to,🐦,WIND,Phong,ARCHER,Xạ thủ,2,255,70,13,13,13,4,3,unit_skill_toucan_snipe
+heron_pierce,Diệc Xuyên,diec,🐋,TIDE,Thủy,ARCHER,Xạ thủ,2,258,69,14,14,14,4,3,unit_skill_heron_pierce
+woodpecker_drill,Gõ Kiến Khoan,go-kien,🐄,WOOD,Mộc,ARCHER,Xạ thủ,2,252,71,13,12,13,4,3,unit_skill_woodpecker_drill
+pelican_bomb,Bồ Nông Bom,bo-nong,🦤,TIDE,Thủy,ARCHER,Xạ thủ,3,268,76,14,15,14,4,3,unit_skill_pelican_bomb
+stork_sniper,Cò Bắn Tỉa,co,🦩,TIDE,Thủy,ARCHER,Xạ thủ,3,270,75,15,16,15,4,3,unit_skill_stork_sniper
+flamingo_shot,Hồng Hạc Bắn,hong-hac,🐑,FIRE,Hỏa,ARCHER,Xạ thủ,3,266,77,14,14,14,4,3,unit_skill_flamingo_shot
+condor_sky,Diều Hâu Khổng Lồ,dieu-khong-lo,🐬,WIND,Phong,ARCHER,Xạ thủ,4,285,84,15,17,15,4,3,unit_skill_condor_sky
+albatross_wind,Hải Âu Gió,hai-au,🦆,WIND,Phong,ARCHER,Xạ thủ,4,283,83,16,18,16,4,3,unit_skill_albatross_wind
+phoenix_arrow,Phượng Hoàng Tên,phuong-ten,🔥,FIRE,Hỏa,ARCHER,Xạ thủ,5,340,100,20,22,20,4,3,unit_skill_phoenix_arrow
+garuda_divine,Garuda Thần,garuda,🪽,SPIRIT,Linh,ARCHER,Xạ thủ,5,335,102,19,24,21,4,3,unit_skill_garuda_divine
+thunderbird_storm,Chim Sấm Sét,chim-sam,🌩️,WIND,Phong,ARCHER,Xạ thủ,5,330,98,21,23,19,4,3,unit_skill_thunderbird_storm
+roc_legend,Đại Bàng Huyền Thoại,dai-bang-huyen,🐖,SPIRIT,Linh,ARCHER,Xạ thủ,5,345,101,20,21,20,4,3,unit_skill_roc_legend
+toad_poison,Cóc Độc,coc-doc,🐸,SWARM,Trùng,MAGE,Pháp sư,1,220,17,11,72,21,4,5,unit_skill_toad_poison
+newt_fire,Kỳ Nhông Lửa,ky-nhong,🐫,FIRE,Hỏa,MAGE,Pháp sư,1,225,18,10,75,20,4,5,unit_skill_newt_fire
+salamander_flame,Kỳ Giông Lửa,ky-giong,🦗,FIRE,Hỏa,MAGE,Pháp sư,1,218,19,11,73,22,4,5,unit_skill_salamander_flame
+jellyfish_shock,Sứa Điện,sua,🪼,TIDE,Thủy,MAGE,Pháp sư,1,222,17,10,76,21,4,5,unit_skill_jellyfish_shock
+squid_ink,Mực Mực,muc-muc,🦐,TIDE,Thủy,MAGE,Pháp sư,2,235,19,11,82,22,4,5,unit_skill_squid_ink
+octopus_mind,Bạch Tuộc Tâm,bach-tuoc-tam,🦧,TIDE,Thủy,MAGE,Pháp sư,2,238,20,10,84,23,4,5,unit_skill_octopus_mind
+firefly_light,Đom Đóm Sáng,dom-dom,💡,FIRE,Hỏa,MAGE,Pháp sư,3,250,21,12,90,23,4,5,unit_skill_firefly_light
+moth_dust,Bướm Đêm Bụi,buom-dem,🦋,NIGHT,Dạ,MAGE,Pháp sư,3,248,22,11,89,24,4,5,unit_skill_moth_dust
+wasp_arcane,Ong Phép,ong-phep,🦞,SPIRIT,Linh,MAGE,Pháp sư,4,265,23,12,98,24,4,5,unit_skill_wasp_arcane
+beetle_mystic,Bọ Huyền,bo-huyen,🐞,SPIRIT,Linh,MAGE,Pháp sư,4,263,24,13,97,25,4,5,unit_skill_beetle_mystic
+lich_undead,Lich Bất Tử,lich,☠️,NIGHT,Dạ,MAGE,Pháp sư,5,490,38,28,108,42,4,5,unit_skill_lich_undead
+dove_peace,Bồ Câu Hòa Bình,bo-cau,🕊️,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,250,23,15,64,26,3,4,unit_skill_dove_peace
+crane_blessing,Hạc Phước,hac,🦓,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,248,24,14,66,25,3,4,unit_skill_crane_blessing
+firefly_heal,Đom Đóm Chữa,dom-chua,✨,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,252,22,16,63,27,3,4,unit_skill_firefly_heal
+unicorn_light,Kỳ Lân Sáng,ky-lan-sang,🐎,SPIRIT,Linh,SUPPORT,Hỗ trợ,2,265,25,16,70,27,3,4,unit_skill_unicorn_light
+fairy_forest,Tiên Rừng,tien,🧚,WOOD,Mộc,SUPPORT,Hỗ trợ,2,268,26,17,71,28,3,4,unit_skill_fairy_forest
+dryad_tree,Yêu Tinh Cây,yeu-tinh,🌳,WOOD,Mộc,SUPPORT,Hỗ trợ,2,262,27,15,69,26,3,4,unit_skill_dryad_tree
+wisp_light,Hồn Ma Sáng,hon-ma,🌟,SPIRIT,Linh,SUPPORT,Hỗ trợ,3,285,27,17,74,28,3,4,unit_skill_wisp_light
+nymph_water,Tiên Nước,tien-nuoc,🧜,TIDE,Thủy,SUPPORT,Hỗ trợ,3,283,28,18,76,29,3,4,unit_skill_nymph_water
+sprite_wind,Yêu Tinh Gió,yeu-tinh-gio,🧚‍♀️,WIND,Phong,SUPPORT,Hỗ trợ,3,287,26,16,73,27,3,4,unit_skill_sprite_wind
+angel_guardian,Thiên Thần Hộ Vệ,thien-than,👼,SPIRIT,Linh,SUPPORT,Hỗ trợ,4,305,32,19,84,30,3,5,unit_skill_angel_guardian
+seraphim_light,Seraphim Ánh Sáng,seraphim,😇,SPIRIT,Linh,SUPPORT,Hỗ trợ,5,440,38,22,95,48,3,5,unit_skill_seraphim_light
+oracle_wisdom,Tiên Tri Trí Tuệ,tien-tri,🔮,SPIRIT,Linh,SUPPORT,Hỗ trợ,5,430,36,24,92,46,3,5,unit_skill_oracle_wisdom

@@ -60,6 +60,7 @@ function parseSynergiesCsv(csvText) {
 
     const bonus = parseBonusValue(bonusStr);
 
+    if (group !== "CLASS" && group !== "TRIBE") continue;
     const targetObj = group === "CLASS" ? classSynergy : tribeSynergy;
 
     if (!targetObj[id]) {
@@ -85,7 +86,8 @@ export const TRIBE_COUNTER = {
   STONE: "WIND",
   WIND: "NIGHT",
   NIGHT: "STONE",
-  SWARM: null
+  SWARM: null,
+  WOOD: "TIDE"
 };
 
 export const TRIBE_COUNTER_LABEL = {
@@ -94,7 +96,8 @@ export const TRIBE_COUNTER_LABEL = {
   TIDE: "Thủy khắc Hỏa",
   STONE: "Nham khắc Phong",
   WIND: "Phong khắc Dạ",
-  NIGHT: "Dạ khắc Nham"
+  NIGHT: "Dạ khắc Nham",
+  WOOD: "Mộc khắc Thủy"
 };
 
 /** Khắc chế vai trò: key trị các value */
@@ -107,4 +110,4 @@ export const CLASS_COUNTER = {
   SUPPORT: []
 };
 
-export const COUNTER_BONUS = 0.20;
+export const COUNTER_BONUS = 0.50;

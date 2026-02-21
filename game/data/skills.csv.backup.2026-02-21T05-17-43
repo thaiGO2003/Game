@@ -1,0 +1,775 @@
+id,name,descriptionVi,actionPattern,effect,damageType,base,scaleStat,scale,shieldBase,tauntTurns,stunChance,stunTurns,reflectPct,reflectTurns,armorBuff,mdefBuff,turns,hit1,hit2,lifesteal,echoBase,echoScale,maxHits,sleepChance,sleepTurns,armorBreak,freezeChance,freezeTurns,splashCount,poisonTurns,poisonPerTurn,shieldScaleStat,shieldScale,rageGain,maxTargets,selfAtkBuff,assistRate,evadeBuff,atkBuff,buffStats,armorPen,killRage,diseaseTurns,diseaseDamage
+thorn_bark,Mai Gai Cổ Mộc,"Kích hoạt lớp mai gai tự nhiên, gây sát thương vật lý lên mục tiêu trước mặt, đồng thời tạo lá chắn bảo vệ bản thân và khiêu khích toàn bộ kẻ địch buộc chúng phải tấn công mình trong 1 lượt. Lá chắn tăng theo chỉ số tấn công. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,damage_shield_taunt,physical,28,atk,1.05,72,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+rhino_counter,Phản Đòn Tê Giác,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+turtle_protection,Bảo Vệ Rùa Thần,"Rùa tạo ra một vùng hào quang bảo vệ, che chắn 75% sát thương lan cho các đồng minh cạnh bên và nhận thay sát thương đó. Hiệu ứng kéo dài 3 lượt. Biến Rùa thành lá chắn sống thực thụ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,turtle_protection,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+pangolin_reflect,Vảy Tê Tê,"Kích hoạt lớp vảy sắc nhọn, phản lại 100% sát thương vật lý nhận được trong 3 lượt. Tướng phép và sát thương chuẩn hoàn toàn miễn nhiễm với phản đòn này. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,pangolin_reflect,,,,,,,,,,,,,,,1,3,,,,,,,,,,,,,,,,,,,,,,,,
+mist_guard,Khí Tức Dày,"Tạo lớp sương mù bảo vệ, tăng giáp +10 và kháng phép +10 cho toàn bộ đồng minh cùng hàng trong 2 lượt. Rất hiệu quả khi đứng tiền tuyến bảo vệ hàng sau. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,ally_row_def_buff,,,,,,,,,,10,10,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+void_execute,Tất Sát Bóng Tối,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.45 ATK). Ưu tiên tấn công carry yếu giáp ở hậu phương. Sát thương đơn mục tiêu mạnh nhất trong các sát thủ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_burst,physical,56,atk,2.45,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+void_execute_v2,Tất Sát Hư Không - Hoàn Nộ,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.8 ATK). Nếu hạ gục mục tiêu, hoàn lại 50% Nộ tối đa. Kỹ năng sát thủ tier 5 với khả năng liên hoàn cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,assassin_execute_rage_refund,physical,65,atk,2.8,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.5,,,,
+flame_combo,Hỏa Ấn Liên Kích,"Lao sau lưng mục tiêu và tung 2 nhát liên tiếp. Nhát đầu gây sát thương vật lý cơ bản (x1.45), nhát thứ hai gây thêm sát thương (x1.25). Tổng sát thương rất cao khi kết hợp cả 2 đòn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,double_hit,physical,,,,,,,,,,,,,"{base:26,scale:1.45}","{base:22,scale:1.25}",,,,,,,,,,,,,,,,,,,,,,,,,
+flame_combo_v2,Hỏa Ấn Liên Kích - Thưởng Vàng,"Lao sau lưng mục tiêu và tung 2 nhát liên tiếp. Nhát đầu gây sát thương vật lý (x1.45), nhát thứ hai gây thêm sát thương (x1.25). Nếu hạ gục mục tiêu, nhận ngay +1 vàng. Kỹ năng kiếm tiền độc đáo của Cáo. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,double_hit_gold_reward,physical,,,,,,,,,,,,,"{base:26,scale:1.45}","{base:22,scale:1.25}",,,,,,,,,,,,,,,,,,,,,,,,,
+blood_bite,Cắn Mạch Hút Máu,"Lao sau lưng mục tiêu và cắn sâu, gây sát thương vật lý và hút 45% sát thương gây ra thành máu cho bản thân. Giúp sát thủ sống dai hơn trong trận đánh kéo dài. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_burst_lifesteal,physical,34,atk,1.7,,,,,,,,,,,,0.45,,,,,,,,,,,,,,,,,,,,,,,,
+echo_slash,Ảnh Trảm,"Lao sau lưng mục tiêu và chém, để lại bóng ảnh gây thêm 1 đòn trễ vào cùng mục tiêu. Đòn trễ gây sát thương dựa trên ATK (x0.9). Tổng 2 đòn tạo burst damage bất ngờ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_delayed_echo,physical,32,atk,1.45,,,,,,,,,,,,,20,0.9,,,,,,,,,,,,,,,,,,,,,,
+cross_arrow,Tên Thập Tự,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+row_pierce,Xuyên Hàng,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+sleep_shot,Mũi Tên Ngủ,"Bắn mũi tên tẩm thuốc mê vào mục tiêu cùng hàng, gây sát thương vật lý. Sau đó Cú Đêm chọn ngẫu nhiên trong nhóm địch có nộ hiện tại cao nhất để ru ngủ: 1★ ru 1 mục tiêu, 2★ ru 2 mục tiêu, 3★ ru 3 mục tiêu. Tỷ lệ ru ngủ mỗi mục tiêu là 35% (ở 3★ đạt ~70%).",RANGED_STATIC,single_sleep,physical,30,atk,1.25,,,,,,,,,,,,,,,,0.35,1,,,,,,,,,,,,,,,,,,,
+armor_break_arrow,Phá Giáp Tiễn,"Bắn mũi tên phá giáp vào mục tiêu cùng hàng, gây sát thương vật lý và giảm 10 giáp mục tiêu trong 2 lượt. Rất hiệu quả để setup cho đồng đội dồn sát thương lên tank. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,single_armor_break,physical,28,atk,1.2,,,,,,,,2,,,,,,,,,10,,,,,,,,,,,,,,,,,,,
+ice_column,Cột Băng Hệ,Triệu hồi cột băng khổng lồ đánh toàn bộ địch trong cùng cột mục tiêu. Gây sát thương phép đầy đủ và có tỷ lệ 50% đóng băng từng kẻ địch trong 1 lượt (ở 3★ tỷ lệ đạt 100%). Pháp sư trị đội hình đứng gần nhau.,RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,,,,,,,,,,,,,0.5,,,,,,,,,,,,,,,,
+snow_burst,Băng Vụ Nén,"Nổ băng tại vị trí mục tiêu, gây sát thương phép đầy đủ lên ô mục tiêu và 8 ô kề sát quanh nó. Ở sao cao mở rộng thêm 1 vòng ô ngoài cùng. Có hiệu ứng làm chậm 1 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,aoe_circle,magic,38,matk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+storm_column,Lôi Trụ Tách Nhánh,"Dội sét xuống cột mục tiêu gây sát thương phép đầy đủ, sau đó lan sang 2 kẻ địch gần nhất gây sát thương đầy đủ. Ở sao cao lan thêm mục tiêu. Rất mạnh khi địch đứng dày. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,column_plus_splash,magic,40,matk,1.2,,,,,,,,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,
+spore_rain,Mưa Bào Tử,"Rải bào tử độc lên vùng rộng quanh mục tiêu, gây sát thương phép đầy đủ và nhiễm độc 2 lượt (16 sát thương mỗi lượt). Ở sao cao vùng ảnh hưởng mở rộng và độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,aoe_poison,magic,34,matk,1.05,,,,,,,,,,,,,,,,,,,,,,2,16,,,,,,,,,,,,,
+life_song,Khúc Ca Tái Sinh,"Hát bài ca hồi sinh, hồi phục máu cho 2 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.2). Ở sao cao hồi thêm đồng minh. Kỹ năng hồi máu chủ lực của đội. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+mirror_shield,Kính Mộng,"Tạo lá chắn phép thuật cho đồng minh yếu nhất và xóa 1 debuff nhẹ. Lá chắn dựa trên MATK (x0.8). Giúp bảo vệ carry khỏi burst damage. Ở sao cao khiên mạnh hơn. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,shield_cleanse,,,,70,,,,,,,,,,,,,,,,,,,,,,,,matk,0.8,,,,,,,,,,,
+rage_chant,Tiếng Hô Kích Nộ,"Hô vang tiếng gọi linh thiêng, cộng +1 nộ cho 3 đồng minh gần nhất. Giúp đồng đội nhanh chóng tung chiêu thức. Ở sao cao kích nộ thêm đồng minh. Tăng tốc toàn đội cực kỳ mạnh. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,team_rage,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,3,,,,,,,,,,
+wind_path,Lối Gió,"Tạo luồng gió mạnh, tăng +10 ATK và +10% né tránh cho toàn bộ đồng minh cùng cột trong 2 lượt. Hiệu quả khi đặt cùng cột với carry hoặc sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,column_bless,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,,0.1,10,,,,,
+cleave_fang,Cào Rách Thịt,"Hổ lao lên và cào xé dọc theo một cột, gây sát thương vật lý lên toàn bộ kẻ địch trong cột trúng đòn và gây hiệu ứng chảy máu 3 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,column_bleed,physical,26,atk,1.1,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+alpha_howl,Tru Hào,"Tru vang rừng sâu, tăng +15 ATK cho bản thân trong 2 lượt và kích hoạt 1 đòn phụ từ đồng minh cùng hàng (tỷ lệ 55%). Ở sao cao tỷ lệ đòn phụ tăng lên gần 100%. Đánh phối hợp cực hiệu quả. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",MELEE_FRONT,self_atk_and_assist,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,15,0.55,,,,,,
+mud_slam,Nện Bùn,"Nện mạnh xuống đất vào 3 ô phía trước theo dải tam giác, gây sát thương vật lý lên toàn bộ mục tiêu trúng đòn. Ở sao cao mở rộng thêm 2 ô ở mép dải đánh. Kiểm soát tốt tuyến đầu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,cone_smash,physical,26,atk,1.18,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+armor_drill,Mũi Khoan Xuyên,"Xuyên thẳng vào mục tiêu bằng mũi khoan sắc bén, gây sát thương chuẩn (bỏ qua giáp và kháng phép). Đặc biệt hiệu quả chống tanker giáp dày. Sát thương không thể bị giảm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,true_single,true,46,atk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+global_poison,Độc Tố Lan Tràn,"Phun độc tố lan tràn khắp chiến trường, gây sát thương phép lên toàn bộ kẻ địch và nhiễm độc 3 lượt (15 sát thương/lượt). Rất mạnh đánh team fight. Ở sao cao độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,global_poison_team,magic,30,matk,0.8,,,,,,,,,,,,,,,,,,,,,,3,15,,,,,,,,,,,,,
+mosquito_drain,Vòi Hút Máu,"Lao sau lưng mục tiêu và cắm vòi hút máu, gây sát thương vật lý và hút 60% sát thương thành máu. Đồng thời gây bệnh dịch lan sang các địch liền kề (10 sát thương/lượt trong 3 lượt). Bệnh có thể lây lan. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,lifesteal_disease,physical,40,atk,1.5,,,,,,,,,,,,0.6,,,,,,,,,,,,,,,,,,,,,,3,10,
+mosquito_drain_v2,Vòi Hút Máu Tiến Hoá,"Lao sau lưng mục tiêu và cắm vòi hút máu, gây sát thương vật lý và hút 60% sát thương thành máu. Tăng HP tối đa bằng 15% sát thương gây ra. Đồng thời gây bệnh dịch lan sang các địch liền kề (10 sát thương/lượt trong 3 lượt). Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,lifesteal_disease_maxhp,physical,40,atk,1.5,,,,,,,,,,,,0.6,,,,,,,,,,,,,,,,,,,,,,3,10,
+worm_evolve,Hoá Kén Phong Mộc,"Sâu Xanh hệ Mộc hoá kén để trưởng thành thành Bướm Gió, tăng mạnh MATK và đòn đánh thường chuyển thành sát thương phép (tính theo MATK). Nếu đạt 2★ trở lên, toàn đội được buff nhanh nhạy (né tránh).",SELF,metamorphosis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,{matk:1.5},,,,
+lion_roar_stun,Sư Tử Hống,"Gầm thét dũng mãnh, gây sát thương phép lên toàn bộ kẻ địch và có 40% tỷ lệ làm choáng 1 lượt. Ở sao cao, tỷ lệ làm choáng tăng lên. Kỹ năng khống chế diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,global_stun,magic,32,atk,0.8,,,0.4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+ant_shield_wall,Kiến Trận Đồ,"Dựng tường khiên kiên cố, tăng +25 Giáp và +15 Kháng Phép cho toàn bộ đồng minh cùng hàng trong 3 lượt. Biến hàng tank thành bức tường thành vững chắc. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,ally_row_def_buff,,,,,,,,,,25,15,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+mantis_slice,Lưỡi Kiếm Tử Thần,"Chém mạnh vào điểm yếu, gây sát thương vật lý cực lớn (x2.8 ATK) và bỏ qua 50% giáp của mục tiêu. Nếu hạ gục mục tiêu, hồi ngay 50% Nộ. Sát thủ kết liễu hoàn hảo. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_burst_armor_pen,physical,60,atk,2.8,,,,,,,,,,,,,,,,,,,,,,0.5,2,,,,,,,,,,,,,
+poison_sting,Nọc Độc Ong,"Bắn kim độc vào mục tiêu, gây sát thương vật lý và nhiễm độc mạnh (20 sát thương/lượt) trong 3 lượt. Độc có thể cộng dồn. Bào mòn máu tanker địch hiệu quả. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,single_poison_stack,physical,30,atk,1.2,,,,,,,,,,,,,,,,,,,,,,3,20,,,,,,,,,,,,,
+wasp_triple_strike,Bão Kim Ong Bắp Cày,"Phóng kim độc vào các mục tiêu ngẫu nhiên: 1★ bắn 1 mục tiêu, 2★ bắn 2 mục tiêu, 3★ bắn 3 mục tiêu. Sát thương mỗi kim theo sao: 1★ = (36 + 1.4x ATK), 2★ = +20%, 3★ = +40%, không giảm theo số mục tiêu.",RANGED_STATIC,random_multi,physical,36,atk,1.4,,,,,,,,,,,,,,1,,,,,,,,,,,,,,,,,,,,,,
+scorpion_venom,Đuôi Độc Bọ Cạp,"Chích đuôi vào mục tiêu, gây sát thương vật lý và làm tê liệt (giảm 30% tốc độ đánh và di chuyển) trong 2 lượt, kèm sát thương độc. Ở sao cao độc lan sang 4 ô liền kề mục tiêu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,single_poison_slow,physical,35,atk,1.25,,,,,,,,,,,,,,,,,,,,2,15,,,,,,,,,,,,,,,
+elephant_trample,Voi Giẫm Đạp,"Dậm mạnh xuống đất gây choáng lên 8 ô kề sát quanh bản thân trong 1 lượt và gây sát thương vật lý. Tanker kiểm soát đám đông cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,aoe_circle_stun,physical,40,atk,1.1,,,,0.4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+death_roll,Cá Sấu Tử Thần,"Cắn chặt mục tiêu và xoay tròn, gây sát thương vật lý cực lớn (x2.5 ATK) và làm mục tiêu chảy máu (20 sát thương/lượt) trong 3 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,single_bleed,physical,50,atk,2.5,,,,,,,,,,,,,,,,,,,,,,3,20,,,,,,,,,,,,,
+storm_feather,Lông Vũ Bão Táp,"Phóng hàng loạt lông vũ sắt nhọn vào 3 ô trước mặt theo dải tam giác, gây sát thương vật lý cho mọi mục tiêu trúng đòn. Xạ thủ gây sát thương diện rộng. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,cone_shot,physical,35,atk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+dazzling_dance,Điệu Múa Mê Hoặc,"Múa điệu mê hoặc, làm giảm 30% ATK của toàn bộ kẻ địch trong 2 lượt. Khắc chế đội hình sát thương vật lý. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",RANGED_STATIC,global_debuff_atk,magic,,,,,0.3,2,,,,,,,,,,,,,,,,,,,,,,,,,0.3,,,,,,,,
+tricera_charge,Sừng Ba Mũi,"Lao thẳng về phía trước húc văng kẻ địch, gây sát thương vật lý và đẩy lùi mục tiêu ra sau 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,knockback_charge,physical,30,atk,1.05,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+gorilla_slam,Cú Đấm Ngàn Cân,"Đấm mạnh xuống đất, gây sát thương vật lý lên mục tiêu và 2 kẻ địch bên cạnh, đồng thời giảm 20 giáp của chúng. Đấu sĩ phá giáp diện rộng. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,cleave_armor_break,physical,38,atk,1.25,,,,,,,,,20,,,,,,,,,,,,,,,,20,,,,,,,,,,,
+cobra_bite,Nọc Độc Tử Thần,"Phun nọc độc cực mạnh vào mục tiêu, gây sát thương phép và nhiễm độc (30 sát thương/lượt) trong 3 lượt. Sát thủ phép thuật. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_strong_poison,magic,40,matk,1.5,,,,,,,,,,,,,,,,,,,,,,3,30,,,,,,,,,,,,,
+swan_shield,Khiên Thiên Nga,"Tạo lá chắn nước tinh khiết cho đồng minh yếu nhất, hấp thụ sát thương. Lá chắn dựa trên MATK (x1.0). Bảo vệ carry khỏi burst damage. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,shield_cleanse,,,,80,,,,,,,,,,,,,,,,,,,,,,,,matk,1.0,,,,,,,,,,,
+carrion_feast,Tiệc Xác Thối,"Lao sau lưng mục tiêu và tấn công điểm yếu, gây sát thương vật lý cao (x2.2 ATK). Nếu mục tiêu dưới 30% HP, sát thương tăng thêm 50%. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",ASSASSIN_BACK,single_burst,physical,48,atk,2.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+dragon_inferno,Hỏa Ngục Rồng,"Phun lửa rồng thiêu đốt toàn bộ kẻ địch, gây sát thương phép và nhiễm cháy (18 sát thương/lượt) trong 3 lượt. Sát thương diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,global_poison_team,magic,36,matk,0.9,,,,,,,,,,,,,,,,,,,,,,3,18,,,,,,,,,,,,,
+phoenix_flame,Lửa Phượng Hoàng,"Hồi phục máu cho 3 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.3). Nếu có đồng minh chết trong lượt trước, hồi sinh với 30% HP. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,dual_heal,,40,matk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+trex_crunch,Hàm Bạo Chúa,"Cắn nghiền mục tiêu với hàm răng khổng lồ, gây sát thương vật lý cực lớn (x2.6 ATK) và giảm 25 giáp mục tiêu trong 2 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,single_armor_break,physical,55,atk,2.6,,,,,,,,2,,,,,,,,,,,25,,,,,,,,,,,,,,,,,
+ancient_wave,Sóng Cổ Đại,"Tạo sóng thần khổng lồ, gây sát thương phép lên toàn bộ kẻ địch và đẩy lùi hàng trước 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,global_knockback,magic,42,matk,1.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+void_tentacles,Xúc Tu Hư Không,"Triệu hồi xúc tu từ hư không, gây sát thương phép lên 4 mục tiêu ngẫu nhiên. Mỗi xúc tu gây sát thương độc lập. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,random_multi,magic,38,matk,1.3,,,,,,,,,,,,,,4,,,,,,,,,,,,,,,,,,,,,,
+kirin_judgment,Phán Quyết Kỳ Lân,"Triệu hồi sét trời giáng xuống toàn bộ kẻ địch, gây sát thương phép và có 45% tỷ lệ làm choáng 1 lượt. Kiểm soát đám đông mạnh mẽ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",RANGED_STATIC,global_stun,magic,40,matk,1.0,,,0.45,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+elder_blessing,Phúc Lành Cổ Thụ,"Kêu gọi sức mạnh đại địa, tăng +20 Giáp và +20 Kháng Phép cho toàn bộ đồng minh trong 3 lượt. Đồng thời hồi 50 HP cho đồng minh yếu nhất. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực.",SELF,team_def_buff,,,,,,,,,,20,20,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+boar_rush,Lao Lợn Rừng,"Lao thẳng vào mục tiêu với tốc độ cao, gây sát thương vật lý (x1.4 ATK) và đẩy lùi mục tiêu 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương.",MELEE_FRONT,knockback_charge,physical,35,atk,1.4,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_bear_ancient,Mai Gai Cổ Mộc - Gấu Cổ Thụ,"Kích hoạt lớp mai gai tự nhiên, gây sát thương vật lý lên mục tiêu trước mặt, đồng thời tạo lá chắn bảo vệ bản thân và khiêu khích toàn bộ kẻ địch buộc chúng phải tấn công mình trong 1 lượt. Lá chắn tăng theo chỉ số tấn công. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Gấu Cổ Thụ.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,damage_shield_taunt,physical,28,atk,1.05,72,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_rhino_quake,Phản Đòn Tê Giác - Tê Giác Địa Chấn,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tê Giác Địa Chấn.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_turtle_mire,Bảo Vệ Rùa Thần - Rùa Đầm Lầy,"Rùa tạo ra một vùng hào quang bảo vệ, che chắn 75% sát thương lan cho các đồng minh cạnh bên và nhận thay sát thương đó. Hiệu ứng kéo dài 3 lượt. Biến Rùa thành lá chắn sống thực thụ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Rùa Đầm Lầy.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,turtle_protection,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_buffalo_mist,Khí Tức Dày - Trâu Sương Mù,"Tạo lớp sương mù bảo vệ, tăng giáp +10 và kháng phép +10 cho toàn bộ đồng minh cùng hàng trong 2 lượt. Rất hiệu quả khi đứng tiền tuyến bảo vệ hàng sau. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Trâu Sương Mù.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",SELF,ally_row_def_buff,,,,,,,,,,10,10,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_ant_guard,Kiến Trận Đồ - Kiến Hộ Vệ,"Dựng tường khiên kiên cố, tăng +25 Giáp và +15 Kháng Phép cho toàn bộ đồng minh cùng hàng trong 3 lượt. Biến hàng tank thành bức tường thành vững chắc. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Kiến Hộ Vệ.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",SELF,ally_row_def_buff,,,,,,,,,,25,15,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_panther_void,Tất Sát Hư Không - Hoàn Nộ - Báo Hư Không,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.8 ATK). Nếu hạ gục mục tiêu, hoàn lại 50% Nộ tối đa. Kỹ năng sát thủ tier 5 với khả năng liên hoàn cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Báo Hư Không.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,assassin_execute_rage_refund,physical,65,atk,2.8,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.5,,,,
+unit_skill_fox_flame,Hỏa Ấn Liên Kích - Cáo Hỏa,"Lao sau lưng mục tiêu và tung 2 nhát liên tiếp. Nhát đầu gây sát thương vật lý cơ bản (x1.45), nhát thứ hai gây thêm sát thương (x1.25). Tổng sát thương rất cao khi kết hợp cả 2 đòn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cáo Hỏa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",ASSASSIN_BACK,double_hit,physical,,,,,,,,,,,,,"{base:26,scale:1.45}","{base:22,scale:1.25}",,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_bat_blood,Cắn Mạch Hút Máu - Dơi Huyết,"Lao sau lưng mục tiêu và cắn sâu, gây sát thương vật lý và hút 45% sát thương gây ra thành máu cho bản thân. Giúp sát thủ sống dai hơn trong trận đánh kéo dài. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Dơi Huyết.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,single_burst_lifesteal,physical,34,atk,1.7,,,,,,,,,,,,0.45,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_lynx_echo,Ảnh Trảm - Châu Chấu Gió,"Lao sau lưng mục tiêu và chém, để lại bóng ảnh gây thêm 1 đòn trễ vào cùng mục tiêu. Đòn trễ gây sát thương dựa trên ATK (x0.9). Tổng 2 đòn tạo burst damage bất ngờ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Châu Chấu Gió.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",ASSASSIN_BACK,single_delayed_echo,physical,32,atk,1.45,,,,,,,,,,,,,20,0.9,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_mantis_blade,Lưỡi Kiếm Tử Thần - Bọ Ngựa Kiếm,"Chém mạnh vào điểm yếu, gây sát thương vật lý cực lớn (x2.8 ATK) và bỏ qua 50% giáp của mục tiêu. Nếu hạ gục mục tiêu, hồi ngay 50% Nộ. Sát thủ kết liễu hoàn hảo. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bọ Ngựa Kiếm.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,single_burst_armor_pen,physical,60,atk,2.8,,,,,,,,,,,,,,,,,,,,,,0.5,2,,,,,,,,,,,,,
+unit_skill_eagle_marksman,Tên Thập Tự - Đại Bàng Xạ Thủ,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Đại Bàng Xạ Thủ.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_monkey_spear,Xuyên Hàng - Khỉ Lao Cành,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Khỉ Lao Cành.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+unit_skill_owl_nightshot,Mũi Tên Ngủ - Cú Đêm,"Bắn mũi tên tẩm thuốc mê vào mục tiêu cùng hàng, gây sát thương vật lý. Sau đó Cú Đêm chọn ngẫu nhiên trong nhóm địch có nộ hiện tại cao nhất để ru ngủ: 1★ ru 1 mục tiêu, 2★ ru 2 mục tiêu, 3★ ru 3 mục tiêu. Tỷ lệ ru ngủ mỗi mục tiêu là 35% (ở 3★ đạt ~70%). Biến thể chuyên biệt cho Cú Đêm.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",RANGED_STATIC,single_sleep,physical,30,atk,1.25,,,,,,,,,,,,,,,,0.35,1,,,,,,,,,,,,,,,,,,,
+unit_skill_cat_goldbow,Phá Giáp Tiễn - Ong Lửa,"Bắn mũi tên phá giáp vào mục tiêu cùng hàng, gây sát thương vật lý và giảm 10 giáp mục tiêu trong 2 lượt. Rất hiệu quả để setup cho đồng đội dồn sát thương lên tank. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Ong Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,single_armor_break,physical,28,atk,1.2,,,,,,,,2,,,,,,,,,10,,,,,,,,,,,,,,,,,,,
+unit_skill_wasp_sting,Bão Kim Ong Bắp Cày - Ong Bắp Cày,"Phóng kim độc vào các mục tiêu ngẫu nhiên: 1★ bắn 1 mục tiêu, 2★ bắn 2 mục tiêu, 3★ bắn 3 mục tiêu. Sát thương mỗi kim theo sao: 1★ = (36 + 1.4x ATK), 2★ = +20%, 3★ = +40%, không giảm theo số mục tiêu. Biến thể chuyên biệt cho Ong Bắp Cày.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",RANGED_STATIC,random_multi,physical,36,atk,1.4,,,,,,,,,,,,,,1,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_ice_mage,Cột Băng Hệ - Chuồn Chuồn Băng,"Triệu hồi cột băng khổng lồ đánh toàn bộ địch trong cùng cột mục tiêu. Gây sát thương phép đầy đủ và có tỷ lệ 50% đóng băng từng kẻ địch trong 1 lượt (ở 3★ tỷ lệ đạt 100%). Pháp sư trị đội hình đứng gần nhau. Biến thể chuyên biệt cho Chuồn Chuồn Băng.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,,,,,,,,,,,,,0.5,,,,,,,,,,,,,,,,
+unit_skill_worm_ice,Băng Vụ Nén - Cóc Băng,"Nổ băng tại vị trí mục tiêu, gây sát thương phép đầy đủ lên ô mục tiêu và 8 ô kề sát quanh nó. Ở sao cao mở rộng thêm 1 vòng ô ngoài cùng. Có hiệu ứng làm chậm 1 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cóc Băng.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,aoe_circle,magic,38,matk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_storm_mage,Lôi Trụ Tách Nhánh - Rắn Lôi,"Dội sét xuống cột mục tiêu gây sát thương phép đầy đủ, sau đó lan sang 2 kẻ địch gần nhất gây sát thương đầy đủ. Ở sao cao lan thêm mục tiêu. Rất mạnh khi địch đứng dày. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rắn Lôi.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,column_plus_splash,magic,40,matk,1.2,,,,,,,,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,
+unit_skill_spore_mage,Mưa Bào Tử - Nhện Bào Tử,"Rải bào tử độc lên vùng rộng quanh mục tiêu, gây sát thương phép đầy đủ và nhiễm độc 2 lượt (16 sát thương mỗi lượt). Ở sao cao vùng ảnh hưởng mở rộng và độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Nhện Bào Tử.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",RANGED_STATIC,aoe_poison,magic,34,matk,1.05,,,,,,,,,,,,,,,,,,,,,,2,16,,,,,,,,,,,,,
+unit_skill_deer_song,Khúc Ca Tái Sinh - Nai Thần Ca,"Hát bài ca hồi sinh, hồi phục máu cho 2 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.2). Ở sao cao hồi thêm đồng minh. Kỹ năng hồi máu chủ lực của đội. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Nai Thần Ca.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_butterfly_mirror,Kính Mộng - Bướm Kính,"Tạo lá chắn phép thuật cho đồng minh yếu nhất và xóa 1 debuff nhẹ. Lá chắn dựa trên MATK (x0.8). Giúp bảo vệ carry khỏi burst damage. Ở sao cao khiên mạnh hơn. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Bướm Kính.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,shield_cleanse,,,,70,,,,,,,,,,,,,,,,,,,,,,,,matk,0.8,,,,,,,,,,,
+unit_skill_parrot_roar,Tiếng Hô Kích Nộ - Vẹt Linh Hô,"Hô vang tiếng gọi linh thiêng, cộng +1 nộ cho 3 đồng minh gần nhất. Giúp đồng đội nhanh chóng tung chiêu thức. Ở sao cao kích nộ thêm đồng minh. Tăng tốc toàn đội cực kỳ mạnh. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Vẹt Linh Hô.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",SELF,team_rage,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,3,,,,,,,,,,
+unit_skill_qilin_breeze,Lối Gió - Kỳ Lân Gió,"Tạo luồng gió mạnh, tăng +10 ATK và +10% né tránh cho toàn bộ đồng minh cùng cột trong 2 lượt. Hiệu quả khi đặt cùng cột với carry hoặc sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Kỳ Lân Gió.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,column_bless,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,,0.1,10,,,,,
+unit_skill_tiger_fang,Cào Rách Thịt - Hổ Nanh,"Hổ lao lên và cào xé dọc theo một cột, gây sát thương vật lý lên toàn bộ kẻ địch trong cột trúng đòn và gây hiệu ứng chảy máu 3 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Hổ Nanh.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",MELEE_FRONT,column_bleed,physical,26,atk,1.1,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_wolf_alpha,Tru Hào - Sói Thủ Lĩnh,"Tru vang rừng sâu, tăng +15 ATK cho bản thân trong 2 lượt và kích hoạt 1 đòn phụ từ đồng minh cùng hàng (tỷ lệ 55%). Ở sao cao tỷ lệ đòn phụ tăng lên gần 100%. Đánh phối hợp cực hiệu quả. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Sói Thủ Lĩnh.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",MELEE_FRONT,self_atk_and_assist,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,15,0.55,,,,,,
+unit_skill_hippo_maul,Nện Bùn - Hà Mã Nện,"Nện mạnh xuống đất vào 3 ô phía trước theo dải tam giác, gây sát thương vật lý lên toàn bộ mục tiêu trúng đòn. Ở sao cao mở rộng thêm 2 ô ở mép dải đánh. Kiểm soát tốt tuyến đầu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Hà Mã Nện.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",MELEE_FRONT,cone_smash,physical,26,atk,1.18,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_beetle_drill,Mũi Khoan Xuyên - Bọ Khoan Giáp,"Xuyên thẳng vào mục tiêu bằng mũi khoan sắc bén, gây sát thương chuẩn (bỏ qua giáp và kháng phép). Đặc biệt hiệu quả chống tanker giáp dày. Sát thương không thể bị giảm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bọ Khoan Giáp.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",MELEE_FRONT,true_single,true,46,atk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_lion_general,Sư Tử Hống - Sư Tử Chiến Tướng,"Gầm thét dũng mãnh, gây sát thương phép lên toàn bộ kẻ địch và có 40% tỷ lệ làm choáng 1 lượt. Ở sao cao, tỷ lệ làm choáng tăng lên. Kỹ năng khống chế diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Sư Tử Chiến Tướng.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,global_stun,magic,32,atk,0.8,,,0.4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_scorpion_king,Đuôi Độc Bọ Cạp - Vua Bọ Cạp,"Chích đuôi vào mục tiêu, gây sát thương vật lý và làm tê liệt (giảm 30% tốc độ đánh và di chuyển) trong 2 lượt, kèm sát thương độc. Ở sao cao độc lan sang 4 ô liền kề mục tiêu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Vua Bọ Cạp.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",MELEE_FRONT,single_poison_slow,physical,35,atk,1.25,,,,,,,,,,,,,,,,,,,,2,15,,,,,,,,,,,,,,,
+unit_skill_worm_queen,Hoá Kén Phong Mộc - Sâu Xanh,"Sâu Xanh hệ Mộc hoá kén để trưởng thành thành Bướm Gió, tăng mạnh MATK và đòn đánh thường chuyển thành sát thương phép (tính theo MATK). Nếu đạt 2★ trở lên, toàn đội được buff nhanh nhạy (né tránh). Biến thể chuyên biệt cho Sâu Xanh.
+
+**Hiệu ứng nguyên tố Mộc** (Hút máu):
+- ⭐ 1 sao: 25% cơ hội hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: 40% cơ hội hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội hút 30% sát thương thành máu",SELF,metamorphosis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,{matk:1.5},,,,
+unit_skill_mosquito_toxic,Vòi Hút Máu - Muỗi Độc,"Lao sau lưng mục tiêu và cắm vòi hút máu, gây sát thương vật lý và hút 60% sát thương thành máu. Đồng thời gây bệnh dịch lan sang các địch liền kề (10 sát thương/lượt trong 3 lượt). Bệnh có thể lây lan. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Muỗi Độc.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,lifesteal_disease,physical,40,atk,1.5,,,,,,,,,,,,0.6,,,,,,,,,,,,,,,,,,,,,,3,10,
+unit_skill_bug_plague,Độc Tố Lan Tràn - Bọ Dịch Hạch,"Phun độc tố lan tràn khắp chiến trường, gây sát thương phép lên toàn bộ kẻ địch và nhiễm độc 3 lượt (15 sát thương/lượt). Rất mạnh đánh team fight. Ở sao cao độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bọ Dịch Hạch.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",RANGED_STATIC,global_poison_team,magic,30,matk,0.8,,,,,,,,,,,,,,,,,,,,,,3,15,,,,,,,,,,,,,
+unit_skill_elephant_guard,Voi Giẫm Đạp - Voi Thiết Giáp,"Dậm mạnh xuống đất gây choáng lên 8 ô kề sát quanh bản thân trong 1 lượt và gây sát thương vật lý. Tanker kiểm soát đám đông cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Voi Thiết Giáp.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,aoe_circle_stun,physical,40,atk,1.1,,,,0.4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_crocodile_bite,Cá Sấu Tử Thần - Cá Sấu Đầm,"Cắn chặt mục tiêu và xoay tròn, gây sát thương vật lý cực lớn (x2.5 ATK) và làm mục tiêu chảy máu (20 sát thương/lượt) trong 3 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cá Sấu Đầm.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",MELEE_FRONT,single_bleed,physical,50,atk,2.5,,,,,,,,,,,,,,,,,,,,,,3,20,,,,,,,,,,,,,
+unit_skill_crow_storm,Lông Vũ Bão Táp - Quạ Bão Táp,"Phóng hàng loạt lông vũ sắt nhọn vào 3 ô trước mặt theo dải tam giác, gây sát thương vật lý cho mọi mục tiêu trúng đòn. Xạ thủ gây sát thương diện rộng. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Quạ Bão Táp.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,cone_shot,physical,35,atk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_peacock_dazzle,Điệu Múa Mê Hoặc - Khổng Tước Vũ,"Múa điệu mê hoặc, làm giảm 30% ATK của toàn bộ kẻ địch trong 2 lượt. Khắc chế đội hình sát thương vật lý. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Khổng Tước Vũ.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,global_debuff_atk,magic,,,,,0.3,2,,,,,,,,,,,,,,,,,,,,,,,,,0.3,,,,,,,,
+unit_skill_triceratops_charge,Sừng Ba Mũi - Bò Rừng Xung Phong,"Lao thẳng về phía trước húc văng kẻ địch, gây sát thương vật lý và đẩy lùi mục tiêu ra sau 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bò Rừng Xung Phong.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,knockback_charge,physical,30,atk,1.05,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_gorilla_smash,Cú Đấm Ngàn Cân - Đười Ươi Phẫn Nộ,"Đấm mạnh xuống đất, gây sát thương vật lý lên mục tiêu và 2 kẻ địch bên cạnh, đồng thời giảm 20 giáp của chúng. Đấu sĩ phá giáp diện rộng. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Đười Ươi Phẫn Nộ.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,cleave_armor_break,physical,38,atk,1.25,,,,,,,,,20,,,,,,,,,,,,,,,,20,,,,,,,,,,,
+unit_skill_cobra_venom,Nọc Độc Tử Thần - Rắn Hổ Mang,"Phun nọc độc cực mạnh vào mục tiêu, gây sát thương phép và nhiễm độc (30 sát thương/lượt) trong 3 lượt. Sát thủ phép thuật. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rắn Hổ Mang.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,single_strong_poison,magic,40,matk,1.5,,,,,,,,,,,,,,,,,,,,,,3,30,,,,,,,,,,,,,
+unit_skill_swan_grace,Khiên Thiên Nga - Thiên Nga Trắng,"Tạo lá chắn nước tinh khiết cho đồng minh yếu nhất, hấp thụ sát thương. Lá chắn dựa trên MATK (x1.0). Bảo vệ carry khỏi burst damage. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Thiên Nga Trắng.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,shield_cleanse,,,,80,,,,,,,,,,,,,,,,,,,,,,,,matk,1.0,,,,,,,,,,,
+unit_skill_vulture_scavunge,Tiệc Xác Thối - Kền Kền Ăn Xác,"Lao sau lưng mục tiêu và tấn công điểm yếu, gây sát thương vật lý cao (x2.2 ATK). Nếu mục tiêu dưới 30% HP, sát thương tăng thêm 50%. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kền Kền Ăn Xác.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",ASSASSIN_BACK,single_burst,physical,48,atk,2.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_dragon_breath,Hỏa Ngục Rồng - Rồng Lửa,"Phun lửa rồng thiêu đốt toàn bộ kẻ địch, gây sát thương phép và nhiễm cháy (18 sát thương/lượt) trong 3 lượt. Sát thương diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rồng Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,global_poison_team,magic,36,matk,0.9,,,,,,,,,,,,,,,,,,,,,,3,18,,,,,,,,,,,,,
+unit_skill_phoenix_rebirth,Lửa Phượng Hoàng - Phượng Hoàng Lửa,"Hồi phục máu cho 3 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.3). Nếu có đồng minh chết trong lượt trước, hồi sinh với 30% HP. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Phượng Hoàng Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",SELF,dual_heal,,40,matk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_trex_bite,Hàm Bạo Chúa - Bạo Chúa T-Rex,"Cắn nghiền mục tiêu với hàm răng khổng lồ, gây sát thương vật lý cực lớn (x2.6 ATK) và giảm 25 giáp mục tiêu trong 2 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bạo Chúa T-Rex.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,single_armor_break,physical,55,atk,2.6,,,,,,,,2,,,,,,,,,,,25,,,,,,,,,,,,,,,,,
+unit_skill_whale_song,Sóng Cổ Đại - Cá Voi Cổ Đại,"Tạo sóng thần khổng lồ, gây sát thương phép lên toàn bộ kẻ địch và đẩy lùi hàng trước 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cá Voi Cổ Đại.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,global_knockback,magic,42,matk,1.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_kraken_void,Xúc Tu Hư Không - Kraken Hư Không,"Triệu hồi xúc tu từ hư không, gây sát thương phép lên 4 mục tiêu ngẫu nhiên. Mỗi xúc tu gây sát thương độc lập. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kraken Hư Không.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,random_multi,magic,38,matk,1.3,,,,,,,,,,,,,,4,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_kirin_thunder,Phán Quyết Kỳ Lân - Kỳ Lân Lôi,"Triệu hồi sét trời giáng xuống toàn bộ kẻ địch, gây sát thương phép và có 45% tỷ lệ làm choáng 1 lượt. Kiểm soát đám đông mạnh mẽ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kỳ Lân Lôi.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,global_stun,magic,40,matk,1.0,,,0.45,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_lizard_elder,Phúc Lành Cổ Thụ - Rồng Đất Cổ,"Kêu gọi sức mạnh đại địa, tăng +20 Giáp và +20 Kháng Phép cho toàn bộ đồng minh trong 3 lượt. Đồng thời hồi 50 HP cho đồng minh yếu nhất. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Rồng Đất Cổ.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,team_def_buff,,,,,,,,,,20,20,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_pangolin_plate,Vảy Tê Tê - Tê Tê Thiết Giáp,"Kích hoạt lớp vảy sắc nhọn, phản lại 100% sát thương vật lý nhận được trong 3 lượt. Tướng phép và sát thương chuẩn hoàn toàn miễn nhiễm với phản đòn này. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tê Tê Thiết Giáp.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,pangolin_reflect,,,,,,,,,,,,,,,1,3,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_badger_stone,Phản Đòn Tê Giác - Lửng Đá,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Lửng Đá.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_crab_shell,Bảo Vệ Rùa Thần - Cua Giáp,"Rùa tạo ra một vùng hào quang bảo vệ, che chắn 75% sát thương lan cho các đồng minh cạnh bên và nhận thay sát thương đó. Hiệu ứng kéo dài 3 lượt. Biến Rùa thành lá chắn sống thực thụ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Cua Giáp.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,turtle_protection,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_armadillo_roll,Vảy Tê Tê - Tatu Cuộn,"Kích hoạt lớp vảy sắc nhọn, phản lại 100% sát thương vật lý nhận được trong 3 lượt. Tướng phép và sát thương chuẩn hoàn toàn miễn nhiễm với phản đòn này. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tatu Cuộn.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,pangolin_reflect,,,,,,,,,,,,,,,1,3,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_snail_fortress,Phản Đòn Tê Giác - Ốc Sên Pháo Đài,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Ốc Sên Pháo Đài.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_ox_mountain,Khí Tức Dày - Bò Núi,"Tạo lớp sương mù bảo vệ, tăng giáp +10 và kháng phép +10 cho toàn bộ đồng minh cùng hàng trong 2 lượt. Rất hiệu quả khi đứng tiền tuyến bảo vệ hàng sau. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Bò Núi.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,ally_row_def_buff,,,,,,,,,,10,10,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_walrus_ice,Phản Đòn Tê Giác - Hải Mã Băng,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Hải Mã Băng.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_golem_stone,Kiến Trận Đồ - Golem Đá,"Dựng tường khiên kiên cố, tăng +25 Giáp và +15 Kháng Phép cho toàn bộ đồng minh cùng hàng trong 3 lượt. Biến hàng tank thành bức tường thành vững chắc. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Golem Đá.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,ally_row_def_buff,,,,,,,,,,25,15,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_yak_highland,Phản Đòn Tê Giác - Bò Tây Tạng,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Bò Tây Tạng.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_mammoth_ancient,Bảo Vệ Rùa Thần - Voi Ma Mút,"Rùa tạo ra một vùng hào quang bảo vệ, che chắn 75% sát thương lan cho các đồng minh cạnh bên và nhận thay sát thương đó. Hiệu ứng kéo dài 3 lượt. Biến Rùa thành lá chắn sống thực thụ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Voi Ma Mút.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,turtle_protection,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_kraken_deep,Phản Đòn Tê Giác - Mực Khổng Lồ,"Tích tụ năng lượng vào lớp da dày, mỗi khi bị kẻ địch cận chiến tấn công, Tê Giác sẽ lập tức húc trả lại gây sát thương vật lý. Hiệu ứng kéo dài 3 lượt. Khắc chế cứng các đấu sĩ và sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Mực Khổng Lồ.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,rhino_counter,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_titan_earth,Phúc Lành Cổ Thụ - Titan Đất,"Kêu gọi sức mạnh đại địa, tăng +20 Giáp và +20 Kháng Phép cho toàn bộ đồng minh trong 3 lượt. Đồng thời hồi 50 HP cho đồng minh yếu nhất. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Titan Đất.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",SELF,team_def_buff,,,,,,,,,,20,20,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_hydra_swamp,Bảo Vệ Rùa Thần - Hydra Đầm Lầy,"Rùa tạo ra một vùng hào quang bảo vệ, che chắn 75% sát thương lan cho các đồng minh cạnh bên và nhận thay sát thương đó. Hiệu ứng kéo dài 3 lượt. Biến Rùa thành lá chắn sống thực thụ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Hydra Đầm Lầy.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,turtle_protection,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,,,,,,
+unit_skill_ram_charge,Mai Gai Cổ Mộc - Cừu Núi Húc,"Kích hoạt lớp mai gai tự nhiên, gây sát thương vật lý lên mục tiêu trước mặt, đồng thời tạo lá chắn bảo vệ bản thân và khiêu khích toàn bộ kẻ địch buộc chúng phải tấn công mình trong 1 lượt. Lá chắn tăng theo chỉ số tấn công. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cừu Núi Húc.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,damage_shield_taunt,physical,28,atk,1.05,72,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_jaguar_hunt,Tru Hào - Báo Đốm Săn,"Tru vang rừng sâu, tăng +15 ATK cho bản thân trong 2 lượt và kích hoạt 1 đòn phụ từ đồng minh cùng hàng (tỷ lệ 55%). Ở sao cao tỷ lệ đòn phụ tăng lên gần 100%. Đánh phối hợp cực hiệu quả. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Báo Đốm Săn.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",MELEE_FRONT,self_atk_and_assist,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,15,0.55,,,,,,
+unit_skill_komodo_bite,Đuôi Độc Bọ Cạp - Kỳ Đà Khổng Lồ,"Chích đuôi vào mục tiêu, gây sát thương vật lý và làm tê liệt (giảm 30% tốc độ đánh và di chuyển) trong 2 lượt, kèm sát thương độc. Ở sao cao độc lan sang 4 ô liền kề mục tiêu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kỳ Đà Khổng Lồ.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",MELEE_FRONT,single_poison_slow,physical,35,atk,1.25,,,,,,,,,,,,,,,,,,,,2,15,,,,,,,,,,,,,,,
+unit_skill_otter_river,Nện Bùn - Rái Cá Sông,"Nện mạnh xuống đất vào 3 ô phía trước theo dải tam giác, gây sát thương vật lý lên toàn bộ mục tiêu trúng đòn. Ở sao cao mở rộng thêm 2 ô ở mép dải đánh. Kiểm soát tốt tuyến đầu. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rái Cá Sông.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",MELEE_FRONT,cone_smash,physical,26,atk,1.18,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_kangaroo_kick,Lao Lợn Rừng - Kangaroo Đấm,"Lao thẳng vào mục tiêu với tốc độ cao, gây sát thương vật lý (x1.4 ATK) và đẩy lùi mục tiêu 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kangaroo Đấm.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",MELEE_FRONT,knockback_charge,physical,35,atk,1.4,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_hyena_pack,Tru Hào - Linh Cẩu Bầy,"Tru vang rừng sâu, tăng +15 ATK cho bản thân trong 2 lượt và kích hoạt 1 đòn phụ từ đồng minh cùng hàng (tỷ lệ 55%). Ở sao cao tỷ lệ đòn phụ tăng lên gần 100%. Đánh phối hợp cực hiệu quả. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Linh Cẩu Bầy.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",MELEE_FRONT,self_atk_and_assist,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,15,0.55,,,,,,
+unit_skill_wolverine_rage,Lao Lợn Rừng - Chồn Sói Cuồng,"Lao thẳng vào mục tiêu với tốc độ cao, gây sát thương vật lý (x1.4 ATK) và đẩy lùi mục tiêu 1 ô. Phá vỡ đội hình địch. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chồn Sói Cuồng.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",MELEE_FRONT,knockback_charge,physical,35,atk,1.4,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_bison_stampede,Voi Giẫm Đạp - Bò Rừng Dẫm,"Dậm mạnh xuống đất gây choáng lên 8 ô kề sát quanh bản thân trong 1 lượt và gây sát thương vật lý. Tanker kiểm soát đám đông cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bò Rừng Dẫm.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,aoe_circle_stun,physical,40,atk,1.1,,,,0.4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_shark_frenzy,Cá Sấu Tử Thần - Cá Mập Điên,"Cắn chặt mục tiêu và xoay tròn, gây sát thương vật lý cực lớn (x2.5 ATK) và làm mục tiêu chảy máu (20 sát thương/lượt) trong 3 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cá Mập Điên.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",MELEE_FRONT,single_bleed,physical,50,atk,2.5,,,,,,,,,,,,,,,,,,,,,,3,20,,,,,,,,,,,,,
+unit_skill_dragon_earth,Mai Gai Cổ Mộc - Rồng Đất,"Kích hoạt lớp mai gai tự nhiên, gây sát thương vật lý lên mục tiêu trước mặt, đồng thời tạo lá chắn bảo vệ bản thân và khiêu khích toàn bộ kẻ địch buộc chúng phải tấn công mình trong 1 lượt. Lá chắn tăng theo chỉ số tấn công. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rồng Đất.
+
+**Hiệu ứng nguyên tố Nham** (Giảm giáp):
+- ⭐ 1 sao: 25% cơ hội giảm 20% giáp (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 30% giáp (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 40% giáp (3 lượt)",MELEE_FRONT,damage_shield_taunt,physical,28,atk,1.05,72,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_chimera_flame,Hỏa Ngục Rồng - Chimera Lửa,"Phun lửa rồng thiêu đốt toàn bộ kẻ địch, gây sát thương phép và nhiễm cháy (18 sát thương/lượt) trong 3 lượt. Sát thương diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chimera Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,global_poison_team,magic,36,matk,0.9,,,,,,,,,,,,,,,,,,,,,,3,18,,,,,,,,,,,,,
+unit_skill_weasel_quick,Ảnh Trảm - Chồn Nhanh,"Lao sau lưng mục tiêu và chém, để lại bóng ảnh gây thêm 1 đòn trễ vào cùng mục tiêu. Đòn trễ gây sát thương dựa trên ATK (x0.9). Tổng 2 đòn tạo burst damage bất ngờ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chồn Nhanh.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",ASSASSIN_BACK,single_delayed_echo,physical,32,atk,1.45,,,,,,,,,,,,,20,0.9,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_spider_venom,Cắn Mạch Hút Máu - Nhện Độc,"Lao sau lưng mục tiêu và cắn sâu, gây sát thương vật lý và hút 45% sát thương gây ra thành máu cho bản thân. Giúp sát thủ sống dai hơn trong trận đánh kéo dài. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Nhện Độc.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,single_burst_lifesteal,physical,34,atk,1.7,,,,,,,,,,,,0.45,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_scorpion_shadow,Nọc Độc Tử Thần - Bọ Cạp Bóng,"Phun nọc độc cực mạnh vào mục tiêu, gây sát thương phép và nhiễm độc (30 sát thương/lượt) trong 3 lượt. Sát thủ phép thuật. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bọ Cạp Bóng.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,single_strong_poison,magic,40,matk,1.5,,,,,,,,,,,,,,,,,,,,,,3,30,,,,,,,,,,,,,
+unit_skill_chameleon_stealth,Ảnh Trảm - Tắc Kè Ẩn,"Lao sau lưng mục tiêu và chém, để lại bóng ảnh gây thêm 1 đòn trễ vào cùng mục tiêu. Đòn trễ gây sát thương dựa trên ATK (x0.9). Tổng 2 đòn tạo burst damage bất ngờ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Tắc Kè Ẩn.
+
+**Hiệu ứng nguyên tố Mộc** (Hút máu):
+- ⭐ 1 sao: 25% cơ hội hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: 40% cơ hội hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội hút 30% sát thương thành máu",ASSASSIN_BACK,single_delayed_echo,physical,32,atk,1.45,,,,,,,,,,,,,20,0.9,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_viper_strike,Nọc Độc Tử Thần - Rắn Lục Tấn,"Phun nọc độc cực mạnh vào mục tiêu, gây sát thương phép và nhiễm độc (30 sát thương/lượt) trong 3 lượt. Sát thủ phép thuật. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Rắn Lục Tấn.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,single_strong_poison,magic,40,matk,1.5,,,,,,,,,,,,,,,,,,,,,,3,30,,,,,,,,,,,,,
+unit_skill_ferret_shadow,Tất Sát Bóng Tối - Chồn Hương Bóng,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.45 ATK). Ưu tiên tấn công carry yếu giáp ở hậu phương. Sát thương đơn mục tiêu mạnh nhất trong các sát thủ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chồn Hương Bóng.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,single_burst,physical,56,atk,2.45,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_mink_silent,Tất Sát Hư Không - Hoàn Nộ - Chồn Mink Im,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.8 ATK). Nếu hạ gục mục tiêu, hoàn lại 50% Nộ tối đa. Kỹ năng sát thủ tier 5 với khả năng liên hoàn cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chồn Mink Im.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",ASSASSIN_BACK,assassin_execute_rage_refund,physical,65,atk,2.8,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.5,,,,
+unit_skill_wasp_assassin,Lưỡi Kiếm Tử Thần - Ong Bắp Cày Sát,"Chém mạnh vào điểm yếu, gây sát thương vật lý cực lớn (x2.8 ATK) và bỏ qua 50% giáp của mục tiêu. Nếu hạ gục mục tiêu, hồi ngay 50% Nộ. Sát thủ kết liễu hoàn hảo. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Ong Bắp Cày Sát.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",ASSASSIN_BACK,single_burst_armor_pen,physical,60,atk,2.8,,,,,,,,,,,,,,,,,,,,,,0.5,2,,,,,,,,,,,,,
+unit_skill_raven_death,Tất Sát Bóng Tối - Quạ Tử Thần,"Lao vòng ra sau lưng mục tiêu và giáng đòn chí tử với hệ số sát thương cực cao (x2.45 ATK). Ưu tiên tấn công carry yếu giáp ở hậu phương. Sát thương đơn mục tiêu mạnh nhất trong các sát thủ. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Quạ Tử Thần.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,single_burst,physical,56,atk,2.45,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_wraith_shadow,Hỏa Ấn Liên Kích - Ma Bóng Tối,"Lao sau lưng mục tiêu và tung 2 nhát liên tiếp. Nhát đầu gây sát thương vật lý cơ bản (x1.45), nhát thứ hai gây thêm sát thương (x1.25). Tổng sát thương rất cao khi kết hợp cả 2 đòn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Ma Bóng Tối.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",ASSASSIN_BACK,double_hit,physical,,,,,,,,,,,,,"{base:26,scale:1.45}","{base:22,scale:1.25}",,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_reaper_void,Tiệc Xác Thối - Tử Thần Hư Không,"Lao sau lưng mục tiêu và tấn công điểm yếu, gây sát thương vật lý cao (x2.2 ATK). Nếu mục tiêu dưới 30% HP, sát thương tăng thêm 50%. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Tử Thần Hư Không.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",ASSASSIN_BACK,single_burst,physical,48,atk,2.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_hawk_hunter,Mũi Tên Ngủ - Diều Hâu Săn,"Bắn mũi tên tẩm thuốc mê vào mục tiêu cùng hàng, gây sát thương vật lý. Sau đó Cú Đêm chọn ngẫu nhiên trong nhóm địch có nộ hiện tại cao nhất để ru ngủ: 1★ ru 1 mục tiêu, 2★ ru 2 mục tiêu, 3★ ru 3 mục tiêu. Tỷ lệ ru ngủ mỗi mục tiêu là 35% (ở 3★ đạt ~70%). Biến thể chuyên biệt cho Diều Hâu Săn.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,single_sleep,physical,30,atk,1.25,,,,,,,,,,,,,,,,0.35,1,,,,,,,,,,,,,,,,,,,
+unit_skill_falcon_dive,Tên Thập Tự - Cắt Lao,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cắt Lao.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_toucan_snipe,Phá Giáp Tiễn - Chim Mỏ To,"Bắn mũi tên phá giáp vào mục tiêu cùng hàng, gây sát thương vật lý và giảm 10 giáp mục tiêu trong 2 lượt. Rất hiệu quả để setup cho đồng đội dồn sát thương lên tank. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chim Mỏ To.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,single_armor_break,physical,28,atk,1.2,,,,,,,,2,,,,,,,,,10,,,,,,,,,,,,,,,,,,,
+unit_skill_heron_pierce,Xuyên Hàng - Diệc Xuyên,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Diệc Xuyên.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+unit_skill_woodpecker_drill,Mũi Tên Ngủ - Gõ Kiến Khoan,"Bắn mũi tên tẩm thuốc mê vào mục tiêu cùng hàng, gây sát thương vật lý. Sau đó Cú Đêm chọn ngẫu nhiên trong nhóm địch có nộ hiện tại cao nhất để ru ngủ: 1★ ru 1 mục tiêu, 2★ ru 2 mục tiêu, 3★ ru 3 mục tiêu. Tỷ lệ ru ngủ mỗi mục tiêu là 35% (ở 3★ đạt ~70%). Biến thể chuyên biệt cho Gõ Kiến Khoan.
+
+**Hiệu ứng nguyên tố Mộc** (Hút máu):
+- ⭐ 1 sao: 25% cơ hội hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: 40% cơ hội hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội hút 30% sát thương thành máu",RANGED_STATIC,single_sleep,physical,30,atk,1.25,,,,,,,,,,,,,,,,0.35,1,,,,,,,,,,,,,,,,,,,
+unit_skill_pelican_bomb,Tên Thập Tự - Bồ Nông Bom,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bồ Nông Bom.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_stork_sniper,Xuyên Hàng - Cò Bắn Tỉa,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cò Bắn Tỉa.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+unit_skill_flamingo_shot,Phá Giáp Tiễn - Hồng Hạc Bắn,"Bắn mũi tên phá giáp vào mục tiêu cùng hàng, gây sát thương vật lý và giảm 10 giáp mục tiêu trong 2 lượt. Rất hiệu quả để setup cho đồng đội dồn sát thương lên tank. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Hồng Hạc Bắn.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,single_armor_break,physical,28,atk,1.2,,,,,,,,2,,,,,,,,,10,,,,,,,,,,,,,,,,,,,
+unit_skill_condor_sky,Xuyên Hàng - Diều Hâu Khổng Lồ,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Diều Hâu Khổng Lồ.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+unit_skill_albatross_wind,Tên Thập Tự - Hải Âu Gió,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Hải Âu Gió.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_phoenix_arrow,Lông Vũ Bão Táp - Phượng Hoàng Tên,"Phóng hàng loạt lông vũ sắt nhọn vào 3 ô trước mặt theo dải tam giác, gây sát thương vật lý cho mọi mục tiêu trúng đòn. Xạ thủ gây sát thương diện rộng. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Phượng Hoàng Tên.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,cone_shot,physical,35,atk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_garuda_divine,Bão Kim Ong Bắp Cày - Garuda Thần,"Phóng kim độc vào các mục tiêu ngẫu nhiên: 1★ bắn 1 mục tiêu, 2★ bắn 2 mục tiêu, 3★ bắn 3 mục tiêu. Sát thương mỗi kim theo sao: 1★ = (36 + 1.4x ATK), 2★ = +20%, 3★ = +40%, không giảm theo số mục tiêu. Biến thể chuyên biệt cho Garuda Thần.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",RANGED_STATIC,random_multi,physical,36,atk,1.4,,,,,,,,,,,,,,1,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_thunderbird_storm,Xuyên Hàng - Chim Sấm Sét,"Bắn mũi tên xuyên qua nhiều mục tiêu trên cùng hàng, gây sát thương vật lý đầy đủ cho tối đa 3 mục tiêu (ở sao cao đánh thêm mục tiêu). Ưu tiên mục tiêu gần nhất trước. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Chim Sấm Sét.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",RANGED_STATIC,row_multi,physical,22,atk,1.02,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,,,,
+unit_skill_roc_legend,Tên Thập Tự - Đại Bàng Huyền Thoại,"Bắn mũi tên nổ hình thập (+) vào mục tiêu, gây sát thương vật lý lên mục tiêu chính và 4 ô liền kề (trên/dưới/trái/phải). Tất cả ô bị ảnh hưởng chịu sát thương đầy đủ. Ở sao cao, vùng ảnh hưởng mở rộng thêm. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Đại Bàng Huyền Thoại.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",RANGED_STATIC,cross_5,physical,25,atk,1.1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_toad_poison,Mưa Bào Tử - Cóc Độc,"Rải bào tử độc lên vùng rộng quanh mục tiêu, gây sát thương phép đầy đủ và nhiễm độc 2 lượt (16 sát thương mỗi lượt). Ở sao cao vùng ảnh hưởng mở rộng và độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Cóc Độc.
+
+**Hiệu ứng nguyên tố Trùng** (Nhiễm độc):
+- ⭐ 1 sao: 25% cơ hội nhiễm độc 10 sát thương/lượt (2 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội nhiễm độc 15 sát thương/lượt (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội nhiễm độc 18 sát thương/lượt (3 lượt)",RANGED_STATIC,aoe_poison,magic,34,matk,1.05,,,,,,,,,,,,,,,,,,,,,,2,16,,,,,,,,,,,,,
+unit_skill_newt_fire,Hỏa Ngục Rồng - Kỳ Nhông Lửa,"Phun lửa rồng thiêu đốt toàn bộ kẻ địch, gây sát thương phép và nhiễm cháy (18 sát thương/lượt) trong 3 lượt. Sát thương diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kỳ Nhông Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,global_poison_team,magic,36,matk,0.9,,,,,,,,,,,,,,,,,,,,,,3,18,,,,,,,,,,,,,
+unit_skill_salamander_flame,Băng Vụ Nén - Kỳ Giông Lửa,"Nổ băng tại vị trí mục tiêu, gây sát thương phép đầy đủ lên ô mục tiêu và 8 ô kề sát quanh nó. Ở sao cao mở rộng thêm 1 vòng ô ngoài cùng. Có hiệu ứng làm chậm 1 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Kỳ Giông Lửa.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,aoe_circle,magic,38,matk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_jellyfish_shock,Cột Băng Hệ - Sứa Điện,"Triệu hồi cột băng khổng lồ đánh toàn bộ địch trong cùng cột mục tiêu. Gây sát thương phép đầy đủ và có tỷ lệ 50% đóng băng từng kẻ địch trong 1 lượt (ở 3★ tỷ lệ đạt 100%). Pháp sư trị đội hình đứng gần nhau. Biến thể chuyên biệt cho Sứa Điện.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,,,,,,,,,,,,,0.5,,,,,,,,,,,,,,,,
+unit_skill_squid_ink,Xúc Tu Hư Không - Mực Mực,"Triệu hồi xúc tu từ hư không, gây sát thương phép lên 4 mục tiêu ngẫu nhiên. Mỗi xúc tu gây sát thương độc lập. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Mực Mực.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,random_multi,magic,38,matk,1.3,,,,,,,,,,,,,,4,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_octopus_mind,Lôi Trụ Tách Nhánh - Bạch Tuộc Tâm,"Dội sét xuống cột mục tiêu gây sát thương phép đầy đủ, sau đó lan sang 2 kẻ địch gần nhất gây sát thương đầy đủ. Ở sao cao lan thêm mục tiêu. Rất mạnh khi địch đứng dày. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bạch Tuộc Tâm.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",RANGED_STATIC,column_plus_splash,magic,40,matk,1.2,,,,,,,,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,
+unit_skill_firefly_light,Hỏa Ngục Rồng - Đom Đóm Sáng,"Phun lửa rồng thiêu đốt toàn bộ kẻ địch, gây sát thương phép và nhiễm cháy (18 sát thương/lượt) trong 3 lượt. Sát thương diện rộng cực mạnh. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Đom Đóm Sáng.
+
+**Hiệu ứng nguyên tố Hỏa** (Cháy):
+- ⭐ 1 sao: 25% cơ hội gây cháy 12 sát thương/lượt (2 lượt), 15% cơ hội lan lửa
+- ⭐⭐ 2 sao: 40% cơ hội gây cháy 17 sát thương/lượt (2 lượt), 25% cơ hội lan lửa
+- ⭐⭐⭐ 3 sao: 60% cơ hội gây cháy 22 sát thương/lượt (3 lượt), 35% cơ hội lan lửa",RANGED_STATIC,global_poison_team,magic,36,matk,0.9,,,,,,,,,,,,,,,,,,,,,,3,18,,,,,,,,,,,,,
+unit_skill_moth_dust,Mưa Bào Tử - Bướm Đêm Bụi,"Rải bào tử độc lên vùng rộng quanh mục tiêu, gây sát thương phép đầy đủ và nhiễm độc 2 lượt (16 sát thương mỗi lượt). Ở sao cao vùng ảnh hưởng mở rộng và độc mạnh hơn. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bướm Đêm Bụi.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",RANGED_STATIC,aoe_poison,magic,34,matk,1.05,,,,,,,,,,,,,,,,,,,,,,2,16,,,,,,,,,,,,,
+unit_skill_wasp_arcane,Cột Băng Hệ - Ong Phép,"Triệu hồi cột băng khổng lồ đánh toàn bộ địch trong cùng cột mục tiêu. Gây sát thương phép đầy đủ và có tỷ lệ 50% đóng băng từng kẻ địch trong 1 lượt (ở 3★ tỷ lệ đạt 100%). Pháp sư trị đội hình đứng gần nhau. Biến thể chuyên biệt cho Ong Phép.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,,,,,,,,,,,,,0.5,,,,,,,,,,,,,,,,
+unit_skill_beetle_mystic,Băng Vụ Nén - Bọ Huyền,"Nổ băng tại vị trí mục tiêu, gây sát thương phép đầy đủ lên ô mục tiêu và 8 ô kề sát quanh nó. Ở sao cao mở rộng thêm 1 vòng ô ngoài cùng. Có hiệu ứng làm chậm 1 lượt. Mốc sao: 1★ sát thương gốc, 2★ +20% sát thương, 3★ +40% sát thương. Biến thể chuyên biệt cho Bọ Huyền.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",RANGED_STATIC,aoe_circle,magic,38,matk,1.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_lich_undead,Cột Băng Hệ - Lich Bất Tử,"Triệu hồi cột băng khổng lồ đánh toàn bộ địch trong cùng cột mục tiêu. Gây sát thương phép đầy đủ và có tỷ lệ 50% đóng băng từng kẻ địch trong 1 lượt (ở 3★ tỷ lệ đạt 100%). Pháp sư trị đội hình đứng gần nhau. Biến thể chuyên biệt cho Lich Bất Tử.
+
+**Hiệu ứng nguyên tố Dạ** (Chảy máu):
+- ⭐ 1 sao: 25% cơ hội chảy máu 8 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐ 2 sao: 40% cơ hội chảy máu 12 sát thương/lượt (2 lượt), giảm 25% hồi máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội chảy máu 15 sát thương/lượt (3 lượt), giảm 25% hồi máu",RANGED_STATIC,column_freeze,magic,44,matk,1.25,,,,,,,,,,,,,,,,,,,,0.5,,,,,,,,,,,,,,,,
+unit_skill_dove_peace,Tiếng Hô Kích Nộ - Bồ Câu Hòa Bình,"Hô vang tiếng gọi linh thiêng, cộng +1 nộ cho 3 đồng minh gần nhất. Giúp đồng đội nhanh chóng tung chiêu thức. Ở sao cao kích nộ thêm đồng minh. Tăng tốc toàn đội cực kỳ mạnh. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Bồ Câu Hòa Bình.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,team_rage,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,3,,,,,,,,,,
+unit_skill_crane_blessing,Kính Mộng - Hạc Phước,"Tạo lá chắn phép thuật cho đồng minh yếu nhất và xóa 1 debuff nhẹ. Lá chắn dựa trên MATK (x0.8). Giúp bảo vệ carry khỏi burst damage. Ở sao cao khiên mạnh hơn. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Hạc Phước.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,shield_cleanse,,,,70,,,,,,,,,,,,,,,,,,,,,,,,matk,0.8,,,,,,,,,,,
+unit_skill_firefly_heal,Lối Gió - Đom Đóm Chữa,"Tạo luồng gió mạnh, tăng +10 ATK và +10% né tránh cho toàn bộ đồng minh cùng cột trong 2 lượt. Hiệu quả khi đặt cùng cột với carry hoặc sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Đom Đóm Chữa.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,column_bless,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,,0.1,10,,,,,
+unit_skill_unicorn_light,Lối Gió - Kỳ Lân Sáng,"Tạo luồng gió mạnh, tăng +10 ATK và +10% né tránh cho toàn bộ đồng minh cùng cột trong 2 lượt. Hiệu quả khi đặt cùng cột với carry hoặc sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Kỳ Lân Sáng.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,column_bless,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,,0.1,10,,,,,
+unit_skill_fairy_forest,Khúc Ca Tái Sinh - Tiên Rừng,"Hát bài ca hồi sinh, hồi phục máu cho 2 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.2). Ở sao cao hồi thêm đồng minh. Kỹ năng hồi máu chủ lực của đội. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tiên Rừng.
+
+**Hiệu ứng nguyên tố Mộc** (Hút máu):
+- ⭐ 1 sao: 25% cơ hội hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: 40% cơ hội hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội hút 30% sát thương thành máu",SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_dryad_tree,Phúc Lành Cổ Thụ - Yêu Tinh Cây,"Kêu gọi sức mạnh đại địa, tăng +20 Giáp và +20 Kháng Phép cho toàn bộ đồng minh trong 3 lượt. Đồng thời hồi 50 HP cho đồng minh yếu nhất. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Yêu Tinh Cây.
+
+**Hiệu ứng nguyên tố Mộc** (Hút máu):
+- ⭐ 1 sao: 25% cơ hội hút 15% sát thương thành máu
+- ⭐⭐ 2 sao: 40% cơ hội hút 25% sát thương thành máu
+- ⭐⭐⭐ 3 sao: 60% cơ hội hút 30% sát thương thành máu",SELF,team_def_buff,,,,,,,,,,20,20,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_wisp_light,Khúc Ca Tái Sinh - Hồn Ma Sáng,"Hát bài ca hồi sinh, hồi phục máu cho 2 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.2). Ở sao cao hồi thêm đồng minh. Kỹ năng hồi máu chủ lực của đội. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Hồn Ma Sáng.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_nymph_water,Khiên Thiên Nga - Tiên Nước,"Tạo lá chắn nước tinh khiết cho đồng minh yếu nhất, hấp thụ sát thương. Lá chắn dựa trên MATK (x1.0). Bảo vệ carry khỏi burst damage. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tiên Nước.
+
+**Hiệu ứng nguyên tố Thủy** (Giảm né tránh):
+- ⭐ 1 sao: 25% cơ hội giảm 15% né tránh (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% né tránh (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% né tránh (2 lượt)",SELF,shield_cleanse,,,,80,,,,,,,,,,,,,,,,,,,,,,,,matk,1.0,,,,,,,,,,,
+unit_skill_sprite_wind,Lối Gió - Yêu Tinh Gió,"Tạo luồng gió mạnh, tăng +10 ATK và +10% né tránh cho toàn bộ đồng minh cùng cột trong 2 lượt. Hiệu quả khi đặt cùng cột với carry hoặc sát thủ. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Yêu Tinh Gió.
+
+**Hiệu ứng nguyên tố Phong** (Giảm chính xác):
+- ⭐ 1 sao: 25% cơ hội giảm 15% chính xác (1 lượt)
+- ⭐⭐ 2 sao: 40% cơ hội giảm 25% chính xác (2 lượt)
+- ⭐⭐⭐ 3 sao: 60% cơ hội giảm 35% chính xác (2 lượt)",SELF,column_bless,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,,,0.1,10,,,,,
+unit_skill_angel_guardian,Lửa Phượng Hoàng - Thiên Thần Hộ Vệ,"Hồi phục máu cho 3 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.3). Nếu có đồng minh chết trong lượt trước, hồi sinh với 30% HP. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Thiên Thần Hộ Vệ.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,dual_heal,,40,matk,1.3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_seraphim_light,Khúc Ca Tái Sinh - Seraphim Ánh Sáng,"Hát bài ca hồi sinh, hồi phục máu cho 2 đồng minh có HP thấp nhất. Lượng hồi dựa trên MATK (x1.2). Ở sao cao hồi thêm đồng minh. Kỹ năng hồi máu chủ lực của đội. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Seraphim Ánh Sáng.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,dual_heal,,36,matk,1.2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+unit_skill_oracle_wisdom,Tiếng Hô Kích Nộ - Tiên Tri Trí Tuệ,"Hô vang tiếng gọi linh thiêng, cộng +1 nộ cho 3 đồng minh gần nhất. Giúp đồng đội nhanh chóng tung chiêu thức. Ở sao cao kích nộ thêm đồng minh. Tăng tốc toàn đội cực kỳ mạnh. Mốc sao: 1★ hiệu lực gốc, 2★ +20% hiệu lực, 3★ +40% hiệu lực. Biến thể chuyên biệt cho Tiên Tri Trí Tuệ.
+
+**Hiệu ứng nguyên tố Linh** (Thanh tẩy):
+- ⭐ 1 sao: 25% cơ hội xóa 1 debuff
+- ⭐⭐ 2 sao: 40% cơ hội xóa 1 debuff + hồi 20 HP
+- ⭐⭐⭐ 3 sao: 60% cơ hội xóa 2 debuff + hồi 40 HP",SELF,team_rage,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,3,,,,,,,,,,

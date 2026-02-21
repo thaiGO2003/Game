@@ -665,7 +665,7 @@ describe('Combat Flow Integration Tests', () => {
         side: "LEFT",
         classType: "ASSASSIN",
         tier: 2,
-        mods: { evadePct: 0.20 } // ASSASSIN base evasion
+        mods: { evadePct: 0.15 } // ASSASSIN base evasion
       });
 
       // Verify Wolf stats match requirements
@@ -674,7 +674,7 @@ describe('Combat Flow Integration Tests', () => {
       expect(wolf.def).toBe(16);
       expect(wolf.rageMax).toBe(2);
       expect(wolf.classType).toBe("ASSASSIN");
-      expect(wolf.mods.evadePct).toBe(0.20);
+      expect(wolf.mods.evadePct).toBe(0.15);
 
       // Test evasion in combat
       const enemy = createUnit({
@@ -693,10 +693,10 @@ describe('Combat Flow Integration Tests', () => {
         if (damage === 0) missCount++;
       }
 
-      // With 20% evasion, expect roughly 15-25% misses (allowing variance)
+      // With 15% evasion, expect roughly 10-20% misses (allowing variance)
       const missRate = missCount / attempts;
-      expect(missRate).toBeGreaterThan(0.10);
-      expect(missRate).toBeLessThan(0.35);
+      expect(missRate).toBeGreaterThan(0.05);
+      expect(missRate).toBeLessThan(0.25);
     });
 
     it('Mosquito should increase max HP when draining', () => {
@@ -1019,7 +1019,7 @@ describe('Combat Flow Integration Tests', () => {
         classType: "ASSASSIN",
         tier: 2,
         side: "LEFT",
-        mods: { evadePct: 0.20 }
+        mods: { evadePct: 0.15 }
       });
 
       const mosquito = createUnit({
@@ -1054,7 +1054,7 @@ describe('Combat Flow Integration Tests', () => {
 
       // Wolf attacks (ASSASSIN with evasion)
       expect(wolf.classType).toBe("ASSASSIN");
-      expect(wolf.mods.evadePct).toBe(0.20);
+      expect(wolf.mods.evadePct).toBe(0.15);
 
       // Mosquito drains
       const enemy1 = createUnit({

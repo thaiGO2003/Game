@@ -11,6 +11,40 @@ const UNIT_REPLACEMENT_MAP = {
 };
 
 /**
+ * Migrates legacy speed-based statuses to evasion-based statuses
+ * Converts slowTurns to evadeDebuffTurns with 15% penalty
+ * Converts hasteTurns to evadeBuffTurns with 10% bonus
+ * **Validates: Requirement 7.1**
+ */
+function migrateLegacyStatuses(unit) {
+  if (!unit || !unit.statuses) return;
+  
+  let migrated = false;
+  
+  // Convert slowTurns to evadeDebuffTurns
+  if (unit.statuses.slowTurns !== undefined) {
+    if (unit.statuses.slowTurns > 0) {
+      unit.statuses.evadeDebuffTurns = unit.statuses.slowTurns;
+      unit.statuses.evadeDebuffValue = 0.15; // 15% evasion penalty
+      migrated = true;
+    }
+    delete unit.statuses.slowTurns;
+  }
+  
+  // Convert hasteTurns to evadeBuffTurns
+  if (unit.statuses.hasteTurns !== undefined) {
+    if (unit.statuses.hasteTurns > 0) {
+      unit.statuses.evadeBuffTurns = unit.statuses.hasteTurns;
+      unit.statuses.evadeBuffValue = 0.10; // 10% evasion bonus
+      migrated = true;
+    }
+    delete unit.statuses.hasteTurns;
+  }
+  
+  return migrated;
+}
+
+/**
  * Validates and migrates save data to current version
  * **Validates: Requirements 27.1, 27.2, 27.3, 27.4, 27.5**
  */
@@ -59,6 +93,11 @@ function migrateSaveData(data) {
             const unit = row[c];
             if (!unit || !unit.baseId) continue;
             
+            // Migrate legacy speed statuses to evasion (Requirement 7.1)
+            if (migrateLegacyStatuses(unit)) {
+              migrationLog.push(`Migrated legacy speed statuses for unit ${unit.baseId} at board[${r}][${c}]`);
+            }
+            
             // Check if unit exists in new catalog
             if (!UNIT_BY_ID[unit.baseId]) {
               // Try to find replacement
@@ -80,6 +119,11 @@ function migrateSaveData(data) {
       if (Array.isArray(payload.player.bench)) {
         payload.player.bench = payload.player.bench.filter((unit, idx) => {
           if (!unit || !unit.baseId) return false;
+          
+          // Migrate legacy speed statuses to evasion (Requirement 7.1)
+          if (migrateLegacyStatuses(unit)) {
+            migrationLog.push(`Migrated legacy speed statuses for unit ${unit.baseId} on bench[${idx}]`);
+          }
           
           if (!UNIT_BY_ID[unit.baseId]) {
             const replacement = UNIT_REPLACEMENT_MAP[unit.baseId];

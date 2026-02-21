@@ -44,7 +44,7 @@ function parseSkillsCsv(csvText) {
         "base", "scale", "shieldBase", "tauntTurns", "stunChance", "stunTurns", "reflectPct",
         "reflectTurns", "armorBuff", "mdefBuff", "turns", "lifesteal", "echoBase", "echoScale",
         "maxHits", "sleepChance", "sleepTurns", "armorBreak", "freezeChance", "freezeTurns",
-        "slowTurns", "splashCount", "poisonTurns", "poisonPerTurn", "shieldScale", "rageGain",
+        "splashCount", "poisonTurns", "poisonPerTurn", "shieldScale", "rageGain",
         "maxTargets", "selfAtkBuff", "assistRate", "evadeBuff", "atkBuff", "armorPen",
         "killRage", "diseaseTurns", "diseaseDamage"
       ];

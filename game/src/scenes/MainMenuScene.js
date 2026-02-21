@@ -172,7 +172,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.settingsPanel.setVisible(!this.settingsPanel.visible);
     }, 0x284b78, 0x9cd0ff);
 
-    this.createButton(w * 0.5, startY + 206, 320, 50, "Thư viện", () => {
+    this.createButton(w * 0.5, startY + 206, 320, 50, "Thư Viện", () => {
       this.updatePanel?.setVisible(false);
       this.toggleWikiPanel();
     }, 0x2e5f7d, 0x9ed8ff);
@@ -438,7 +438,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     panel.add(title);
 
-    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là wiki cập nhật theo.", {
+    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là Thư Viện cập nhật theo.", {
       fontFamily: "Consolas",
       fontSize: "16px",
       color: "#cde8ff",
@@ -1207,7 +1207,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     panel.add(title);
 
-    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là wiki cập nhật theo.", {
+    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là Thư Viện cập nhật theo.", {
       fontFamily: "Consolas",
       fontSize: "16px",
       color: "#cde8ff",

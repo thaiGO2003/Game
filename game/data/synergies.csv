@@ -38,3 +38,126 @@ TRIBE,SPIRIT,,6,"{""startingRage"":2,""healPct"":0.24}"
 TRIBE,SWARM,,2,"{""poisonOnHit"":8}"
 TRIBE,SWARM,,4,"{""poisonOnHit"":14}"
 TRIBE,SWARM,,6,"{""poisonOnHit"":22}"
+TRIBE,WOOD,,2,"{""evadePct"":0.05}"
+TRIBE,WOOD,,4,"{""evadePct"":0.1,""hpPct"":0.08}"
+TRIBE,WOOD,,6,"{""evadePct"":0.16,""hpPct"":0.16,""healPct"":0.12}"
+UNIT,bear_ancient,Gấu Cổ Thụ,1,{}
+UNIT,rhino_quake,Tê Giác Địa Chấn,1,{}
+UNIT,turtle_mire,Rùa Đầm Lầy,1,{}
+UNIT,buffalo_mist,Trâu Sương Mù,1,{}
+UNIT,ant_guard,Kiến Hộ Vệ,1,{}
+UNIT,panther_void,Báo Hư Không,1,{}
+UNIT,fox_flame,Cáo Hỏa,1,{}
+UNIT,bat_blood,Dơi Huyết,1,{}
+UNIT,lynx_echo,Châu Chấu Gió,1,{}
+UNIT,mantis_blade,Bọ Ngựa Kiếm,1,{}
+UNIT,eagle_marksman,Đại Bàng Xạ Thủ,1,{}
+UNIT,monkey_spear,Khỉ Lao Cành,1,{}
+UNIT,owl_nightshot,Cú Đêm,1,{}
+UNIT,cat_goldbow,Ong Lửa,1,{}
+UNIT,wasp_sting,Ong Bắp Cày,1,{}
+UNIT,ice_mage,Chuồn Chuồn Băng,1,{}
+UNIT,worm_ice,Cóc Băng,1,{}
+UNIT,storm_mage,Rắn Lôi,1,{}
+UNIT,spore_mage,Nhện Bào Tử,1,{}
+UNIT,deer_song,Nai Thần Ca,1,{}
+UNIT,butterfly_mirror,Bướm Kính,1,{}
+UNIT,parrot_roar,Vẹt Linh Hô,1,{}
+UNIT,qilin_breeze,Kỳ Lân Gió,1,{}
+UNIT,tiger_fang,Hổ Nanh,1,{}
+UNIT,wolf_alpha,Sói Thủ Lĩnh,1,{}
+UNIT,hippo_maul,Hà Mã Nện,1,{}
+UNIT,beetle_drill,Bọ Khoan Giáp,1,{}
+UNIT,lion_general,Sư Tử Chiến Tướng,1,{}
+UNIT,scorpion_king,Vua Bọ Cạp,1,{}
+UNIT,worm_queen,Sâu Xanh,1,{}
+UNIT,mosquito_toxic,Muỗi Độc,1,{}
+UNIT,bug_plague,Bọ Dịch Hạch,1,{}
+UNIT,elephant_guard,Voi Thiết Giáp,1,{}
+UNIT,crocodile_bite,Cá Sấu Đầm,1,{}
+UNIT,crow_storm,Quạ Bão Táp,1,{}
+UNIT,peacock_dazzle,Khổng Tước Vũ,1,{}
+UNIT,triceratops_charge,Bò Rừng Xung Phong,1,{}
+UNIT,gorilla_smash,Đười Ươi Phẫn Nộ,1,{}
+UNIT,cobra_venom,Rắn Hổ Mang,1,{}
+UNIT,swan_grace,Thiên Nga Trắng,1,{}
+UNIT,vulture_scavunge,Kền Kền Ăn Xác,1,{}
+UNIT,dragon_breath,Rồng Lửa,1,{}
+UNIT,phoenix_rebirth,Phượng Hoàng Lửa,1,{}
+UNIT,trex_bite,Bạo Chúa T-Rex,1,{}
+UNIT,whale_song,Cá Voi Cổ Đại,1,{}
+UNIT,kraken_void,Kraken Hư Không,1,{}
+UNIT,kirin_thunder,Kỳ Lân Lôi,1,{}
+UNIT,lizard_elder,Rồng Đất Cổ,1,{}
+UNIT,pangolin_plate,Tê Tê Thiết Giáp,1,{}
+UNIT,badger_stone,Lửng Đá,1,{}
+UNIT,crab_shell,Cua Giáp,1,{}
+UNIT,armadillo_roll,Tatu Cuộn,1,{}
+UNIT,snail_fortress,Ốc Sên Pháo Đài,1,{}
+UNIT,ox_mountain,Bò Núi,1,{}
+UNIT,walrus_ice,Hải Mã Băng,1,{}
+UNIT,golem_stone,Golem Đá,1,{}
+UNIT,yak_highland,Bò Tây Tạng,1,{}
+UNIT,mammoth_ancient,Voi Ma Mút,1,{}
+UNIT,kraken_deep,Mực Khổng Lồ,1,{}
+UNIT,titan_earth,Titan Đất,1,{}
+UNIT,hydra_swamp,Hydra Đầm Lầy,1,{}
+UNIT,ram_charge,Cừu Núi Húc,1,{}
+UNIT,jaguar_hunt,Báo Đốm Săn,1,{}
+UNIT,komodo_bite,Kỳ Đà Khổng Lồ,1,{}
+UNIT,otter_river,Rái Cá Sông,1,{}
+UNIT,kangaroo_kick,Kangaroo Đấm,1,{}
+UNIT,hyena_pack,Linh Cẩu Bầy,1,{}
+UNIT,wolverine_rage,Chồn Sói Cuồng,1,{}
+UNIT,bison_stampede,Bò Rừng Dẫm,1,{}
+UNIT,shark_frenzy,Cá Mập Điên,1,{}
+UNIT,dragon_earth,Rồng Đất,1,{}
+UNIT,chimera_flame,Chimera Lửa,1,{}
+UNIT,weasel_quick,Chồn Nhanh,1,{}
+UNIT,spider_venom,Nhện Độc,1,{}
+UNIT,scorpion_shadow,Bọ Cạp Bóng,1,{}
+UNIT,chameleon_stealth,Tắc Kè Ẩn,1,{}
+UNIT,viper_strike,Rắn Lục Tấn,1,{}
+UNIT,ferret_shadow,Chồn Hương Bóng,1,{}
+UNIT,mink_silent,Chồn Mink Im,1,{}
+UNIT,wasp_assassin,Ong Bắp Cày Sát,1,{}
+UNIT,raven_death,Quạ Tử Thần,1,{}
+UNIT,wraith_shadow,Ma Bóng Tối,1,{}
+UNIT,reaper_void,Tử Thần Hư Không,1,{}
+UNIT,hawk_hunter,Diều Hâu Săn,1,{}
+UNIT,falcon_dive,Cắt Lao,1,{}
+UNIT,toucan_snipe,Chim Mỏ To,1,{}
+UNIT,heron_pierce,Diệc Xuyên,1,{}
+UNIT,woodpecker_drill,Gõ Kiến Khoan,1,{}
+UNIT,pelican_bomb,Bồ Nông Bom,1,{}
+UNIT,stork_sniper,Cò Bắn Tỉa,1,{}
+UNIT,flamingo_shot,Hồng Hạc Bắn,1,{}
+UNIT,condor_sky,Diều Hâu Khổng Lồ,1,{}
+UNIT,albatross_wind,Hải Âu Gió,1,{}
+UNIT,phoenix_arrow,Phượng Hoàng Tên,1,{}
+UNIT,garuda_divine,Garuda Thần,1,{}
+UNIT,thunderbird_storm,Chim Sấm Sét,1,{}
+UNIT,roc_legend,Đại Bàng Huyền Thoại,1,{}
+UNIT,toad_poison,Cóc Độc,1,{}
+UNIT,newt_fire,Kỳ Nhông Lửa,1,{}
+UNIT,salamander_flame,Kỳ Giông Lửa,1,{}
+UNIT,jellyfish_shock,Sứa Điện,1,{}
+UNIT,squid_ink,Mực Mực,1,{}
+UNIT,octopus_mind,Bạch Tuộc Tâm,1,{}
+UNIT,firefly_light,Đom Đóm Sáng,1,{}
+UNIT,moth_dust,Bướm Đêm Bụi,1,{}
+UNIT,wasp_arcane,Ong Phép,1,{}
+UNIT,beetle_mystic,Bọ Huyền,1,{}
+UNIT,lich_undead,Lich Bất Tử,1,{}
+UNIT,dove_peace,Bồ Câu Hòa Bình,1,{}
+UNIT,crane_blessing,Hạc Phước,1,{}
+UNIT,firefly_heal,Đom Đóm Chữa,1,{}
+UNIT,unicorn_light,Kỳ Lân Sáng,1,{}
+UNIT,fairy_forest,Tiên Rừng,1,{}
+UNIT,dryad_tree,Yêu Tinh Cây,1,{}
+UNIT,wisp_light,Hồn Ma Sáng,1,{}
+UNIT,nymph_water,Tiên Nước,1,{}
+UNIT,sprite_wind,Yêu Tinh Gió,1,{}
+UNIT,angel_guardian,Thiên Thần Hộ Vệ,1,{}
+UNIT,seraphim_light,Seraphim Ánh Sáng,1,{}
+UNIT,oracle_wisdom,Tiên Tri Trí Tuệ,1,{}

@@ -9,6 +9,8 @@ import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVis
 import { TooltipController } from "../core/tooltip.js";
 import { AudioFx } from "../core/audioFx.js";
 import { clearProgress, loadProgress, saveProgress } from "../core/persistence.js";
+import { RecipeDiagram } from "../ui/RecipeDiagram.js";
+import { LibraryModal } from "../ui/LibraryModal.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -24,6 +26,7 @@ import {
   createUnitUid,
   getDeployCapByLevel,
   getEffectiveSkillId,
+  getWaspMaxTargets,
   getXpToLevelUp,
   gridKey,
   manhattan,
@@ -32,6 +35,7 @@ import {
   sampleWithoutReplacement,
   scaledBaseStats,
   getBaseEvasion,
+  getEffectiveEvasion,
   starEffectChanceMultiplier,
   starTargetBonus,
   starAreaBonus
@@ -208,7 +212,7 @@ const HISTORY_FILTERS = [
   { key: "EVENT", label: "Sự kiện" }
 ];
 
-const MATCH_WIKI_ENABLED = false;
+const MATCH_WIKI_ENABLED = true;
 
 const VERSION_INFO = {
   version: "v0.2.0",
@@ -305,6 +309,9 @@ export class PlanningScene extends Phaser.Scene {
     this.gamepadButtonLatch = {};
     this.gamepadHintText = null;
     this.gamepadCursorLayer = null;
+    
+    // Track active damage numbers for position offsetting
+    this.activeDamageNumbers = [];
   }
 
   resetTransientSceneState() {
@@ -345,6 +352,7 @@ export class PlanningScene extends Phaser.Scene {
     this.roundBackgroundMask = null;
     this.roundBackgroundKey = null;
     this.logHistory = [];
+    this.activeDamageNumbers = [];
     this.historyFilter = "ALL";
     this.historyModalVisible = false;
     this.historyModalParts = [];
@@ -399,7 +407,9 @@ export class PlanningScene extends Phaser.Scene {
     this.wikiMaxScroll = 0;
     this._wikiTab = "units";
     this._wikiDetailUnit = null;
+    this._wikiRecipeViewMode = "card"; // "card" or "diagram"
     this._wikiCraftRecipes = null;
+    this._recipeDiagram = null;
   }
 
   resetBoardViewTransform(refresh = false) {
@@ -440,6 +450,14 @@ export class PlanningScene extends Phaser.Scene {
     this.createHistoryModal();
     this.createVersionInfoModal();
     this.createSettingsOverlay();
+    this.libraryModal = new LibraryModal(this, {
+      title: "Thư Viện Linh Thú",
+      onClose: () => {
+        this.wikiVisible = false;
+        this.clearAttackPreview();
+      }
+    });
+    this.wikiOverlay = this.libraryModal.getOverlayParts();
     this.createPlayerCellZones();
     this.createBenchSlots();
     this.setupBoardViewInput();
@@ -1786,6 +1804,16 @@ export class PlanningScene extends Phaser.Scene {
       { variant: "ghost", fontSize: 13 }
     );
 
+    this.buttons.wiki = this.createButton(
+      l.boardPanelX + l.boardPanelW - ctaW - 102,
+      y1 + 8,
+      96,
+      34,
+      "📚 Thư Viện",
+      () => this.toggleWikiModal(true),
+      { variant: "ghost", fontSize: 13 }
+    );
+
     const controlsX = l.boardPanelX + l.boardPanelW - 14;
     const controlsY = l.topPanelY + 54;
     this.controlsText = this.add.text(
@@ -2154,6 +2182,18 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   createWikiModal() {
+    if (!this.libraryModal) {
+      this.libraryModal = new LibraryModal(this, {
+        title: "Thư Viện Linh Thú",
+        onClose: () => {
+          this.wikiVisible = false;
+          this.clearAttackPreview();
+        }
+      });
+    }
+    this.wikiOverlay = this.libraryModal.getOverlayParts();
+    return;
+
     const w = this.scale.width;
     const h = this.scale.height;
     const modalW = Math.min(1060, w - 40);
@@ -2172,7 +2212,7 @@ export class PlanningScene extends Phaser.Scene {
     bg.setInteractive();
     bg.setDepth(topDepth + 1);
 
-    const title = this.add.text(modalX, modalY - modalH / 2 + 24, "Wiki Linh Thú", {
+    const title = this.add.text(modalX, modalY - modalH / 2 + 24, "Thư Viện Linh Thú", {
       fontFamily: UI_FONT,
       fontSize: "22px",
       color: UI_COLORS.textPrimary,
@@ -2228,6 +2268,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   refreshWikiList() {
+    if (this.libraryModal) {
+      this.libraryModal.refresh();
+      return;
+    }
     if (!this.wikiListContainer) return;
     this.wikiListContainer.removeAll(true);
 
@@ -2274,6 +2318,7 @@ export class PlanningScene extends Phaser.Scene {
       tabBg.setInteractive({ useHandCursor: true });
       tabBg.on("pointerdown", () => {
         this._wikiDetailUnit = null;
+        this._wikiSearchQuery = ""; // Reset search when changing tab
         this._wikiTab = td.key;
         this.wikiScrollY = 0;
         this.refreshWikiList();
@@ -2284,6 +2329,31 @@ export class PlanningScene extends Phaser.Scene {
       }).setOrigin(0.5);
       this.wikiListContainer.add([tabBg, tabLabel]);
     });
+
+    // --- Search Bar (Only for Units) ---
+    if (this._wikiTab === "units" && !this._wikiDetailUnit) {
+      const searchX = tabDefs.length * (180 + 8) + 20;
+      const searchW = 300;
+      const searchBg = this.add.rectangle(searchX, y, searchW, 32, 0x112235, 0.9).setOrigin(0, 0);
+      searchBg.setStrokeStyle(1, 0x3a5070, 1);
+
+      const searchIcon = this.add.text(searchX + 10, y + 8, "🔍", { fontSize: "14px" });
+      const searchText = this.add.text(searchX + 34, y + 8, this.wikiSearchQuery || "Tìm kiếm linh thú...", {
+        fontFamily: UI_FONT, fontSize: "14px", color: this.wikiSearchQuery ? "#ffffff" : "#6a8fb0"
+      });
+
+      searchBg.setInteractive({ useHandCursor: true });
+      searchBg.on("pointerdown", () => {
+        const query = window.prompt("Nhập tên linh thú, hệ hoặc nghề:", this.wikiSearchQuery);
+        if (query !== null) {
+          this.wikiSearchQuery = query.trim();
+          this.wikiScrollY = 0;
+          this.refreshWikiList();
+        }
+      });
+      this.wikiListContainer.add([searchBg, searchIcon, searchText]);
+    }
+
     y += 44;
 
     // ---- UNIT DETAIL VIEW ----
@@ -2313,7 +2383,7 @@ export class PlanningScene extends Phaser.Scene {
       this.wikiListContainer.add(backBtn);
       y += 28;
 
-      const detailBg = this.add.rectangle(0, y, viewportW - 14, 300, 0x0f1e30, 0.95).setOrigin(0, 0);
+      const detailBg = this.add.rectangle(0, y, viewportW - 14, 340, 0x0f1e30, 0.95).setOrigin(0, 0);
       detailBg.setStrokeStyle(1, 0x5a8ab0, 0.8);
       this.wikiListContainer.add(detailBg);
 
@@ -2327,46 +2397,48 @@ export class PlanningScene extends Phaser.Scene {
       }).setOrigin(1, 0);
       this.wikiListContainer.add(tierText);
 
-      const metaText = this.add.text(16, y + 46, [
+      const statsText = [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
-        `HP: ${stats.hp ?? "?"}   ATK: ${stats.atk ?? "?"}   DEF: ${stats.def ?? "?"}   MDEF: ${stats.mdef ?? "?"}`,
-        `MATK: ${stats.matk ?? "?"}   Tầm đánh: ${rangeTypeLabel}   Né tránh: ${evasionPct}%   Nộ tối đa: ${stats.rageMax ?? "?"}`
-      ].join("\n"), {
+        `Máu (HP): ${stats.hp ?? "?"}   Công (ATK): ${stats.atk ?? "?"}   Phòng thủ (DEF): ${stats.def ?? "?"}`,
+        `K.Phép (MDEF): ${stats.mdef ?? "?"}   S.Mạnh Phép (MATK): ${stats.matk ?? "?"}`,
+        `Tầm đánh: ${range} ô (${rangeTypeLabel})   Né tránh: ${evasionPct}%   Nộ tối đa: ${stats.rageMax ?? "?"}`
+      ].join("\n");
+
+      const metaText = this.add.text(16, y + 46, statsText, {
         fontFamily: UI_FONT, fontSize: "14px", color: "#c0ddf5", lineSpacing: 6
       });
       this.wikiListContainer.add(metaText);
 
-      const skillTitle = this.add.text(16, y + 126, "⚡ KỸ NĂNG:", {
+      const skillTitle = this.add.text(16, y + 146, "⚡ KỸ NĂNG CHỦ ĐỘNG:", {
         fontFamily: UI_FONT, fontSize: "14px", color: "#ffd580", fontStyle: "bold"
       });
       this.wikiListContainer.add(skillTitle);
 
-      const skillNameText = this.add.text(16, y + 148, skill?.name ?? unit.skillId, {
+      const skillNameText = this.add.text(16, y + 168, skill?.name ?? unit.skillId, {
         fontFamily: UI_FONT, fontSize: "17px", color: "#8df2ff", fontStyle: "bold"
       });
       this.wikiListContainer.add(skillNameText);
 
-      const skillDesc = this.add.text(16, y + 172, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
+      const skillDesc = this.add.text(16, y + 192, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
         fontFamily: UI_FONT, fontSize: "13px", color: "#d0eaff", lineSpacing: 5,
         wordWrap: { width: viewportW - 44 }
       });
       this.wikiListContainer.add(skillDesc);
 
-      const atkY = y + 172 + skillDesc.height + 14;
+      const atkY = y + 192 + skillDesc.height + 14;
       const atkTitle = this.add.text(16, atkY, "⚔️ ĐÁNH THƯỜNG:", {
         fontFamily: UI_FONT, fontSize: "14px", color: "#ffd580", fontStyle: "bold"
       });
       this.wikiListContainer.add(atkTitle);
 
-      const rangeLabel = range >= 2 ? "Đánh xa" : "Cận chiến";
-      const atkDesc = this.add.text(16, atkY + 22, `${rangeLabel} • Mỗi lượt tấn công 1 mục tiêu gần nhất của phe địch.`, {
+      const atkDesc = this.add.text(16, atkY + 22, `${rangeTypeLabel} • Tấn công mục tiêu gần nhất. Gây sát thương vật lý.`, {
         fontFamily: UI_FONT, fontSize: "13px", color: "#d0eaff", lineSpacing: 4,
         wordWrap: { width: viewportW - 44 }
       });
       this.wikiListContainer.add(atkDesc);
 
       const detailBottom = atkY + 22 + atkDesc.height + 16;
-      const detailHeight = Math.max(300, detailBottom - y);
+      const detailHeight = Math.max(340, detailBottom - y);
       detailBg.setSize(viewportW - 14, detailHeight);
 
       const arenaY = y + detailHeight + 12;
@@ -2378,7 +2450,21 @@ export class PlanningScene extends Phaser.Scene {
 
     // ---- UNITS TAB ----
     if (this._wikiTab === "units") {
-      const units = [...UNIT_CATALOG].sort((a, b) => a.tier - b.tier || a.classType.localeCompare(b.classType) || a.name.localeCompare(b.name));
+      let units = [...UNIT_CATALOG];
+
+      // Apply Search Filter
+      if (this.wikiSearchQuery) {
+        const q = this.wikiSearchQuery.toLowerCase();
+        units = units.filter(u => {
+          const visual = getUnitVisual(u.id, u.classType);
+          const name = visual.nameVi.toLowerCase();
+          const tribe = getTribeLabelVi(u.tribe).toLowerCase();
+          const className = getClassLabelVi(u.classType).toLowerCase();
+          return name.includes(q) || tribe.includes(q) || className.includes(q) || u.id.toLowerCase().includes(q);
+        });
+      }
+
+      units.sort((a, b) => a.tier - b.tier || a.classType.localeCompare(b.classType) || a.name.localeCompare(b.name));
       const classCount = {};
       const tribeCount = {};
       units.forEach((unit) => {
@@ -2458,92 +2544,185 @@ export class PlanningScene extends Phaser.Scene {
       this.wikiListContainer.add(recipeTitle);
       y += recipeTitle.height + 8;
 
+      // View mode toggle buttons
+      const toggleY = y;
+      const toggleButtonW = 100;
+      const toggleButtonH = 28;
+      const toggleGap = 8;
+      
+      const cardModeBtn = this.add.rectangle(0, toggleY, toggleButtonW, toggleButtonH, 
+        this._wikiRecipeViewMode === "card" ? 0x2a5080 : 0x1a2d40, 
+        this._wikiRecipeViewMode === "card" ? 1 : 0.7
+      ).setOrigin(0, 0);
+      cardModeBtn.setStrokeStyle(1, this._wikiRecipeViewMode === "card" ? 0x7ab8f5 : 0x3a5070, 1);
+      cardModeBtn.setInteractive({ useHandCursor: true });
+      cardModeBtn.on("pointerdown", () => {
+        if (this._wikiRecipeViewMode !== "card") {
+          this._wikiRecipeViewMode = "card";
+          if (this._recipeDiagram) {
+            this._recipeDiagram.destroy();
+            this._recipeDiagram = null;
+          }
+          this.wikiScrollY = 0;
+          this.refreshWikiList();
+        }
+      });
+      
+      const cardModeLabel = this.add.text(toggleButtonW / 2, toggleY + toggleButtonH / 2, "📋 Danh sách", {
+        fontFamily: UI_FONT, fontSize: "12px", 
+        color: this._wikiRecipeViewMode === "card" ? "#ffeab0" : "#8ab4d4"
+      }).setOrigin(0.5);
+      
+      const diagramModeBtn = this.add.rectangle(toggleButtonW + toggleGap, toggleY, toggleButtonW, toggleButtonH,
+        this._wikiRecipeViewMode === "diagram" ? 0x2a5080 : 0x1a2d40,
+        this._wikiRecipeViewMode === "diagram" ? 1 : 0.7
+      ).setOrigin(0, 0);
+      diagramModeBtn.setStrokeStyle(1, this._wikiRecipeViewMode === "diagram" ? 0x7ab8f5 : 0x3a5070, 1);
+      diagramModeBtn.setInteractive({ useHandCursor: true });
+      diagramModeBtn.on("pointerdown", () => {
+        if (this._wikiRecipeViewMode !== "diagram") {
+          this._wikiRecipeViewMode = "diagram";
+          this.wikiScrollY = 0;
+          this.refreshWikiList();
+        }
+      });
+      
+      const diagramModeLabel = this.add.text(toggleButtonW + toggleGap + toggleButtonW / 2, toggleY + toggleButtonH / 2, "🔗 Sơ đồ", {
+        fontFamily: UI_FONT, fontSize: "12px",
+        color: this._wikiRecipeViewMode === "diagram" ? "#ffeab0" : "#8ab4d4"
+      }).setOrigin(0.5);
+      
+      this.wikiListContainer.add([cardModeBtn, cardModeLabel, diagramModeBtn, diagramModeLabel]);
+      y += toggleButtonH + 12;
+
       const hint = this.add.text(0, y, "Bàn chế mặc định 2x2. Nâng cấp 15 vàng mở 3x3. Công thức bậc cao cần dùng cả trang bị đã ghép.", {
         fontFamily: UI_FONT, fontSize: "14px", color: "#9ec4e8", wordWrap: { width: viewportW - 14 }
       });
       this.wikiListContainer.add(hint);
-      y += hint.height + 12;
+      y += hint.height + 16;
 
-      const rcols = viewportW > 700 ? 2 : 1;
-      const rgap = 12;
-      const rcardW = Math.floor((viewportW - rgap * (rcols - 1)) / rcols);
-      const rcardH = 196;
+      // Render based on view mode
+      if (this._wikiRecipeViewMode === "diagram") {
+        // Node-based diagram view
+        const diagramHeight = 800;
+        
+        // Clean up existing diagram if any
+        if (this._recipeDiagram) {
+          this._recipeDiagram.destroy();
+        }
+        
+        // Create new diagram
+        this._recipeDiagram = new RecipeDiagram(
+          this,
+          0,
+          y,
+          viewportW,
+          diagramHeight,
+          this._wikiCraftRecipes
+        );
+        
+        this.wikiListContainer.add(this._recipeDiagram.container);
+        y += diagramHeight + 20;
+      } else {
+        // Original card view
+        const categories = [
+          { id: "offense", label: "⚔️ TRANG BỊ TẤN CÔNG", filter: (r) => (r.stats?.atk || r.stats?.critPct || r.stats?.atkPct) },
+          { id: "magic", label: "🔮 TRANG BỊ PHÁP THUẬT", filter: (r) => (r.stats?.matk || r.stats?.matkPct || r.id.toLowerCase().includes("staff") || r.id.toLowerCase().includes("wand")) },
+          { id: "defense", label: "🛡️ TRANG BỊ PHÒNG THỦ", filter: (r) => (r.stats?.hp || r.stats?.def || r.stats?.mdef || r.stats?.shieldStart || r.id.toLowerCase().includes("armor") || r.id.toLowerCase().includes("crown")) }
+        ];
 
-      this._wikiCraftRecipes.forEach((recipe, idx) => {
-        const col = idx % rcols;
-        const row = Math.floor(idx / rcols);
-        const cardX = col * (rcardW + rgap);
-        const cardY = y + row * (rcardH + 8);
-        const bg = this.add.rectangle(cardX, cardY, rcardW, rcardH, idx % 2 === 0 ? 0x1a2e44 : 0x162840, 0.9).setOrigin(0, 0);
-        bg.setStrokeStyle(1, 0x5a8ab0, 0.5);
-        const title = this.add.text(cardX + 10, cardY + 8, `${recipe.icon} ${recipe.name}`, {
-          fontFamily: UI_FONT,
-          fontSize: "14px",
-          color: "#e9f5ff",
-          fontStyle: "bold"
+      categories.forEach((cat) => {
+        const catRecipes = this._wikiCraftRecipes.filter(cat.filter);
+        if (catRecipes.length === 0) return;
+
+        const catHeader = this.add.text(0, y, cat.label, {
+          fontFamily: UI_FONT, fontSize: "16px", color: "#8de8ff", fontStyle: "bold"
         });
+        this.wikiListContainer.add(catHeader);
+        y += 28;
 
-        const gridSize = recipe._gridSize ?? 2;
-        const slotSize = gridSize >= 3 ? 18 : 22;
-        const slotGap = 5;
-        const gridX = cardX + 10;
-        const gridY = cardY + 34;
-        const gridW = gridSize * slotSize + (gridSize - 1) * slotGap;
-        const gridCenterY = gridY + gridW * 0.5;
-        const patternSlots = [];
-        for (let s = 0; s < gridSize * gridSize; s += 1) {
-          const sx = gridX + (s % gridSize) * (slotSize + slotGap);
-          const sy = gridY + Math.floor(s / gridSize) * (slotSize + slotGap);
-          const cellBg = this.add.rectangle(sx + slotSize / 2, sy + slotSize / 2, slotSize, slotSize, 0x112235, 0.98);
-          cellBg.setStrokeStyle(1, 0x5a8ab0, 0.7);
-          const item = recipe._pattern?.[s] ?? null;
-          const icon = this.add.text(sx + slotSize / 2, sy + slotSize / 2, item?.icon ?? "", {
-            fontFamily: "Segoe UI Emoji",
+        const rcols = viewportW > 700 ? 2 : 1;
+        const rgap = 12;
+        const rcardW = Math.floor((viewportW - rgap * (rcols - 1)) / rcols);
+        const rcardH = 196;
+
+        catRecipes.forEach((recipe, idx) => {
+          const col = idx % rcols;
+          const row = Math.floor(idx / rcols);
+          const cardX = col * (rcardW + rgap);
+          const cardY = y + row * (rcardH + 8);
+          const bg = this.add.rectangle(cardX, cardY, rcardW, rcardH, idx % 2 === 0 ? 0x1a2e44 : 0x162840, 0.9).setOrigin(0, 0);
+          bg.setStrokeStyle(1, 0x5a8ab0, 0.5);
+          const title = this.add.text(cardX + 10, cardY + 8, `${recipe.icon} ${recipe.name}`, {
+            fontFamily: UI_FONT,
             fontSize: "14px",
+            color: "#e9f5ff",
+            fontStyle: "bold"
+          });
+
+          const gridSize = recipe._gridSize ?? 2;
+          const slotSize = gridSize >= 3 ? 18 : 22;
+          const slotGap = 5;
+          const gridX = cardX + 10;
+          const gridY = cardY + 34;
+          const gridW = gridSize * slotSize + (gridSize - 1) * slotGap;
+          const gridCenterY = gridY + gridW * 0.5;
+          const patternSlots = [];
+          for (let s = 0; s < gridSize * gridSize; s += 1) {
+            const sx = gridX + (s % gridSize) * (slotSize + slotGap);
+            const sy = gridY + Math.floor(s / gridSize) * (slotSize + slotGap);
+            const cellBg = this.add.rectangle(sx + slotSize / 2, sy + slotSize / 2, slotSize, slotSize, 0x112235, 0.98);
+            cellBg.setStrokeStyle(1, 0x5a8ab0, 0.7);
+            const item = recipe._pattern?.[s] ?? null;
+            const icon = this.add.text(sx + slotSize / 2, sy + slotSize / 2, item?.icon ?? "", {
+              fontFamily: "Segoe UI Emoji",
+              fontSize: "14px",
+              color: "#ffffff"
+            }).setOrigin(0.5);
+            patternSlots.push(cellBg, icon);
+          }
+
+          const sizeTag = this.add.text(cardX + rcardW - 10, cardY + 10, `Bậc ${recipe.tier ?? 1} • Khung ${gridSize}x${gridSize}`, {
+            fontFamily: UI_FONT,
+            fontSize: "11px",
+            color: "#9ec4e8"
+          }).setOrigin(1, 0);
+
+          const arrow = this.add.text(gridX + gridW + 10, gridCenterY, "→", {
+            fontFamily: UI_FONT,
+            fontSize: "18px",
+            color: "#a6cff1",
+            fontStyle: "bold"
+          }).setOrigin(0.5);
+          const outX = gridX + gridW + 24;
+          const outBg = this.add.rectangle(outX + slotSize / 2, gridCenterY, slotSize, slotSize, 0x2a4563, 0.96);
+          outBg.setStrokeStyle(1, 0x82c2ff, 0.9);
+          const outIcon = this.add.text(outX + slotSize / 2, gridCenterY, recipe.icon, {
+            fontFamily: "Segoe UI Emoji",
+            fontSize: "15px",
             color: "#ffffff"
           }).setOrigin(0.5);
-          patternSlots.push(cellBg, icon);
-        }
 
-        const sizeTag = this.add.text(cardX + rcardW - 10, cardY + 10, `Bậc ${recipe.tier ?? 1} • Khung ${gridSize}x${gridSize}`, {
-          fontFamily: UI_FONT,
-          fontSize: "11px",
-          color: "#9ec4e8"
-        }).setOrigin(1, 0);
-
-        const arrow = this.add.text(gridX + gridW + 10, gridCenterY, "→", {
-          fontFamily: UI_FONT,
-          fontSize: "18px",
-          color: "#a6cff1",
-          fontStyle: "bold"
-        }).setOrigin(0.5);
-        const outX = gridX + gridW + 24;
-        const outBg = this.add.rectangle(outX + slotSize / 2, gridCenterY, slotSize, slotSize, 0x2a4563, 0.96);
-        outBg.setStrokeStyle(1, 0x82c2ff, 0.9);
-        const outIcon = this.add.text(outX + slotSize / 2, gridCenterY, recipe.icon, {
-          fontFamily: "Segoe UI Emoji",
-          fontSize: "15px",
-          color: "#ffffff"
-        }).setOrigin(0.5);
-
-        const reqTextY = gridY + gridW + 8;
-        const reqText = this.add.text(cardX + 10, reqTextY, `Nguyên liệu: ${recipe._requiredLabel || "?"}`, {
-          fontFamily: UI_FONT,
-          fontSize: "12px",
-          color: "#b9d8f2",
-          wordWrap: { width: rcardW - 20 }
+          const reqTextY = gridY + gridW + 8;
+          const reqText = this.add.text(cardX + 10, reqTextY, `Nguyên liệu: ${recipe._requiredLabel || "?"}`, {
+            fontFamily: UI_FONT,
+            fontSize: "12px",
+            color: "#b9d8f2",
+            wordWrap: { width: rcardW - 20 }
+          });
+          const desc = this.add.text(cardX + 10, reqTextY + reqText.height + 4, recipe.description, {
+            fontFamily: UI_FONT,
+            fontSize: "12px",
+            color: "#d7ecff",
+            wordWrap: { width: rcardW - 20 }
+          });
+          this.wikiListContainer.add([bg, title, sizeTag, ...patternSlots, arrow, outBg, outIcon, reqText, desc]);
         });
-        const desc = this.add.text(cardX + 10, reqTextY + reqText.height + 4, recipe.description, {
-          fontFamily: UI_FONT,
-          fontSize: "12px",
-          color: "#d7ecff",
-          wordWrap: { width: rcardW - 20 }
-        });
-        this.wikiListContainer.add([bg, title, sizeTag, ...patternSlots, arrow, outBg, outIcon, reqText, desc]);
+
+        const rows = Math.ceil(catRecipes.length / rcols);
+        y += rows * (rcardH + 8) + 20;
       });
-
-      const totalRRows = Math.ceil(this._wikiCraftRecipes.length / rcols);
-      y += totalRRows * (rcardH + 8);
+      } // End of card view mode
     }
 
     this.wikiMaxScroll = Math.max(0, y - (Math.min(760, this.scale.height - 40) - 100));
@@ -2761,10 +2940,25 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   toggleWikiModal(force = null) {
+    if (this.libraryModal) {
+      const next = typeof force === "boolean" ? force : !this.wikiVisible;
+      if (next) {
+        this.toggleSettingsOverlay(false);
+        this.toggleHistoryModal(false);
+        this.toggleVersionInfoModal(false);
+        this.libraryModal.show();
+      } else {
+        this.libraryModal.hide();
+        this.clearAttackPreview();
+      }
+      this.wikiVisible = this.libraryModal.isOpen();
+      return;
+    }
+
     if (!MATCH_WIKI_ENABLED) {
       const shouldOpen = force == null ? !this.wikiVisible : !!force;
       if (shouldOpen) {
-        this.addLog("Wiki trong trận đang tạm tắt để sửa lỗi.");
+        this.addLog("Thư Viện trong trận đang tạm tắt để sửa lỗi.");
       } else if (this.wikiVisible) {
         this.wikiVisible = false;
         this.wikiOverlay.forEach((o) => o?.setVisible(false));
@@ -2791,6 +2985,10 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   onWikiWheel(dy) {
+    if (this.libraryModal) {
+      this.libraryModal.scrollBy(dy);
+      return;
+    }
     if (!this.wikiVisible) return;
     this.wikiScrollY = clamp(this.wikiScrollY + dy * 0.5, 0, this.wikiMaxScroll);
     this.wikiListContainer.setY(this.wikiListBaseY - this.wikiScrollY);
@@ -4816,7 +5014,11 @@ export class PlanningScene extends Phaser.Scene {
         defBuffTurns: 0,
         defBuffValue: 0,
         mdefBuffTurns: 0,
-        mdefBuffValue: 0
+        mdefBuffValue: 0,
+        evadeBuffTurns: 0,
+        evadeBuffValue: 0,
+        evadeDebuffTurns: 0,
+        evadeDebuffValue: 0
       }
     };
     this.applyOwnedEquipmentBonuses(unit, owned);
@@ -4922,10 +5124,11 @@ export class PlanningScene extends Phaser.Scene {
 
   getPreviewSkillIcon(attacker, skill) {
     const effect = skill?.effect ?? null;
-    const shieldEffects = new Set(["shield_immune", "team_buff_def", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
+    const shieldEffects = new Set(["shield_immune", "team_buff_def", "team_def_buff", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
     const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
 
     if (effect === "global_tide_evade") return "💚";
+    if (effect === "global_knockback") return "🌊";
     if (shieldEffects.has(effect)) return "🛡️";
     if (healBuffEffects.has(effect)) return "💚";
     if (attacker?.classType === "ARCHER") return "🏹";
@@ -5030,6 +5233,7 @@ export class PlanningScene extends Phaser.Scene {
       case "global_debuff_atk":
       case "global_fire":
       case "global_slow":
+      case "global_knockback":
       case "global_poison_team":
         pushUnits(enemies);
         break;
@@ -5038,10 +5242,14 @@ export class PlanningScene extends Phaser.Scene {
         break;
       case "single_burst_armor_pen":
       case "single_poison_slow":
+      case "single_poison_stack":
       case "single_bleed":
       case "knockback_charge":
       case "single_strong_poison":
       case "execute_heal":
+      case "assassin_execute_rage_refund":
+      case "double_hit_gold_reward":
+      case "lifesteal_disease_maxhp":
       case "true_execute":
         pushCell(target.row, target.col);
         break;
@@ -5057,6 +5265,7 @@ export class PlanningScene extends Phaser.Scene {
       case "shield_immune":
       case "revive_or_heal":
       case "team_buff_def":
+      case "team_def_buff":
         pushUnits(allies);
         break;
       case "damage_shield_taunt":
@@ -5116,7 +5325,9 @@ export class PlanningScene extends Phaser.Scene {
         break;
       case "random_multi": {
         const pool = enemies.filter((enemy) => enemy.alive);
-        const count = Math.min(skill.maxHits ?? 3, pool.length);
+        const baseMaxHits = getWaspMaxTargets(attacker, skill) ?? skill.maxHits ?? 3;
+        const maxHits = skill.id === "wasp_triple_strike" ? baseMaxHits : baseMaxHits + starTargetBonus(attacker.star ?? 1);
+        const count = Math.min(maxHits, pool.length);
         pushUnits(sampleWithoutReplacement(pool, count));
         break;
       }
@@ -5796,8 +6007,10 @@ export class PlanningScene extends Phaser.Scene {
 
         // Single hover zone prevents pointerover/out conflicts between stacked sprite/icon/bars.
         const hoverZoneW = Math.max(60, unitBars.barW + 16);
-        const hoverZoneH = 64;
-        const hoverZone = this.add.zone(point.x, point.y - 2, hoverZoneW, hoverZoneH);
+        // Shift hover zone upward so unit name/tag area is included,
+        // while keeping bottom coverage for HP/Rage bars.
+        const hoverZoneH = 74;
+        const hoverZone = this.add.zone(point.x, point.y - 18, hoverZoneW, hoverZoneH);
         hoverZone.setInteractive({ useHandCursor: true });
         hoverZone.setDepth(2005 + point.y);
         this.tooltip.attach(hoverZone, () => this.getUnitTooltip(unit.baseId, unit.star, unit));
@@ -6076,29 +6289,8 @@ export class PlanningScene extends Phaser.Scene {
       ...this.describeBasicAttack(base.classType, base.stats.range).map((line) => `• ${line}`),
       "",
       `${skillIcon} Chiêu thức: ${skill?.name ?? "Không có"}`,
-      ...this.describeSkillLines(skill).map((line) => `• ${line}`)
+      ...this.describeSkillLines(skill, base).map((line) => `• ${line}`)
     ];
-
-    if (skill && skill.scaleStat && skill.scale) {
-      const scaleStat = skill.scaleStat;
-      const statLabel = this.translateScaleStat(scaleStat);
-      const baseVal = skill.base || 0;
-
-      let currentStat = 0;
-      if (ownedUnit) {
-        if (scaleStat === "atk") currentStat = this.getEffectiveAtk(ownedUnit);
-        else if (scaleStat === "matk") currentStat = this.getEffectiveMatk(ownedUnit);
-        else if (scaleStat === "def") currentStat = this.getEffectiveDef(ownedUnit);
-        else if (scaleStat === "mdef") currentStat = this.getEffectiveMdef(ownedUnit);
-        else currentStat = ownedUnit[scaleStat] || 0;
-      } else {
-        currentStat = Math.round((base.stats[scaleStat] || 0) * statScale);
-      }
-
-      const bonus = Math.round(currentStat * skill.scale);
-      const total = baseVal + bonus;
-      rightLines.push(`• Công thức: ${statLabel} (${skill.scale}x) + ${baseVal} = ${bonus} + ${baseVal} = ${total}`);
-    }
 
     if (equippedItems.length) {
       rightLines.push("");
@@ -6118,12 +6310,26 @@ export class PlanningScene extends Phaser.Scene {
     const equipmentLine = equippedItems.length
       ? `Trang bị: ${equippedItems.map((item) => `${item.icon} ${item.name}`).join(", ")}`
       : "Trang bị: Chưa có";
+    
+    // Calculate evasion stat
+    const baseEvasion = getBaseEvasion(base.classType);
+    let evasionText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}%`;
+    
+    // If ownedUnit is provided, check for modified evasion
+    if (ownedUnit) {
+      const effectiveEvasion = getEffectiveEvasion(ownedUnit);
+      if (Math.abs(effectiveEvasion - baseEvasion) > 0.001) {
+        evasionText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}% → ${(effectiveEvasion * 100).toFixed(1)}%`;
+      }
+    }
+    
     return {
       title: `${visual.icon} ${visual.nameVi} (${star}★)`,
       body: [
         `🏷️ Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
         `❤️ HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
         `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`,
+        evasionText,
         `🔥 Nộ tối đa:${base.stats.rageMax}`,
         `🎒 ${equipmentLine}`,
         `🎯 Mốc nghề: ${classMarks}`,
@@ -6229,16 +6435,191 @@ export class PlanningScene extends Phaser.Scene {
     return lines;
   }
 
-  describeSkillLines(skill) {
-    if (!skill) return ["Không có kỹ năng chủ động."];
-    if (skill.descriptionVi) {
-      return [skill.descriptionVi];
+  stripSkillStarNotes(description) {
+    const raw = String(description ?? "").trim();
+    if (!raw) return "";
+    return raw.replace(/\s*Mốc sao:[\s\S]*$/i, "").trim();
+  }
+
+  getStarStatMultiplier(star) {
+    if (star >= 3) return 2.5;
+    if (star === 2) return 1.6;
+    return 1;
+  }
+
+  getStarSkillMultiplier(star) {
+    if (star >= 3) return 1.4;
+    if (star === 2) return 1.2;
+    return 1;
+  }
+
+  getSkillTargetCountText(skill, star) {
+    if (!skill) return "không rõ";
+    const effect = String(skill.effect ?? "");
+    const targetBonus = starTargetBonus(star);
+    const maxHits = Number.isFinite(skill.maxHits) ? Math.max(1, Math.floor(skill.maxHits)) : null;
+    const maxTargets = Number.isFinite(skill.maxTargets) ? Math.max(1, Math.floor(skill.maxTargets)) : null;
+
+    if (effect === "random_multi") {
+      const baseHits = getWaspMaxTargets({ star }, skill) ?? maxHits ?? 3;
+      const count = skill.id === "wasp_triple_strike" ? baseHits : baseHits + targetBonus;
+      return `${count} mục tiêu`;
     }
-    const lines = [`Thi triển: ${this.translateActionPattern(skill.actionPattern)}`];
-    if (skill.effect) lines.push(`Hiệu ứng: ${this.translateSkillEffect(skill.effect)}`);
-    const areaText = this.describeSkillArea(skill);
-    if (areaText) lines.push(`Vùng tác động: ${areaText}`);
-    if (skill.damageType) lines.push(`Loại sát thương: ${this.translateDamageType(skill.damageType)}`);
+    if (effect === "row_multi") {
+      return `${maxHits ?? 3} mục tiêu cùng hàng`;
+    }
+    if (effect === "team_rage") {
+      return `${maxTargets ?? 3} đồng minh`;
+    }
+    if (effect === "single_sleep") {
+      const sleepTargets = Math.min(3, Math.max(1, star));
+      return `1 mục tiêu chính + ru ngủ tối đa ${sleepTargets} mục tiêu`;
+    }
+
+    const map = {
+      damage_shield_taunt: "1 mục tiêu",
+      damage_stun: "1 mục tiêu",
+      damage_shield_reflect: "1 mục tiêu",
+      single_burst: "1 mục tiêu",
+      double_hit: "1 mục tiêu",
+      single_burst_lifesteal: "1 mục tiêu",
+      single_delayed_echo: "1 mục tiêu",
+      single_sleep: "1 mục tiêu chính",
+      single_armor_break: "1 mục tiêu",
+      single_bleed: "1 mục tiêu",
+      true_single: "1 mục tiêu",
+      cross_5: "tối đa 5 ô",
+      column_freeze: "tối đa 5 ô",
+      column_bleed: "tối đa 5 ô",
+      row_cleave: "tối đa 5 ô",
+      aoe_circle: "tối đa 9 ô",
+      aoe_poison: "tối đa 9 ô",
+      column_plus_splash: "1 cột chính + 2 cột cạnh",
+      ally_row_def_buff: "tối đa 5 đồng minh",
+      column_bless: "tối đa 5 đồng minh",
+      dual_heal: "2 đồng minh",
+      shield_cleanse: "1 đồng minh",
+      global_tide_evade: "toàn bộ đồng minh",
+      global_knockback: "toàn bộ kẻ địch",
+      global_poison_team: "toàn bộ kẻ địch",
+      global_stun: "toàn bộ kẻ địch",
+      multi_disarm: "3 kẻ địch",
+      random_lightning: "5 lần giáng ngẫu nhiên",
+      metamorphosis: "bản thân",
+      turtle_protection: "bản thân",
+      rhino_counter: "bản thân",
+      pangolin_reflect: "bản thân",
+      self_atk_and_assist: "1 mục tiêu chính (+đánh phụ trợ nếu có)",
+      team_def_buff: "toàn bộ đồng minh"
+    };
+    return map[effect] ?? "theo tình huống";
+  }
+
+  getSkillShapeText(skill) {
+    if (!skill) return "không rõ";
+    const effect = String(skill.effect ?? "");
+    const map = {
+      damage_shield_taunt: "1 ô điểm tiền tuyến",
+      damage_stun: "1 ô điểm",
+      damage_shield_reflect: "1 ô điểm",
+      single_burst: "1 ô điểm",
+      double_hit: "1 ô điểm (2 nhát)",
+      single_burst_lifesteal: "1 ô điểm",
+      single_delayed_echo: "1 ô điểm + dội lại cùng ô",
+      single_sleep: "1 ô điểm",
+      single_armor_break: "1 ô điểm",
+      single_bleed: "1 ô điểm",
+      true_single: "1 ô điểm",
+      cross_5: "hình chữ thập 5 ô",
+      row_multi: "hàng ngang",
+      row_cleave: "hàng ngang",
+      column_freeze: "cột dọc",
+      column_bleed: "cột dọc",
+      column_plus_splash: "cột dọc + 2 cột kế bên",
+      aoe_circle: "vùng vuông 3x3",
+      aoe_poison: "vùng vuông 3x3",
+      random_multi: "rải ngẫu nhiên trên bàn địch",
+      ally_row_def_buff: "hàng ngang đồng minh",
+      column_bless: "cột dọc đồng minh",
+      dual_heal: "2 ô đồng minh thấp máu",
+      shield_cleanse: "1 ô đồng minh thấp máu",
+      team_rage: "nhóm đồng minh gần bản thân",
+      global_tide_evade: "toàn bộ bàn đồng minh",
+      global_knockback: "toàn bộ bàn địch",
+      global_poison_team: "toàn bộ bàn địch",
+      global_stun: "toàn bộ bàn địch",
+      multi_disarm: "3 mục tiêu địch có công cao nhất",
+      random_lightning: "5 điểm ngẫu nhiên phía địch",
+      metamorphosis: "tự thân",
+      turtle_protection: "tự thân",
+      rhino_counter: "tự thân",
+      pangolin_reflect: "tự thân",
+      self_atk_and_assist: "điểm tiền tuyến + đồng minh cùng hàng hỗ trợ",
+      cone_smash: "quạt 3 ô phía trước",
+      team_def_buff: "toàn bộ bàn đồng minh"
+    };
+    return map[effect] ?? "mẫu kỹ năng đặc thù";
+  }
+
+  getSkillDamageAndFormulaText(skill, baseStats, star) {
+    const starSkillMult = this.getStarSkillMultiplier(star);
+    const damageType = this.translateDamageType(skill?.damageType || "physical");
+    const statFromKey = (key) => Math.round((Number(baseStats?.[key] ?? 0) || 0) * this.getStarStatMultiplier(star));
+
+    if (skill?.hit1 && skill?.hit2) {
+      const statKey = skill.scaleStat || "atk";
+      const statLabel = this.translateScaleStat(statKey);
+      const statValue = statFromKey(statKey);
+      const h1Base = Number(skill.hit1.base ?? 0);
+      const h1Scale = Number(skill.hit1.scale ?? 0);
+      const h2Base = Number(skill.hit2.base ?? 0);
+      const h2Scale = Number(skill.hit2.scale ?? 0);
+      const h1 = Math.round((h1Base + statValue * h1Scale) * starSkillMult);
+      const h2 = Math.round((h2Base + statValue * h2Scale) * starSkillMult);
+      const total = Math.max(0, h1 + h2);
+      const formula = `Công thức: [(${statLabel}(${statValue}) x ${h1Scale} + ${h1Base}) + (${statLabel}(${statValue}) x ${h2Scale} + ${h2Base})] x${starSkillMult.toFixed(2)} = ${total}`;
+      return { damageText: `${total} (${damageType})`, formulaText: formula };
+    }
+
+    const baseVal = Number(skill?.base);
+    const scaleVal = Number(skill?.scale);
+    if (!Number.isFinite(baseVal) || !Number.isFinite(scaleVal)) {
+      return {
+        damageText: "không gây sát thương trực tiếp",
+        formulaText: "Công thức: Không có công thức sát thương trực tiếp."
+      };
+    }
+
+    const statKey = skill.scaleStat || "atk";
+    const statLabel = this.translateScaleStat(statKey);
+    const statValue = statFromKey(statKey);
+    const total = Math.max(0, Math.round((baseVal + statValue * scaleVal) * starSkillMult));
+    const formula = `Công thức: (${statLabel}(${statValue}) x ${scaleVal} + ${baseVal}) x${starSkillMult.toFixed(2)} = ${total}`;
+    return { damageText: `${total} (${damageType})`, formulaText: formula };
+  }
+
+  buildSkillStarMilestoneLines(skill, baseUnit) {
+    if (!skill) return [];
+    const baseStats = baseUnit?.stats ?? null;
+    const lines = [];
+    for (let star = 1; star <= 3; star += 1) {
+      const targetText = this.getSkillTargetCountText(skill, star);
+      const shapeText = this.getSkillShapeText(skill);
+      const { damageText, formulaText } = this.getSkillDamageAndFormulaText(skill, baseStats, star);
+      lines.push(
+        `${star} sao: Sát thương: ${damageText} | Số mục tiêu: ${targetText} | Hình dạng chiêu thức: ${shapeText} | ${formulaText}`
+      );
+    }
+    return lines;
+  }
+
+  describeSkillLines(skill, baseUnit = null) {
+    if (!skill) return ["Không có kỹ năng chủ động."];
+    const lines = [];
+    const description = this.stripSkillStarNotes(skill.descriptionVi || skill.description);
+    if (description) lines.push(description);
+    lines.push("Mốc sao:");
+    lines.push(...this.buildSkillStarMilestoneLines(skill, baseUnit));
     return lines;
   }
 
@@ -6264,7 +6645,7 @@ export class PlanningScene extends Phaser.Scene {
       single_sleep: "Tấn công 1 ô hình điểm, có thể gây ngủ.",
       single_armor_break: "Tấn công 1 ô hình điểm và giảm giáp.",
       column_freeze: "Tấn công 5 ô hình cột dọc.",
-      aoe_circle: "Tấn công 5 ô hình vòng tròn nhỏ.",
+      aoe_circle: "Tấn công vùng vuông 3x3 quanh mục tiêu.",
       column_plus_splash: "Tấn công 5 ô hình cột và lan 2 ô cạnh mục tiêu.",
       column_bleed: "Tấn công toàn bộ cột mục tiêu và gây chảy máu.",
       aoe_poison: "Tấn công vùng 3x3 (tối đa 9 ô).",
@@ -6273,10 +6654,17 @@ export class PlanningScene extends Phaser.Scene {
       team_rage: `Không tấn công. Tăng nộ tối đa ${maxTargets ?? 3} đồng minh.`,
       column_bless: "Không tấn công. Cường hóa 1 cột đồng minh (tối đa 5 ô).",
       global_tide_evade: "Không tấn công. Hồi đầy máu cho toàn bộ đồng minh.",
+      global_knockback: "Gây sát thương lên toàn bộ địch và đẩy lùi hàng tiền tuyến 1 ô.",
+      team_def_buff: "Không tấn công. Tăng giáp/kháng phép toàn đội và hồi máu mục tiêu thấp máu nhất.",
       row_cleave: "Tấn công 5 ô hình hàng ngang.",
       self_atk_and_assist: "Tấn công 1 ô tiền tuyến, đồng thời tự cường hóa.",
-      cone_smash: "Tấn công 3 ô hình nón trước mặt.",
+      cone_smash: "Tấn công vùng quạt 3 ô vuông trước mặt.",
       true_single: "Tấn công 1 ô hình điểm (sát thương chuẩn)."
+      ,
+      single_poison_stack: "Tấn công 1 ô và cộng dồn độc theo số lần trúng.",
+      lifesteal_disease_maxhp: "Tấn công 1 ô, hút máu, tăng HP tối đa và phát tán dịch bệnh.",
+      double_hit_gold_reward: "Tấn công 1 ô (2 đòn); nếu kết liễu sẽ thưởng vàng.",
+      assassin_execute_rage_refund: "Tất sát 1 ô; khi kết liễu sẽ hoàn nộ, thưởng vàng và đánh nối đòn."
     };
     const text = map[skill.effect];
     if (text) return text;
@@ -6286,7 +6674,7 @@ export class PlanningScene extends Phaser.Scene {
     if (String(skill.effect ?? "").includes("row")) return "Tấn công nhiều ô hình hàng ngang.";
     if (String(skill.effect ?? "").includes("column")) return "Tấn công nhiều ô hình cột dọc.";
     if (String(skill.effect ?? "").includes("aoe")) return "Tấn công nhiều ô theo vùng.";
-    if (String(skill.effect ?? "").includes("cone")) return "Tấn công nhiều ô hình nón.";
+    if (String(skill.effect ?? "").includes("cone")) return "Tấn công nhiều ô vùng quạt trước mặt.";
     return "Tấn công theo mẫu kỹ năng đặc thù.";
   }
 
@@ -6331,7 +6719,7 @@ export class PlanningScene extends Phaser.Scene {
       single_sleep: "Sát thương + gây ngủ",
       single_armor_break: "Sát thương + giảm giáp",
       column_freeze: "Cột băng + đóng băng",
-      aoe_circle: "Nổ vùng tròn",
+      aoe_circle: "Nổ vùng vuông 3x3",
       column_plus_splash: "Đánh cột + lan cạnh",
       aoe_poison: "Độc diện rộng",
       dual_heal: "Hồi máu 2 đồng minh",
@@ -6339,11 +6727,17 @@ export class PlanningScene extends Phaser.Scene {
       team_rage: "Tăng nộ đồng minh",
       column_bless: "Cường hóa theo cột",
       global_tide_evade: "Sóng thần hồi đầy máu đồng minh",
+      global_knockback: "Sóng thần toàn bản đồ + đẩy lùi tiền tuyến",
       column_bleed: "Xé cột + chảy máu",
       row_cleave: "Quét hàng",
       self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
-      cone_smash: "Nện hình nón",
-      true_single: "Sát thương chuẩn đơn mục tiêu"
+      cone_smash: "Nện vùng quạt 3 ô",
+      true_single: "Sát thương chuẩn đơn mục tiêu",
+      team_def_buff: "Tăng giáp/kháng phép toàn đội + hồi máu thấp nhất",
+      single_poison_stack: "Độc cộng dồn",
+      lifesteal_disease_maxhp: "Hút máu + tăng HP tối đa + dịch bệnh",
+      double_hit_gold_reward: "Song kích thưởng vàng",
+      assassin_execute_rage_refund: "Tất sát hoàn nộ"
     };
     return map[effect] ?? effect;
   }
@@ -6629,7 +7023,9 @@ export class PlanningScene extends Phaser.Scene {
       const target = this.selectTarget(actor);
       if (target) {
         if (actor.rage >= actor.rageMax && actor.statuses.silence <= 0) {
-          actor.rage = 0;
+          if (actor.classType !== "MAGE") {
+            actor.rage = 0;
+          }
           this.updateCombatUnitUi(actor);
           await this.castSkill(actor, target);
         } else {
@@ -6662,7 +7058,6 @@ export class PlanningScene extends Phaser.Scene {
     this.tickTimedStatus(unit, "atkBuffTurns");
     this.tickTimedStatus(unit, "defBuffTurns");
     this.tickTimedStatus(unit, "mdefBuffTurns");
-    this.tickTimedStatus(unit, "slowTurns");
     this.tickTimedStatus(unit, "disarmTurns");
     this.tickTimedStatus(unit, "immuneTurns");
     this.tickTimedStatus(unit, "physReflectTurns");
@@ -6810,7 +7205,7 @@ export class PlanningScene extends Phaser.Scene {
     if (!skill) {
       // Log error for missing skill (Requirement 18.3)
       console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
-      
+
       // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;
@@ -6885,7 +7280,17 @@ export class PlanningScene extends Phaser.Scene {
         if (target.alive) {
           target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns);
           target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, skill.poisonPerTurn);
-          target.statuses.slowTurns = Math.max(target.statuses.slowTurns, skill.slowTurns);
+          this.updateCombatUnitUi(target);
+        }
+        break;
+      }
+      case "single_poison_stack": {
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (target.alive) {
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns || 3);
+          const perTurn = skill.poisonPerTurn || 15;
+          target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + perTurn;
+          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỘC +", "#880088");
           this.updateCombatUnitUi(target);
         }
         break;
@@ -7007,6 +7412,37 @@ export class PlanningScene extends Phaser.Scene {
         });
         break;
       }
+      case "global_knockback": {
+        enemies.forEach((enemy) => {
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType || "magic", skill.name, skillOpts);
+        });
+        const push = attacker.side === "LEFT" ? 1 : -1;
+        const frontliners = enemies
+          .filter((enemy) => enemy.alive && this.distanceToFrontline(enemy) === 0)
+          .sort((a, b) => a.row - b.row);
+        for (const enemy of frontliners) {
+          const newCol = Math.max(0, Math.min(COLS - 1, enemy.col + push));
+          const blocked = enemies.some((u) => u.uid !== enemy.uid && u.alive && u.row === enemy.row && u.col === newCol);
+          if (blocked || newCol === enemy.col) continue;
+          enemy.col = newCol;
+          const screen = this.gridToScreen(enemy.col, enemy.row);
+          await this.tweenCombatUnit(enemy, screen.x, screen.y - 10, 180);
+          this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
+          this.updateCombatUnitUi(enemy);
+        }
+        break;
+      }
+      case "global_poison_team": {
+        enemies.forEach((enemy) => {
+          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType || "magic", skill.name, skillOpts);
+          if (enemy.alive) {
+            enemy.statuses.poisonTurns = Math.max(enemy.statuses.poisonTurns, skill.poisonTurns);
+            enemy.statuses.poisonDamage = Math.max(enemy.statuses.poisonDamage, skill.poisonPerTurn);
+            this.updateCombatUnitUi(enemy);
+          }
+        });
+        break;
+      }
       case "revive_or_heal": {
         const dead = this.combatUnits.find(u => u.side === attacker.side && !u.alive);
         if (dead && Math.random() < 0.5) {
@@ -7029,14 +7465,7 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "global_slow": {
-        enemies.forEach(e => {
-          this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
-          if (e.alive) {
-            e.statuses.slowTurns = Math.max(e.statuses.slowTurns, 3);
-            this.showFloatingText(e.sprite.x, e.sprite.y - 45, "LÀM CHẬM", "#888888");
-            this.updateCombatUnitUi(e);
-          }
-        });
+        // Removed: slow mechanic replaced by evasion system
         break;
       }
       case "global_tide_evade": {
@@ -7072,12 +7501,27 @@ export class PlanningScene extends Phaser.Scene {
         }
         break;
       }
+      case "team_def_buff":
       case "team_buff_def": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+        const turns = Number.isFinite(skill.turns) ? Math.max(1, Math.round(skill.turns)) : 3;
+        const defBuff = Math.max(1, Math.round((skill.armorBuff || 20) * starScale));
+        const mdefBase = Math.max(skill.mdefBuff || 0, skill.armorBuff || 0, 20);
+        const mdefBuff = Math.max(1, Math.round(mdefBase * starScale));
         allies.forEach(a => {
-          a.statuses.defBuffTurns = Math.max(a.statuses.defBuffTurns, 3);
-          a.statuses.defBuffValue = Math.max(a.statuses.defBuffValue, skill.armorBuff || 30);
+          a.statuses.defBuffTurns = Math.max(a.statuses.defBuffTurns, turns);
+          a.statuses.defBuffValue = Math.max(a.statuses.defBuffValue, defBuff);
+          a.statuses.mdefBuffTurns = Math.max(a.statuses.mdefBuffTurns, turns);
+          a.statuses.mdefBuffValue = Math.max(a.statuses.mdefBuffValue, mdefBuff);
           this.updateCombatUnitUi(a);
         });
+        const lowest = allies
+          .filter((ally) => ally.alive)
+          .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+        if (lowest) {
+          const healAmount = Math.max(1, Math.round(50 * starScale));
+          this.healUnit(attacker, lowest, healAmount, "PHÚC LÀNH");
+        }
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẢO VỆ", "#00ff00");
         break;
       }
@@ -7204,10 +7648,11 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "row_multi": {
+        const maxHits = Number.isFinite(skill.maxHits) ? Math.max(1, Math.floor(skill.maxHits)) : 3;
         const victims = enemies
           .filter((enemy) => enemy.row === target.row)
           .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
-          .slice(0, skill.maxHits);
+          .slice(0, maxHits);
         victims.forEach((enemy) => {
           const isPrimary = enemy.row === target.row && enemy.col === target.col;
           this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
@@ -7216,11 +7661,17 @@ export class PlanningScene extends Phaser.Scene {
       }
       case "random_multi": {
         const pool = enemies.filter((enemy) => enemy.alive);
-        const count = Math.min(skill.maxHits ?? 3, pool.length);
+        const baseMaxHits = getWaspMaxTargets(attacker, skill) ?? skill.maxHits ?? 3;
+        const maxHits = skill.id === "wasp_triple_strike" ? baseMaxHits : baseMaxHits + targetBonus;
+        const count = Math.min(maxHits, pool.length);
         const victims = sampleWithoutReplacement(pool, count);
+        const waspDamageMult = skill.id === "wasp_triple_strike"
+          ? (attacker.star >= 3 ? 1.4 : attacker.star === 2 ? 1.2 : 1)
+          : 1;
+        const hitDamage = rawSkill * waspDamageMult;
         victims.forEach((enemy) => {
           const isPrimary = enemy.row === target.row && enemy.col === target.col;
-          this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
+          this.resolveDamage(attacker, enemy, hitDamage, skill.damageType, skill.name, { isSplash: !isPrimary });
         });
         break;
       }
@@ -7388,6 +7839,81 @@ export class PlanningScene extends Phaser.Scene {
         }
         break;
       }
+      case "lifesteal_disease": {
+        const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (dealt > 0 && skill.lifesteal) {
+          this.healUnit(attacker, attacker, Math.round(dealt * skill.lifesteal), "HÚT MÁU");
+        }
+        if (target.alive) {
+          target.statuses.diseaseTurns = Math.max(target.statuses.diseaseTurns || 0, skill.diseaseTurns || 3);
+          target.statuses.diseaseDamage = Math.max(target.statuses.diseaseDamage || 0, skill.diseaseDamage || 10);
+          this.showFloatingText(target.sprite.x, target.sprite.y - 45, "DỊCH BỆNH", "#880088");
+          this.updateCombatUnitUi(target);
+        }
+        break;
+      }
+      case "lifesteal_disease_maxhp": {
+        const dealt = this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (dealt > 0) {
+          this.healUnit(attacker, attacker, Math.round(dealt * 0.6), "HÚT MÁU");
+          const maxHpIncrease = Math.round(dealt * 0.15);
+          attacker.maxHp += maxHpIncrease;
+          attacker.hp += maxHpIncrease;
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 55, `+${maxHpIncrease} HP TỐI ĐA`, "#00ff88");
+          this.updateCombatUnitUi(attacker);
+        }
+        if (target.alive) {
+          target.statuses.diseaseTurns = Math.max(target.statuses.diseaseTurns || 0, 3);
+          target.statuses.diseaseDamage = Math.max(target.statuses.diseaseDamage || 0, 10);
+          this.updateCombatUnitUi(target);
+        }
+        enemies
+          .filter((enemy) => enemy.alive && enemy.uid !== target.uid && Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
+          .forEach((enemy) => {
+            enemy.statuses.diseaseTurns = Math.max(enemy.statuses.diseaseTurns || 0, 3);
+            enemy.statuses.diseaseDamage = Math.max(enemy.statuses.diseaseDamage || 0, 10);
+            this.updateCombatUnitUi(enemy);
+          });
+        break;
+      }
+      case "double_hit_gold_reward": {
+        const hit1 = this.calcSkillRaw(attacker, { base: 26, scaleStat: "atk", scale: 1.45 });
+        const hit2 = this.calcSkillRaw(attacker, { base: 22, scaleStat: "atk", scale: 1.25 });
+        this.resolveDamage(attacker, target, hit1, "physical", "HỎA ẤN 1", skillOpts);
+        await this.wait(120);
+        const targetAliveAfterHit1 = target.alive;
+        this.resolveDamage(attacker, target, hit2, "physical", "HỎA ẤN 2", skillOpts);
+        if (targetAliveAfterHit1 && !target.alive && attacker.side === "LEFT") {
+          this.player.gold += 1;
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 65, "+1 VÀNG", "#ffd700");
+          this.addLog(`${attacker.name} kết liễu ${target.name} và nhận 1 vàng!`);
+        }
+        break;
+      }
+      case "assassin_execute_rage_refund": {
+        const targetWasAlive = target.alive;
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
+        if (targetWasAlive && !target.alive) {
+          const refund = Math.ceil(attacker.rageMax * 0.5);
+          attacker.rage = Math.min(attacker.rageMax, attacker.rage + refund);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 65, `+${refund} NỘ`, "#ff6b9d");
+          if (attacker.side === "LEFT") {
+            this.player.gold += 5;
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 85, "+5 VÀNG", "#ffd700");
+            this.addLog(`${attacker.name} kết liễu ${target.name} và nhận 5 vàng!`);
+          }
+          const enemySide = attacker.side === "LEFT" ? "RIGHT" : "LEFT";
+          const remainingEnemies = this.getCombatUnits(enemySide);
+          if (remainingEnemies.length > 0) {
+            const newTarget = this.selectTarget(attacker);
+            if (newTarget) {
+              this.addLog(`${attacker.name} tấn công tiếp!`);
+              await this.basicAttack(attacker, newTarget);
+            }
+          }
+        }
+        break;
+      }
       case "cone_smash": {
         enemies
           .filter((enemy) => Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
@@ -7411,7 +7937,8 @@ export class PlanningScene extends Phaser.Scene {
     const statName = skill.scaleStat || "atk";
     const sourceStat =
       statName === "atk" ? this.getEffectiveAtk(attacker) : statName === "matk" ? this.getEffectiveMatk(attacker) : attacker[statName] ?? 0;
-    return skill.base + sourceStat * skill.scale;
+    const starSkillMult = attacker?.star >= 3 ? 1.4 : attacker?.star === 2 ? 1.2 : 1;
+    return (skill.base + sourceStat * skill.scale) * starSkillMult;
   }
 
   getUnitStatFallback(unit, statKey, defaultValue = 0) {
@@ -7479,9 +8006,16 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (attacker && !options.forceHit) {
-      const evadePct = Phaser.Math.Clamp(Number(defender.mods.evadePct ?? 0), 0, 0.6);
+      const evadePct = getEffectiveEvasion(defender);
       if (Math.random() < evadePct) {
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
+        if (!options.noRage) {
+          defender.rage = Math.min(defender.rageMax, defender.rage + 1);
+          this.updateCombatUnitUi(defender);
+        }
+        if (!options.noAutoCast) {
+          this.scheduleTankAutoCast(defender, attacker);
+        }
         return 0;
       }
     }
@@ -7534,6 +8068,10 @@ export class PlanningScene extends Phaser.Scene {
       attacker.rage = Math.min(attacker.rageMax, attacker.rage + gain);
     }
     if (!options.noRage) defender.rage = Math.min(defender.rageMax, defender.rage + 1);
+
+    if (!options.noAutoCast) {
+      this.scheduleTankAutoCast(defender, attacker);
+    }
 
     if (attacker && attacker.mods.burnOnHit > 0 && defender.alive) {
       defender.statuses.burnTurns = Math.max(defender.statuses.burnTurns, 2);
@@ -7597,6 +8135,39 @@ export class PlanningScene extends Phaser.Scene {
     return damageLeft;
   }
 
+  scheduleTankAutoCast(tank, preferredTarget = null) {
+    if (!tank?.alive) return;
+    if (tank.classType !== "TANKER") return;
+    if ((tank.statuses?.silence ?? 0) > 0) return;
+    if (!Number.isFinite(tank.rage) || !Number.isFinite(tank.rageMax) || tank.rage < tank.rageMax) return;
+    if (tank._isAutoCastingTankSkill) return;
+    const skill = SKILL_LIBRARY[tank.skillId];
+    if (!skill) return;
+
+    const fallbackTarget = preferredTarget?.alive ? preferredTarget : this.selectTarget(tank, { deterministic: true });
+    if (!fallbackTarget) return;
+
+    tank._isAutoCastingTankSkill = true;
+    this.time.delayedCall(0, async () => {
+      try {
+        if (!tank.alive || (tank.statuses?.silence ?? 0) > 0) return;
+        if (tank.rage < tank.rageMax) return;
+        const target = preferredTarget?.alive ? preferredTarget : this.selectTarget(tank, { deterministic: true });
+        if (!target) return;
+
+        tank.rage = 0;
+        this.updateCombatUnitUi(tank);
+        this.showFloatingText(tank.sprite.x, tank.sprite.y - 56, "TỰ TUNG CHIÊU", "#9bdcff");
+        await this.applySkillEffect(tank, target, skill);
+      } catch (error) {
+        console.error("[Tank Auto-Cast] Planning scene auto-cast failed:", error);
+      } finally {
+        tank._isAutoCastingTankSkill = false;
+        this.updateCombatUnitUi(tank);
+      }
+    });
+  }
+
   addShield(target, amount) {
     const val = Math.max(1, Math.round(amount));
     target.shield += val;
@@ -7636,7 +8207,6 @@ export class PlanningScene extends Phaser.Scene {
     if (unit.statuses.diseaseTurns > 0) s.push("🦠");
     if (unit.statuses.tauntTurns > 0 && unit.statuses.tauntTargetId) s.push("🎯");
     if (unit.statuses.armorBreakTurns > 0) s.push("⚔️");
-    if (unit.statuses.slowTurns > 0) s.push("⏳");
     if (unit.statuses.atkDebuffTurns > 0) s.push("📉");
     if (unit.statuses.reflectTurns > 0 || unit.statuses.physReflectTurns > 0) s.push("🌀");
     unit.statusLabel.setText(s.slice(0, 5).join(" "));
@@ -7755,7 +8325,34 @@ export class PlanningScene extends Phaser.Scene {
     const color = damageType === "magic" ? "#d9a6ff" : damageType === "true" ? "#f2f7ff" : "#ff9b9b";
     const stroke = damageType === "magic" ? "#34164b" : "#20101a";
     const fontSize = isCrit ? 24 : 17;
-    const label = this.add.text(x, y, `-${value}${isCrit ? "!" : ""}`, {
+    
+    // Clean up expired damage numbers (older than 200ms)
+    const now = Date.now();
+    this.activeDamageNumbers = this.activeDamageNumbers.filter(dn => now - dn.timestamp < 200);
+    
+    // Check for overlapping damage numbers within 30 pixels
+    const OVERLAP_THRESHOLD = 30;
+    const OFFSET_AMOUNT = 20;
+    let adjustedY = y;
+    
+    for (const activeDN of this.activeDamageNumbers) {
+      const dx = Math.abs(activeDN.x - x);
+      const dy = Math.abs(activeDN.y - adjustedY);
+      
+      // If within overlap threshold, offset the y-position
+      if (dx < OVERLAP_THRESHOLD && dy < OVERLAP_THRESHOLD) {
+        adjustedY -= OFFSET_AMOUNT;
+      }
+    }
+    
+    // Track this damage number
+    this.activeDamageNumbers.push({
+      x,
+      y: adjustedY,
+      timestamp: now
+    });
+    
+    const label = this.add.text(x, adjustedY, `-${value}${isCrit ? "!" : ""}`, {
       fontFamily: UI_FONT,
       fontSize: `${fontSize}px`,
       fontStyle: "bold",
@@ -7768,10 +8365,10 @@ export class PlanningScene extends Phaser.Scene {
     this.combatSprites.push(label);
     this.tweens.add({
       targets: label,
-      y: y - (isCrit ? 42 : 32),
+      y: adjustedY - (isCrit ? 42 : 32),
       alpha: 0,
       scale: isCrit ? 1.1 : 1.0,
-      duration: isCrit ? 620 : 500,
+      duration: isCrit ? 1500 : 1200,
       ease: "Cubic.easeOut",
       onComplete: () => label.destroy()
     });

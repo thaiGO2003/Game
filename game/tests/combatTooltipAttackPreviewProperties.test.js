@@ -1,0 +1,147 @@
+import { describe, it, expect, vi } from "vitest";
+import fc from "fast-check";
+import { TooltipController } from "../src/core/tooltip.js";
+import { CombatScene } from "../src/scenes/CombatScene.js";
+
+function dedupe(cells) {
+  const map = new Map();
+  cells.forEach((cell) => {
+    const key = `${cell.row}_${cell.col}`;
+    if (!map.has(key)) map.set(key, cell);
+  });
+  return [...map.values()];
+}
+
+describe("Property 3: Combat Tooltip Completeness", () => {
+  it("should always include HP/ATK/DEF/MATK/MDEF/range/role/element when unit is provided", () => {
+    const unitArb = fc.record({
+      hp: fc.integer({ min: 1, max: 9999 }),
+      maxHp: fc.integer({ min: 1, max: 9999 }),
+      atk: fc.integer({ min: 1, max: 999 }),
+      def: fc.integer({ min: 0, max: 999 }),
+      matk: fc.integer({ min: 1, max: 999 }),
+      mdef: fc.integer({ min: 0, max: 999 }),
+      range: fc.integer({ min: 1, max: 5 }),
+      classType: fc.constantFrom("TANKER", "FIGHTER", "ASSASSIN", "ARCHER", "MAGE", "SUPPORT"),
+      tribe: fc.constantFrom("STONE", "WIND", "FIRE", "TIDE", "NIGHT", "SPIRIT", "SWARM")
+    }).map((u) => ({ ...u, maxHp: Math.max(u.maxHp, u.hp) }));
+
+    fc.assert(
+      fc.property(unitArb, (unit) => {
+        const mockController = { show: vi.fn(), hide: vi.fn() };
+        TooltipController.prototype.showCombatUnitTooltip.call(mockController, { x: 100, y: 100 }, {}, unit);
+        expect(mockController.show).toHaveBeenCalledTimes(1);
+        const [, , body] = mockController.show.mock.calls[0];
+        expect(body).toContain("HP:");
+        expect(body).toContain("ATK:");
+        expect(body).toContain("DEF:");
+        expect(body).toContain("MATK:");
+        expect(body).toContain("MDEF:");
+        expect(body).toContain("Tầm đánh:");
+        expect(body).toContain("Nghề:");
+        expect(body).toContain("Hệ:");
+      }),
+      { numRuns: 60 }
+    );
+  });
+});
+
+describe("Property 4: Melee Attack Preview", () => {
+  it("should return at most one forward cell for melee units", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom("LEFT", "RIGHT"),
+        fc.integer({ min: 0, max: 4 }),
+        fc.integer({ min: 0, max: 9 }),
+        (side, row, col) => {
+          const sceneLike = { dedupePreviewCells: dedupe };
+          const cells = CombatScene.prototype.calculateAttackRange.call(sceneLike, {
+            alive: true,
+            side,
+            row,
+            col,
+            range: 1
+          });
+          expect(cells.length).toBeLessThanOrEqual(1);
+          if (cells.length === 1) {
+            const expectedCol = side === "LEFT" ? col + 1 : col - 1;
+            expect(cells[0].row).toBe(row);
+            expect(cells[0].col).toBe(expectedCol);
+          }
+        }
+      ),
+      { numRuns: 120 }
+    );
+  });
+});
+
+describe("Property 5: Ranged Attack Preview", () => {
+  it("should create a contiguous forward line up to range or board boundary", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom("LEFT", "RIGHT"),
+        fc.integer({ min: 0, max: 4 }),
+        fc.integer({ min: 0, max: 9 }),
+        fc.integer({ min: 2, max: 5 }),
+        (side, row, col, range) => {
+          const sceneLike = { dedupePreviewCells: dedupe };
+          const cells = CombatScene.prototype.calculateAttackRange.call(sceneLike, {
+            alive: true,
+            side,
+            row,
+            col,
+            range
+          });
+          expect(cells.every((c) => c.row === row)).toBe(true);
+          for (let i = 1; i < cells.length; i += 1) {
+            const delta = side === "LEFT" ? cells[i].col - cells[i - 1].col : cells[i - 1].col - cells[i].col;
+            expect(delta).toBe(1);
+          }
+          expect(cells.length).toBeLessThanOrEqual(range);
+        }
+      ),
+      { numRuns: 120 }
+    );
+  });
+});
+
+describe("Property 6: Attack Preview Cleanup", () => {
+  it("should clear preview state/layers when clearing current hovered unit", () => {
+    const attackPreviewLayer = { clear: vi.fn() };
+    const attackPreviewSword = { clear: vi.fn(), setVisible: vi.fn() };
+    const sceneLike = {
+      previewHoverUnit: { uid: "u1" },
+      attackPreviewLayer,
+      attackPreviewSword
+    };
+    CombatScene.prototype.clearAttackPreview.call(sceneLike, { uid: "u1" });
+    expect(sceneLike.previewHoverUnit).toBeNull();
+    expect(attackPreviewLayer.clear).toHaveBeenCalled();
+    expect(attackPreviewSword.clear).toHaveBeenCalled();
+    expect(attackPreviewSword.setVisible).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("Property 7: Attack Preview Updates on Movement", () => {
+  it("should refresh preview on tween update when hovered unit is moving", async () => {
+    const syncCombatLabels = vi.fn();
+    const showAttackPreviewForUnit = vi.fn();
+    const sceneLike = {
+      previewHoverUnit: { uid: "u1" },
+      scaleCombatDuration: (x) => x,
+      tweens: {
+        add: (config) => {
+          config.onUpdate?.();
+          config.onComplete?.();
+        }
+      },
+      syncCombatLabels,
+      showAttackPreviewForUnit
+    };
+    const unit = { uid: "u1", sprite: {} };
+    await CombatScene.prototype.tweenCombatUnit.call(sceneLike, unit, 10, 20, 100);
+    expect(syncCombatLabels).toHaveBeenCalledWith(unit);
+    expect(showAttackPreviewForUnit).toHaveBeenCalledWith(unit);
+  });
+});
+
