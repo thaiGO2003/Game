@@ -5,8 +5,10 @@
  * status effects, and combat end conditions.
  * This system is independent of Phaser and uses pure functions where possible.
  * 
- * **Validates: Requirements 1.1, 1.6, 13.4**
+ * **Validates: Requirements 1.1, 1.6, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 4.12, 4.13, 13.4**
  */
+
+import { APPLY_HANDLERS, TICK_HANDLERS, isStatusTypeSupported } from './StatusEffectHandlers.js';
 
 /**
  * Calculates turn order by sorting units by speed (higher speed acts first)
@@ -401,22 +403,51 @@ export function calculateDamage(attacker, defender, skill, state) {
   };
 }
 
-// Helper functions for stat calculations
+/**
+ * Gets effective attack stat for a unit
+ * Applies attack buffs and debuffs from status effects
+ * 
+ * @param {Object} unit - Combat unit
+ * @returns {number} Effective attack value (minimum 1)
+ * @private
+ */
 function getEffectiveAtk(unit) {
   const buff = unit.statuses?.atkBuffTurns > 0 ? unit.statuses.atkBuffValue : 0;
   const debuff = unit.statuses?.atkDebuffTurns > 0 ? unit.statuses.atkDebuffValue : 0;
   return Math.max(1, unit.atk + buff - debuff);
 }
 
+/**
+ * Gets effective defense stat for a unit
+ * Applies defense buffs from status effects
+ * 
+ * @param {Object} unit - Combat unit
+ * @returns {number} Effective defense value (minimum 0)
+ * @private
+ */
 function getEffectiveDef(unit) {
   const buff = unit.statuses?.defBuffTurns > 0 ? unit.statuses.defBuffValue : 0;
   return Math.max(0, unit.def + buff);
 }
 
+/**
+ * Gets effective magic attack stat for a unit
+ * 
+ * @param {Object} unit - Combat unit
+ * @returns {number} Effective magic attack value (minimum 1)
+ * @private
+ */
 function getEffectiveMatk(unit) {
   return Math.max(1, unit.matk);
 }
 
+/**
+ * Gets effective magic defense stat for a unit
+ * 
+ * @param {Object} unit - Combat unit
+ * @returns {number} Effective magic defense value (minimum 0)
+ * @private
+ */
 function getEffectiveMdef(unit) {
   return Math.max(0, unit.mdef);
 }
@@ -511,7 +542,7 @@ export function applyDamage(unit, damage, state) {
 
 /**
  * Applies a status effect to a combat unit
- * Handles stacking, duration, and effect application
+ * Handles stacking, duration, and effect application using StatusEffectHandlers
  * 
  * @param {Object} unit - Combat unit receiving the status effect
  * @param {Object} effect - Status effect definition with type, duration, and value
@@ -546,110 +577,17 @@ export function applyStatusEffect(unit, effect, state) {
   const duration = effect.duration ?? 1;
   const value = effect.value ?? 0;
 
-  // Apply status effect based on type
-  switch (effectType) {
-    // Control effects (hard CC)
-    case 'freeze':
-    case 'stun':
-    case 'sleep':
-    case 'silence':
-      unit.statuses[effectType] = Math.max(unit.statuses[effectType] ?? 0, duration);
-      break;
-
-    // Damage over time effects
-    case 'burn':
-      unit.statuses.burnTurns = Math.max(unit.statuses.burnTurns ?? 0, duration);
-      unit.statuses.burnDamage = value;
-      break;
-
-    case 'poison':
-      unit.statuses.poisonTurns = Math.max(unit.statuses.poisonTurns ?? 0, duration);
-      unit.statuses.poisonDamage = value;
-      break;
-
-    case 'bleed':
-      unit.statuses.bleedTurns = Math.max(unit.statuses.bleedTurns ?? 0, duration);
-      unit.statuses.bleedDamage = value;
-      break;
-
-    case 'disease':
-      unit.statuses.diseaseTurns = Math.max(unit.statuses.diseaseTurns ?? 0, duration);
-      unit.statuses.diseaseDamage = value;
-      break;
-
-    // Stat modifiers
-    case 'armorBreak':
-      unit.statuses.armorBreakTurns = Math.max(unit.statuses.armorBreakTurns ?? 0, duration);
-      unit.statuses.armorBreakValue = value;
-      break;
-
-    case 'atkBuff':
-      unit.statuses.atkBuffTurns = Math.max(unit.statuses.atkBuffTurns ?? 0, duration);
-      unit.statuses.atkBuffValue = value;
-      break;
-
-    case 'atkDebuff':
-      unit.statuses.atkDebuffTurns = Math.max(unit.statuses.atkDebuffTurns ?? 0, duration);
-      unit.statuses.atkDebuffValue = value;
-      break;
-
-    case 'defBuff':
-      unit.statuses.defBuffTurns = Math.max(unit.statuses.defBuffTurns ?? 0, duration);
-      unit.statuses.defBuffValue = value;
-      break;
-
-    case 'mdefBuff':
-      unit.statuses.mdefBuffTurns = Math.max(unit.statuses.mdefBuffTurns ?? 0, duration);
-      unit.statuses.mdefBuffValue = value;
-      break;
-
-    case 'evadeBuff':
-      unit.statuses.evadeBuffTurns = Math.max(unit.statuses.evadeBuffTurns ?? 0, duration);
-      unit.statuses.evadeBuffValue = value;
-      break;
-
-    case 'evadeDebuff':
-      unit.statuses.evadeDebuffTurns = Math.max(unit.statuses.evadeDebuffTurns ?? 0, duration);
-      unit.statuses.evadeDebuffValue = value;
-      break;
-
-    // Special effects
-    case 'taunt':
-      unit.statuses.tauntTurns = Math.max(unit.statuses.tauntTurns ?? 0, duration);
-      unit.statuses.tauntTargetId = effect.targetId ?? null;
-      break;
-
-    case 'reflect':
-      unit.statuses.reflectTurns = Math.max(unit.statuses.reflectTurns ?? 0, duration);
-      unit.statuses.reflectPct = value;
-      break;
-
-    case 'disarm':
-      unit.statuses.disarmTurns = Math.max(unit.statuses.disarmTurns ?? 0, duration);
-      break;
-
-    case 'immune':
-      unit.statuses.immuneTurns = Math.max(unit.statuses.immuneTurns ?? 0, duration);
-      break;
-
-    case 'physReflect':
-      unit.statuses.physReflectTurns = Math.max(unit.statuses.physReflectTurns ?? 0, duration);
-      break;
-
-    case 'counter':
-      unit.statuses.counterTurns = Math.max(unit.statuses.counterTurns ?? 0, duration);
-      break;
-
-    case 'protecting':
-      unit.statuses.isProtecting = duration;
-      break;
-
-    default:
-      return {
-        success: false,
-        error: `Unknown status effect type: ${effectType}`
-      };
+  // Check if status type is supported
+  if (!isStatusTypeSupported(effectType)) {
+    return {
+      success: false,
+      error: `Unknown status effect type: ${effectType}`
+    };
   }
+
+  // Apply status effect using handler
+  const handler = APPLY_HANDLERS[effectType];
+  handler(unit, { ...effect, duration, value });
 
   // Log status application
   if (state?.combatLog) {
@@ -708,105 +646,51 @@ export function tickStatusEffects(unit, state) {
   const triggeredEffects = [];
   let controlStatus = null; // 'freeze', 'stun', 'sleep', or null
 
-  // Helper function to tick a timed status
-  const tickTimedStatus = (key) => {
-    const current = Number.isFinite(unit.statuses[key]) ? unit.statuses[key] : 0;
-    unit.statuses[key] = current > 0 ? current - 1 : 0;
-
-    // Clean up associated values when status expires
-    if (unit.statuses[key] <= 0) {
-      if (key === 'tauntTurns') {
-        unit.statuses.tauntTargetId = null;
-      } else if (key === 'armorBreakTurns') {
-        unit.statuses.armorBreakValue = 0;
-      } else if (key === 'reflectTurns') {
-        unit.statuses.reflectPct = 0;
-      } else if (key === 'atkDebuffTurns') {
-        unit.statuses.atkDebuffValue = 0;
-      } else if (key === 'atkBuffTurns') {
-        unit.statuses.atkBuffValue = 0;
-      } else if (key === 'defBuffTurns') {
-        unit.statuses.defBuffValue = 0;
-      } else if (key === 'mdefBuffTurns') {
-        unit.statuses.mdefBuffValue = 0;
-      } else if (key === 'evadeBuffTurns') {
-        unit.statuses.evadeBuffValue = 0;
-      } else if (key === 'evadeDebuffTurns') {
-        unit.statuses.evadeDebuffValue = 0;
-      }
-    }
-  };
-
-  // Tick all timed status effects
-  tickTimedStatus('tauntTurns');
-  tickTimedStatus('silence');
-  tickTimedStatus('armorBreakTurns');
-  tickTimedStatus('reflectTurns');
-  tickTimedStatus('atkBuffTurns');
-  tickTimedStatus('atkDebuffTurns');
-  tickTimedStatus('defBuffTurns');
-  tickTimedStatus('mdefBuffTurns');
-  tickTimedStatus('evadeBuffTurns');
-  tickTimedStatus('evadeDebuffTurns');
-  tickTimedStatus('disarmTurns');
-  tickTimedStatus('immuneTurns');
-  tickTimedStatus('physReflectTurns');
-  tickTimedStatus('counterTurns');
-  tickTimedStatus('isProtecting');
-
-  // Apply damage over time effects
-  if (unit.statuses.burnTurns > 0) {
-    const burnDamage = unit.statuses.burnDamage ?? 0;
-    triggeredEffects.push({
-      type: 'burn',
-      damage: burnDamage
-    });
-    unit.statuses.burnTurns -= 1;
-  }
-
-  if (unit.statuses.poisonTurns > 0) {
-    const poisonDamage = unit.statuses.poisonDamage ?? 0;
-    triggeredEffects.push({
-      type: 'poison',
-      damage: poisonDamage
-    });
-    unit.statuses.poisonTurns -= 1;
-  }
-
-  if (unit.statuses.bleedTurns > 0) {
-    const bleedDamage = unit.statuses.bleedDamage ?? 0;
-    triggeredEffects.push({
-      type: 'bleed',
-      damage: bleedDamage
-    });
-    unit.statuses.bleedTurns -= 1;
-  }
-
-  if (unit.statuses.diseaseTurns > 0) {
-    const diseaseDamage = unit.statuses.diseaseDamage ?? 0;
-    triggeredEffects.push({
-      type: 'disease',
-      damage: diseaseDamage,
-      spreads: true // Disease spreads to adjacent allies
-    });
-    unit.statuses.diseaseTurns -= 1;
-  }
-
-  // Check for control effects (these prevent actions)
+  // Check for control effects FIRST (these prevent actions)
   // Priority: freeze > stun > sleep
+  // Only the highest priority control effect is active and decremented
   if (unit.statuses.freeze > 0) {
     controlStatus = 'freeze';
-    unit.statuses.freeze -= 1;
+    // Don't tick other control effects when frozen
   } else if (unit.statuses.stun > 0) {
     controlStatus = 'stun';
-    unit.statuses.stun -= 1;
+    // Don't tick other control effects when stunned
   } else if (unit.statuses.sleep > 0) {
     controlStatus = 'sleep';
-    unit.statuses.sleep -= 1;
+    // Don't tick other control effects when asleep
+  }
+
+  // Tick all non-control status effects using handlers
+  const nonControlStatusTypes = ['silence', 'burn', 'poison', 'bleed', 'disease',
+    'armorBreak', 'atkBuff', 'atkDebuff', 'defBuff', 'mdefBuff', 'evadeBuff', 'evadeDebuff',
+    'taunt', 'reflect', 'disarm', 'immune', 'physReflect', 'counter', 'protecting'];
+
+  for (const statusType of nonControlStatusTypes) {
+    const handler = TICK_HANDLERS[statusType];
+    if (handler) {
+      const result = handler(unit);
+      
+      // If damage was dealt, add to triggered effects
+      if (result.damage) {
+        triggeredEffects.push({
+          type: statusType,
+          damage: result.damage,
+          spreads: statusType === 'disease' // Disease spreads to adjacent allies
+        });
+      }
+    }
+  }
+
+  // Tick the active control effect (only one at a time)
+  if (controlStatus) {
+    const handler = TICK_HANDLERS[controlStatus];
+    if (handler) {
+      handler(unit);
+    }
   }
 
   // Log status ticks
-  if (state?.combatLog && triggeredEffects.length > 0) {
+  if (state?.combatLog && (triggeredEffects.length > 0 || controlStatus)) {
     state.combatLog.push({
       type: 'STATUS_TICK',
       unitName: unit.name,

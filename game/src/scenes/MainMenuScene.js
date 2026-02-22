@@ -19,6 +19,7 @@ import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVis
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
+import GameModeRegistry from "../gameModes/GameModeRegistry.js";
 
 const AI_LABELS = {
   EASY: "Dễ",
@@ -253,16 +254,29 @@ export class MainMenuScene extends Phaser.Scene {
     });
     panel.add(this.startInfoText);
 
+    // Get available game modes from registry
+    const availableModes = GameModeRegistry.getAll();
+    const modeOptions = availableModes.map(mode => ({
+      value: mode.id,
+      label: mode.name,
+      disabled: false
+    }));
+    
+    // Add placeholder for future modes if no modes registered
+    if (modeOptions.length === 0) {
+      modeOptions.push(
+        { value: "PVE_JOURNEY", label: "PvE Vô tận" },
+        { value: "PVE_SANDBOX", label: "PvE Sandbox (Khóa)", disabled: true }
+      );
+    }
+
     this.modeRadioGroup = this.createRadioGroup({
       parent: panel,
       x: rightX,
       y: topY + 12,
       width: rightWidth,
       title: "Chế độ",
-      options: [
-        { value: "PVE_JOURNEY", label: "PvE Vô tận" },
-        { value: "PVE_SANDBOX", label: "PvE Sandbox (Khóa)", disabled: true }
-      ],
+      options: modeOptions,
       getValue: () => this.selectedMode,
       onChange: (value, option) => {
         if (option?.disabled) return;
@@ -1144,11 +1158,16 @@ export class MainMenuScene extends Phaser.Scene {
 
   refreshStartPanel() {
     if (!this.startInfoText) return;
-    const modeLabel = this.selectedMode === "PVE_JOURNEY" ? "PvE Vô tận" : "PvE Sandbox";
-    const modeDesc =
+    
+    // Get mode config from registry
+    const modeConfig = GameModeRegistry.get(this.selectedMode);
+    const modeLabel = modeConfig ? modeConfig.name : (this.selectedMode === "PVE_JOURNEY" ? "PvE Vô tận" : "PvE Sandbox");
+    const modeDesc = modeConfig ? modeConfig.description : (
       this.selectedMode === "PVE_JOURNEY"
         ? "Thua khi quân ta chết hết. Mỗi vòng xuất hiện đội hình địch đã xếp sẵn, bạn sắp quân để khắc chế."
-        : "Tập dượt đội hình nhanh, tập trung thử đội và kỹ năng.";
+        : "Tập dượt đội hình nhanh, tập trung thử đội và kỹ năng."
+    );
+    
     this.startInfoText.setText(
       [
         `Chế độ: ${modeLabel}`,

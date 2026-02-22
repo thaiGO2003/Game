@@ -14,6 +14,7 @@ import { LibraryModal } from "../ui/LibraryModal.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
 import { CombatSystem } from "../systems/CombatSystem.js";
 import { generateEnemyTeam, computeEnemyTeamSize, AI_SETTINGS, getAISettings, selectTarget as aiSelectTarget } from "../systems/AISystem.js";
+import GameModeRegistry from "../gameModes/GameModeRegistry.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -158,6 +159,7 @@ export class CombatScene extends Phaser.Scene {
     super("CombatScene");
     this.phase = PHASE.PLANNING;
     this.aiMode = "MEDIUM";
+    this.gameModeConfig = null;
     this.tileLookup = new Map();
     this.playerCellZones = [];
     this.buttons = {};
@@ -252,6 +254,7 @@ export class CombatScene extends Phaser.Scene {
   resetTransientSceneState() {
     this.phase = PHASE.PLANNING;
     this.aiMode = "MEDIUM";
+    this.gameModeConfig = null;
     this.tileLookup = new Map();
     this.playerCellZones = [];
     this.buttons = {};
@@ -322,6 +325,15 @@ export class CombatScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#10141b");
     this.input.keyboard?.removeAllListeners();
     this.input.removeAllListeners();
+    
+    // Get game mode configuration
+    const gameMode = this.runStatePayload?.player?.gameMode ?? "PVE_JOURNEY";
+    this.gameModeConfig = GameModeRegistry.get(gameMode);
+    if (!this.gameModeConfig) {
+      console.warn(`Game mode "${gameMode}" not found, falling back to PVE_JOURNEY`);
+      this.gameModeConfig = GameModeRegistry.get("PVE_JOURNEY");
+    }
+    
     const uiSettings = loadUiSettings();
     this.applyDisplaySettings(uiSettings);
     this.layout = this.computeLayout();
@@ -566,11 +578,25 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
     this.runStatePayload = hydrated;
-    this.aiMode = hydrated.aiMode ?? "MEDIUM";
+    
+    // Use game mode config for AI difficulty, fallback to saved aiMode or MEDIUM
+    if (this.gameModeConfig?.aiDifficulty) {
+      this.aiMode = this.gameModeConfig.aiDifficulty;
+    } else {
+      this.aiMode = hydrated.aiMode ?? "MEDIUM";
+    }
+    
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
     this.audioFx.startBgm("bgm_warrior", 0.2);
     this.player = hydrated.player;
-    this.loseCondition = normalizeLoseCondition(this.player?.loseCondition);
+    
+    // Use game mode config for lose condition, fallback to player's loseCondition
+    if (this.gameModeConfig?.loseCondition) {
+      this.loseCondition = normalizeLoseCondition(this.gameModeConfig.loseCondition);
+    } else {
+      this.loseCondition = normalizeLoseCondition(this.player?.loseCondition);
+    }
+    
     this.phase = PHASE.PLANNING;
     this.logs = [];
     this.logHistory = [];
@@ -2057,20 +2083,31 @@ export class CombatScene extends Phaser.Scene {
     let atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
     let matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
 
-    // Apply Endless mode scaling for AI units when round > 30
-    if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
-      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
-      hpBase = Math.round(hpBase * scaleFactor);
-      atkBase = Math.round(atkBase * scaleFactor);
-      matkBase = Math.round(matkBase * scaleFactor);
-    }
+    // Apply game mode config enemy scaling for AI units
+    if (side === "RIGHT" && this.gameModeConfig?.enemyScaling) {
+      const scaleFactor = this.gameModeConfig.enemyScaling(this.player.round);
+      if (typeof scaleFactor === 'number' && scaleFactor > 0) {
+        hpBase = Math.round(hpBase * scaleFactor);
+        atkBase = Math.round(atkBase * scaleFactor);
+        matkBase = Math.round(matkBase * scaleFactor);
+      }
+    } else {
+      // Fallback to legacy scaling for backward compatibility
+      // Apply Endless mode scaling for AI units when round > 30
+      if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
+        const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+        hpBase = Math.round(hpBase * scaleFactor);
+        atkBase = Math.round(atkBase * scaleFactor);
+        matkBase = Math.round(matkBase * scaleFactor);
+      }
 
-    // Apply Easy mode difficulty scaling for AI units when round > 30
-    if (side === "RIGHT" && ai.difficulty === "EASY" && this.player.round > 30) {
-      const scaleFactor = 1 + (this.player.round - 30) * 0.05;
-      hpBase = Math.round(hpBase * scaleFactor);
-      atkBase = Math.round(atkBase * scaleFactor);
-      matkBase = Math.round(matkBase * scaleFactor);
+      // Apply Easy mode difficulty scaling for AI units when round > 30
+      if (side === "RIGHT" && ai.difficulty === "EASY" && this.player.round > 30) {
+        const scaleFactor = 1 + (this.player.round - 30) * 0.05;
+        hpBase = Math.round(hpBase * scaleFactor);
+        atkBase = Math.round(atkBase * scaleFactor);
+        matkBase = Math.round(matkBase * scaleFactor);
+      }
     }
 
     const hpWithAug = side === "LEFT" ? Math.round(hpBase * (1 + this.player.teamHpPct)) : hpBase;
@@ -4688,16 +4725,10 @@ export class CombatScene extends Phaser.Scene {
         // Tanker defender reduces incoming damage by 50% (Requirement 8.2)
         raw *= 0.5;
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 55, "HỘ THỂ", "#44ddff");
-
-        // Combat logging for debugging (Requirement 8.5)
-        console.log(`[Elemental Advantage] Attacker: ${attacker.name} (${attacker.tribe}) -> Defender: ${defender.name} (${defender.tribe}, TANKER) | Modifier: 0.5x (damage reduction)`);
       } else if (attacker.classType !== "TANKER") {
         // Non-tanker attacker increases damage by 50% (Requirement 8.1, 8.3)
         raw *= 1.5;
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 55, "KHẮC CHẾ", "#ffdd44");
-
-        // Combat logging for debugging (Requirement 8.5)
-        console.log(`[Elemental Advantage] Attacker: ${attacker.name} (${attacker.tribe}) -> Defender: ${defender.name} (${defender.tribe}) | Modifier: 1.5x (damage increase)`);
       }
       // Note: If attacker is TANKER and defender is not TANKER, no modifier is applied
     }

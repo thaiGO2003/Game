@@ -4,7 +4,7 @@
  * Manages shop operations including refresh, buy, sell, lock/unlock, and shop generation.
  * This system is independent of Phaser and uses pure functions where possible.
  * 
- * **Validates: Requirements 1.1, 1.6, 13.4**
+ * **Validates: Requirements 1.1, 1.6, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 13.4**
  */
 
 import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
@@ -20,9 +20,25 @@ const DEFAULT_REFRESH_COST = 2;
  * Refreshes the shop with new offers
  * Deducts refresh cost from player gold if not locked
  * 
- * @param {Object} player - Player state object
+ * @param {Object} player - Player state object with gold, level, and shop properties
+ * @param {number} player.gold - Current player gold
+ * @param {number} player.level - Current player level (1-25)
+ * @param {boolean} player.shopLocked - Whether shop is locked
+ * @param {Array<Object>} player.shop - Current shop offers
  * @param {number} cost - Cost to refresh shop (default 2)
  * @returns {Object} Result object with success flag, updated player, or error
+ * @returns {boolean} return.success - Whether operation succeeded
+ * @returns {Object} return.player - Updated player state (if success)
+ * @returns {string} return.error - Error message (if failed)
+ * 
+ * @example
+ * const result = refreshShop(player, 2);
+ * if (result.success) {
+ *   player = result.player; // Update player state
+ *   updateShopUI(player.shop);
+ * } else {
+ *   showError(result.error); // "Not enough gold" or "Shop is locked"
+ * }
  * 
  * **Validates: Requirements 3.1, 3.2, 3.9**
  */
@@ -59,10 +75,27 @@ export function refreshShop(player, cost = DEFAULT_REFRESH_COST) {
  * Deducts unit cost from player gold and adds unit to bench
  * 
  * @param {Object} player - Player state object
+ * @param {number} player.gold - Current player gold
+ * @param {Array<Object>} player.shop - Current shop offers
+ * @param {Array<Object>} player.bench - Player's bench units
  * @param {number} slot - Shop slot index (0-4)
- * @param {Function} createUnitFn - Function to create owned unit (baseId, star) => unit
+ * @param {Function} createUnitFn - Function to create owned unit: (baseId, star) => unit
  * @param {number} benchCap - Maximum bench capacity
  * @returns {Object} Result object with success flag, updated player, purchased unit, or error
+ * @returns {boolean} return.success - Whether operation succeeded
+ * @returns {Object} return.player - Updated player state (if success)
+ * @returns {Object} return.unit - Purchased unit (if success)
+ * @returns {number} return.cost - Gold cost of purchase (if success)
+ * @returns {string} return.error - Error message (if failed)
+ * 
+ * @example
+ * const result = buyUnit(player, 0, createOwnedUnit, 8);
+ * if (result.success) {
+ *   player = result.player;
+ *   console.log(`Bought ${result.unit.name} for ${result.cost} gold`);
+ * } else {
+ *   showError(result.error); // "Not enough gold" or "Bench is full"
+ * }
  * 
  * **Validates: Requirements 3.3, 3.4, 3.5, 3.10**
  */
@@ -128,10 +161,26 @@ export function buyUnit(player, slot, createUnitFn, benchCap) {
 
 /**
  * Sells a unit and adds gold to player
+ * Calculates sell value based on unit tier and star level
+ * Formula: tier × (star === 3 ? 5 : star === 2 ? 3 : 1)
  * 
  * @param {Object} player - Player state object
+ * @param {number} player.gold - Current player gold
  * @param {Object} unit - Unit to sell
+ * @param {string} unit.baseId - Unit base ID
+ * @param {number} unit.star - Unit star level (1-3)
  * @returns {Object} Result object with success flag, updated player, sell value, or error
+ * @returns {boolean} return.success - Whether operation succeeded
+ * @returns {Object} return.player - Updated player state with increased gold (if success)
+ * @returns {number} return.sellValue - Gold received from sale (if success)
+ * @returns {string} return.error - Error message (if failed)
+ * 
+ * @example
+ * const result = sellUnit(player, unit);
+ * if (result.success) {
+ *   player = result.player;
+ *   console.log(`Sold unit for ${result.sellValue} gold`);
+ * }
  * 
  * **Validates: Requirement 3.6**
  */
@@ -169,9 +218,20 @@ export function sellUnit(player, unit) {
 
 /**
  * Locks the shop to preserve current offers
+ * Prevents shop refresh until unlocked
  * 
  * @param {Object} player - Player state object
  * @returns {Object} Result object with success flag and updated player
+ * @returns {boolean} return.success - Whether operation succeeded
+ * @returns {Object} return.player - Updated player state with shopLocked=true
+ * @returns {string} return.error - Error message (if failed)
+ * 
+ * @example
+ * const result = lockShop(player);
+ * if (result.success) {
+ *   player = result.player;
+ *   updateLockIcon(true);
+ * }
  * 
  * **Validates: Requirement 3.7**
  */
@@ -190,9 +250,20 @@ export function lockShop(player) {
 
 /**
  * Unlocks the shop to allow refreshing
+ * Allows shop refresh after being locked
  * 
  * @param {Object} player - Player state object
  * @returns {Object} Result object with success flag and updated player
+ * @returns {boolean} return.success - Whether operation succeeded
+ * @returns {Object} return.player - Updated player state with shopLocked=false
+ * @returns {string} return.error - Error message (if failed)
+ * 
+ * @example
+ * const result = unlockShop(player);
+ * if (result.success) {
+ *   player = result.player;
+ *   updateLockIcon(false);
+ * }
  * 
  * **Validates: Requirement 3.7**
  */
@@ -216,6 +287,16 @@ export function unlockShop(player) {
  * @param {number} level - Player level (1-25)
  * @param {number} slots - Number of shop slots (default 5)
  * @returns {Array<Object>} Array of shop offers
+ * @returns {number} return[].slot - Slot index
+ * @returns {string} return[].baseId - Unit base ID
+ * 
+ * @example
+ * const offers = generateShopOffers(5, 5);
+ * // Returns: [
+ * //   {slot: 0, baseId: 'warrior'},
+ * //   {slot: 1, baseId: 'mage'},
+ * //   ...
+ * // ]
  * 
  * **Validates: Requirements 3.2, 3.8**
  */
@@ -252,7 +333,16 @@ export function generateShopOffers(level, slots = DEFAULT_SHOP_SLOTS) {
  * Calculates the cost to refresh the shop
  * Currently a fixed cost, but can be extended for dynamic pricing
  * 
- * @returns {number} Cost to refresh shop
+ * @returns {number} Cost to refresh shop (currently always 2)
+ * 
+ * @example
+ * const cost = calculateRefreshCost();
+ * console.log(cost); // 2
+ * 
+ * @note Future extensions could include:
+ * - Increasing cost per refresh in same round
+ * - Discounts from augments/items
+ * - Level-based pricing
  */
 export function calculateRefreshCost() {
   // Currently fixed cost, but can be extended for:
@@ -266,8 +356,25 @@ export function calculateRefreshCost() {
  * Gets the tier odds for a specific player level
  * Returns probability distribution for tiers 1-5
  * 
- * @param {number} level - Player level (1-25)
+ * @param {number} level - Player level (1-25, clamped to this range)
  * @returns {Object} Tier odds object with probabilities for each tier
+ * @returns {number} return.tier1 - Probability of tier 1 units (0-1)
+ * @returns {number} return.tier2 - Probability of tier 2 units (0-1)
+ * @returns {number} return.tier3 - Probability of tier 3 units (0-1)
+ * @returns {number} return.tier4 - Probability of tier 4 units (0-1)
+ * @returns {number} return.tier5 - Probability of tier 5 units (0-1)
+ * 
+ * @example
+ * const odds = getTierOdds(1);
+ * // Returns: {tier1: 1, tier2: 0, tier3: 0, tier4: 0, tier5: 0}
+ * 
+ * @example
+ * const odds = getTierOdds(5);
+ * // Returns: {tier1: 0.35, tier2: 0.35, tier3: 0.22, tier4: 0.07, tier5: 0.01}
+ * 
+ * @example
+ * const odds = getTierOdds(25);
+ * // Returns: {tier1: 0, tier2: 0, tier3: 0.02, tier4: 0.08, tier5: 0.90}
  * 
  * **Validates: Requirement 3.8**
  */

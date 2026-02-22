@@ -8,6 +8,7 @@ import { UpgradeSystem } from "../systems/UpgradeSystem.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
 import { ShopSystem } from "../systems/ShopSystem.js";
 import { generateEnemyTeam, computeEnemyTeamSize, AI_SETTINGS, getAISettings } from "../systems/AISystem.js";
+import GameModeRegistry from "../gameModes/GameModeRegistry.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -206,6 +207,7 @@ export class PlanningScene extends Phaser.Scene {
     this.layout = null;
     this.runtimeSettings = loadUiSettings();
     this.gameMode = "PVE_JOURNEY";
+    this.gameModeConfig = null;
     this.boardZoom = 1;
     this.boardPanX = 0;
     this.boardPanY = 0;
@@ -392,6 +394,15 @@ export class PlanningScene extends Phaser.Scene {
     this.applyDisplaySettings(this.runtimeSettings, false);
     this.layout = this.computeLayout();
     this.gameMode = this.incomingData?.mode ?? this.gameMode;
+    
+    // Get game mode configuration
+    this.gameModeConfig = GameModeRegistry.get(this.gameMode);
+    if (!this.gameModeConfig) {
+      console.warn(`Game mode "${this.gameMode}" not found, falling back to PVE_JOURNEY`);
+      this.gameMode = "PVE_JOURNEY";
+      this.gameModeConfig = GameModeRegistry.get(this.gameMode);
+    }
+    
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
@@ -782,7 +793,16 @@ export class PlanningScene extends Phaser.Scene {
     this.applyRunState(createDefaultRunState());
     this.player.gameMode = this.gameMode;
     this.player.loseCondition = normalizeLoseCondition(this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
-    this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
+    
+    // Apply game mode config starting values
+    if (this.gameModeConfig) {
+      this.player.gold = this.gameModeConfig.startingGold;
+      this.player.hp = this.gameModeConfig.startingHP;
+    } else {
+      // Fallback to default values
+      this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
+    }
+    
     this.applyRuntimeSettings(this.runtimeSettings);
     this.enterPlanning(false);
     this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
@@ -1703,20 +1723,26 @@ export class PlanningScene extends Phaser.Scene {
     let curX = x;
     const btnH = 44;
 
-    this.buttons.roll = this.createButton(curX, y1, 130, btnH, "Đổi tướng (2 vàng)", () => this.rollShop());
-    curX += 130 + gap;
+    // Only show shop buttons if shop is enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.shop !== false) {
+      this.buttons.roll = this.createButton(curX, y1, 130, btnH, "Đổi tướng (2 vàng)", () => this.rollShop());
+      curX += 130 + gap;
 
-    this.buttons.xp = this.createButton(curX, y1, 130, btnH, "Mua XP (4 vàng)", () => this.buyXp());
-    curX += 130 + gap;
+      this.buttons.xp = this.createButton(curX, y1, 130, btnH, "Mua XP (4 vàng)", () => this.buyXp());
+      curX += 130 + gap;
 
-    this.buttons.lock = this.createButton(curX, y1, 100, btnH, "Khóa: Tắt", () => this.toggleLock());
-    curX += 100 + gap;
+      this.buttons.lock = this.createButton(curX, y1, 100, btnH, "Khóa: Tắt", () => this.toggleLock());
+      curX += 100 + gap;
+    }
 
     this.buttons.upgradeBench = this.createButton(curX, y1, 160, btnH, "Nâng dự bị (10 vàng)", () => this.upgradeBench());
     curX += 160 + gap;
 
-    this.buttons.upgradeCraft = this.createButton(curX, y1, 160, btnH, "Nâng bàn chế (15 vàng)", () => this.upgradeCraftTable());
-    curX += 160 + gap;
+    // Only show craft button if crafting is enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.crafting !== false) {
+      this.buttons.upgradeCraft = this.createButton(curX, y1, 160, btnH, "Nâng bàn chế (15 vàng)", () => this.upgradeCraftTable());
+      curX += 160 + gap;
+    }
 
     this.buttons.sell = this.createButton(curX, y1, 85, btnH, "Bán (S)", () => this.sellSelectedUnit(), { variant: "ghost" });
     curX += 85 + gap;
@@ -3865,13 +3891,17 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshShop(false);
     this.refreshPlanningUi();
 
-    if (AUGMENT_ROUNDS.includes(this.player.round) && !this.player.augmentRoundsTaken.includes(this.player.round)) {
-      this.showAugmentChoices();
+    // Only show augment choices if augments are enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.augments !== false) {
+      if (AUGMENT_ROUNDS.includes(this.player.round) && !this.player.augmentRoundsTaken.includes(this.player.round)) {
+        this.showAugmentChoices();
+      }
     }
   }
 
   grantRoundIncome() {
-    const base = 5;
+    // Use game mode config for base gold, fallback to 5 if not available
+    const base = this.gameModeConfig?.goldScaling?.(this.player.round) ?? 5;
     const interestCap = 5 + this.player.interestCapBonus;
     const interest = Math.min(interestCap, Math.floor(this.player.gold / 10));
     const winStreakBonus = this.player.winStreak >= 2 ? Math.min(3, Math.floor(this.player.winStreak / 2)) : 0;
@@ -4830,9 +4860,9 @@ export class PlanningScene extends Phaser.Scene {
     const lock = this.player.shopLocked ? "Bật" : "Tắt";
     const rollCost = Math.max(1, 2 + this.player.rollCostDelta);
 
-    this.buttons.roll.setLabel(`Đổi tướng (${rollCost} vàng)`);
-    this.buttons.xp.setLabel("Mua XP (4 vàng)");
-    this.buttons.lock.setLabel(`Khóa: ${lock}`);
+    this.buttons.roll?.setLabel(`Đổi tướng (${rollCost} vàng)`);
+    this.buttons.xp?.setLabel("Mua XP (4 vàng)");
+    this.buttons.lock?.setLabel(`Khóa: ${lock}`);
     const craftLevel = this.player?.craftTableLevel ?? 0;
     this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10 vàng)`);
     this.buttons.upgradeCraft?.setLabel(craftLevel >= 1 ? "Bàn chế: 3x3" : "Nâng bàn chế (15 vàng)");
@@ -4841,9 +4871,9 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.settings.setLabel("Cài đặt");
     this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
 
-    this.buttons.roll.setEnabled(planning);
-    this.buttons.xp.setEnabled(planning);
-    this.buttons.lock.setEnabled(planning);
+    this.buttons.roll?.setEnabled(planning);
+    this.buttons.xp?.setEnabled(planning);
+    this.buttons.lock?.setEnabled(planning);
     this.buttons.upgradeCraft?.setEnabled(planning && craftLevel < 1);
     this.buttons.sell.setEnabled(planning && this.selectedBenchIndex != null && !!this.player?.bench?.[this.selectedBenchIndex]);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);

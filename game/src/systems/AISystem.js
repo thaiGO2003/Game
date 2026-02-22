@@ -1,13 +1,11 @@
 /**
- * AISystem - Manages AI opponent logic
+ * AISystem - AI Opponent Management System
  * 
- * This system handles:
- * - Enemy team generation with budget constraints
- * - Difficulty scaling (EASY, MEDIUM, HARD)
- * - Round-based strength scaling
- * - AI decision making for combat
+ * Manages AI opponent logic including enemy team generation, difficulty scaling,
+ * and tactical decision making for combat.
+ * This system is independent of Phaser and uses pure functions where possible.
  * 
- * Requirements: 1.1, 1.6, 13.4
+ * **Validates: Requirements 1.1, 1.6, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 13.4**
  */
 
 import { UNIT_CATALOG } from '../data/unitCatalog.js';
@@ -68,9 +66,32 @@ export const AI_SETTINGS = {
 };
 
 /**
- * Get AI settings for a specific difficulty
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @returns {Object} AI settings object
+ * Gets AI settings configuration for a specific difficulty level
+ * Returns stat multipliers, rage gain, targeting behavior, and team composition settings
+ * 
+ * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD), defaults to MEDIUM
+ * @returns {Object} AI settings object with multipliers and configuration
+ * @returns {string} return.label - Display label for difficulty
+ * @returns {number} return.hpMult - HP multiplier for enemy units
+ * @returns {number} return.atkMult - Attack multiplier for enemy units
+ * @returns {number} return.matkMult - Magic attack multiplier for enemy units
+ * @returns {number} return.rageGain - Rage gain multiplier
+ * @returns {number} return.randomTargetChance - Probability of random target selection
+ * @returns {number} return.teamSizeBonus - Flat bonus to team size
+ * @returns {number} return.teamGrowthEvery - Rounds between team size growth
+ * @returns {number} return.teamGrowthCap - Maximum team size growth
+ * @returns {number} return.budgetMult - Budget multiplier for unit selection
+ * @returns {number} return.levelBonus - Bonus to estimated level
+ * @returns {number} return.maxTierBonus - Bonus to maximum tier available
+ * @returns {number} return.star2Bonus - Bonus to 2-star unit chance
+ * @returns {number} return.star3Bonus - Bonus to 3-star unit chance
+ * 
+ * @example
+ * const settings = getAISettings('HARD');
+ * console.log(settings.hpMult); // 1.05
+ * console.log(settings.randomTargetChance); // 0.12
+ * 
+ * **Validates: Requirements 7.2, 7.3**
  */
 export function getAISettings(difficulty = 'MEDIUM') {
   return AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
@@ -119,11 +140,19 @@ const AI_ROLE_PROFILES = {
 };
 
 /**
- * Utility function to clamp a value between min and max
+ * Utility function to clamp a value between minimum and maximum bounds
+ * 
  * @param {number} value - Value to clamp
- * @param {number} min - Minimum value
- * @param {number} max - Maximum value
- * @returns {number} Clamped value
+ * @param {number} min - Minimum allowed value
+ * @param {number} max - Maximum allowed value
+ * @returns {number} Clamped value between min and max (inclusive)
+ * 
+ * @example
+ * clamp(15, 0, 10); // Returns 10
+ * clamp(-5, 0, 10); // Returns 0
+ * clamp(5, 0, 10);  // Returns 5
+ * 
+ * @private
  */
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -131,26 +160,50 @@ function clamp(value, min, max) {
 
 /**
  * Utility function to select a random item from an array
- * @param {Array} array - Array to select from
- * @returns {*} Random item from array
+ * 
+ * @param {Array} array - Array to select from (must not be empty)
+ * @returns {*} Random item from the array
+ * 
+ * @example
+ * const units = ['warrior', 'mage', 'archer'];
+ * const random = randomItem(units); // Returns one of the three units
+ * 
+ * @private
  */
 function randomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
 /**
- * Generate enemy team based on round, budget, and difficulty
+ * Generates an enemy team based on round number, budget, and difficulty
+ * Creates a balanced team composition with appropriate unit tiers and star levels
+ * Considers role distribution (tanks, damage dealers, support) for tactical variety
  * 
- * @param {number} round - Current round number
- * @param {number} budget - Budget for unit selection
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @param {boolean} sandbox - Whether sandbox mode is active
- * @returns {Array<{baseId: string, star: number, row: number, col: number}>} Array of enemy units with positions
+ * @param {number} round - Current round number (affects team strength and composition)
+ * @param {number} budget - Budget constraint for unit selection (currently unused, calculated internally)
+ * @param {string} difficulty - Difficulty level: "EASY", "MEDIUM", or "HARD" (default: "MEDIUM")
+ * @param {boolean} sandbox - Whether sandbox mode is active (affects team size penalty)
+ * @returns {Array<Object>} Array of enemy units with positions
+ * @returns {string} return[].baseId - Unit base ID from catalog
+ * @returns {number} return[].star - Star level (1-3)
+ * @returns {number} return[].row - Board row position (0-4)
+ * @returns {number} return[].col - Board column position (5-9 for enemy side)
+ * 
+ * @example
+ * // Generate medium difficulty enemy team for round 5
+ * const enemies = generateEnemyTeam(5, 50, 'MEDIUM', false);
+ * // Returns: [{baseId: 'warrior', star: 1, row: 2, col: 5}, ...]
+ * 
+ * @example
+ * // Generate hard difficulty enemy team for round 10
+ * const hardEnemies = generateEnemyTeam(10, 100, 'HARD', false);
+ * // Returns larger team with higher star units
+ * 
+ * **Validates: Requirements 7.1, 7.2, 7.3, 7.5, 7.6, 7.7**
  */
 export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox = false) {
   const ai = AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
   const modeFactor = ai.budgetMult ?? 1;
-  const estLevel = clamp(1 + Math.floor(round / 2) + (ai.levelBonus ?? 0), 1, 15);
   const teamSize = computeEnemyTeamSize(round, difficulty, sandbox);
   const actualBudget = Math.round((8 + round * (sandbox ? 2.1 : 2.6)) * modeFactor);
   const maxTier = clamp(1 + Math.floor(round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
@@ -232,12 +285,23 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
 }
 
 /**
- * Compute enemy team size based on round and difficulty
+ * Computes enemy team size based on round number and difficulty
+ * Team size increases with rounds and varies by difficulty level
  * 
  * @param {number} round - Current round number
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @param {boolean} sandbox - Whether sandbox mode is active
- * @returns {number} Team size
+ * @param {string} difficulty - Difficulty level: "EASY", "MEDIUM", or "HARD" (default: "MEDIUM")
+ * @param {boolean} sandbox - Whether sandbox mode is active (reduces team size by 1)
+ * @returns {number} Team size (number of units), clamped between 2 and 15
+ * 
+ * @example
+ * // Early game, medium difficulty
+ * computeEnemyTeamSize(1, 'MEDIUM', false); // Returns ~5
+ * 
+ * @example
+ * // Late game, hard difficulty
+ * computeEnemyTeamSize(20, 'HARD', false); // Returns ~12
+ * 
+ * **Validates: Requirements 7.2, 7.6**
  */
 export function computeEnemyTeamSize(round, difficulty = 'MEDIUM', sandbox = false) {
   const ai = AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
@@ -252,10 +316,23 @@ export function computeEnemyTeamSize(round, difficulty = 'MEDIUM', sandbox = fal
 }
 
 /**
- * Get AI difficulty multiplier for stats
+ * Gets AI difficulty multipliers for combat stats
+ * Returns multipliers that scale enemy unit stats based on difficulty
  * 
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @returns {{hpMult: number, atkMult: number, matkMult: number, rageGain: number, randomTargetChance: number}} Difficulty multipliers
+ * @param {string} difficulty - Difficulty level: "EASY", "MEDIUM", or "HARD" (default: "MEDIUM")
+ * @returns {Object} Difficulty multipliers object
+ * @returns {number} return.hpMult - HP multiplier (0.84 for EASY, 0.95 for MEDIUM, 1.05 for HARD)
+ * @returns {number} return.atkMult - Attack multiplier
+ * @returns {number} return.matkMult - Magic attack multiplier
+ * @returns {number} return.rageGain - Rage gain multiplier (currently 1 for all difficulties)
+ * @returns {number} return.randomTargetChance - Probability of random target selection
+ * 
+ * @example
+ * const mult = getAIDifficultyMultiplier('HARD');
+ * enemyUnit.hp *= mult.hpMult;    // Increase HP by 5%
+ * enemyUnit.atk *= mult.atkMult;  // Increase attack by 4%
+ * 
+ * **Validates: Requirements 7.2, 7.3**
  */
 export function getAIDifficultyMultiplier(difficulty = 'MEDIUM') {
   const ai = AI_SETTINGS[difficulty] ?? AI_SETTINGS.MEDIUM;
@@ -269,13 +346,27 @@ export function getAIDifficultyMultiplier(difficulty = 'MEDIUM') {
 }
 
 /**
- * Make AI decision for combat action
- * Determines whether to use skill or basic attack, and selects target
+ * Makes AI decision for combat action
+ * Determines whether to use skill, basic attack, or skip turn
+ * Selects appropriate target based on unit role and tactical considerations
  * 
- * @param {Object} state - Combat state with all units
+ * @param {Object} state - Combat state with all units and game state
  * @param {Object} aiUnit - AI unit taking action
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @returns {{action: 'SKILL'|'ATTACK'|'SKIP', target: Object|null, reason: string}} AI action decision
+ * @param {string} difficulty - Difficulty level: "EASY", "MEDIUM", or "HARD" (default: "MEDIUM")
+ * @returns {Object} AI action decision
+ * @returns {'SKILL'|'ATTACK'|'SKIP'} return.action - Action type to perform
+ * @returns {Object|null} return.target - Target unit for the action (null if SKIP)
+ * @returns {string} return.reason - Reason for the decision (for debugging/logging)
+ * 
+ * @example
+ * const decision = makeAIDecision(combatState, enemyUnit, 'MEDIUM');
+ * if (decision.action === 'SKILL') {
+ *   executeSkill(enemyUnit, decision.target);
+ * } else if (decision.action === 'ATTACK') {
+ *   executeBasicAttack(enemyUnit, decision.target);
+ * }
+ * 
+ * **Validates: Requirements 7.4, 7.5**
  */
 export function makeAIDecision(state, aiUnit, difficulty = 'MEDIUM') {
   // Check if unit should skip turn (stunned, etc.)
@@ -307,14 +398,32 @@ export function makeAIDecision(state, aiUnit, difficulty = 'MEDIUM') {
 }
 
 /**
- * Select target for an attacker unit
- * Implements tactical target selection based on unit role and positioning
+ * Selects target for an attacker unit using tactical AI
+ * Implements role-based target selection:
+ * - Melee frontline (Tank/Fighter): Targets closest enemy, prefers same row
+ * - Assassins: Targets backline (farthest column), prefers same row
+ * - Ranged (Archer/Mage/Support): Targets same row first, then closest
  * 
- * @param {Object} attacker - Attacking unit
+ * @param {Object} attacker - Attacking unit with position and role information
  * @param {Object} state - Combat state with all units
- * @param {string} difficulty - Difficulty level (EASY, MEDIUM, HARD)
- * @param {Object} options - Options {deterministic: boolean}
- * @returns {Object|null} Selected target unit or null
+ * @param {string} difficulty - Difficulty level: "EASY", "MEDIUM", or "HARD" (default: "MEDIUM")
+ * @param {Object} options - Optional configuration
+ * @param {boolean} options.deterministic - If true, disables random target selection (for testing)
+ * @returns {Object|null} Selected target unit or null if no valid targets
+ * 
+ * @example
+ * // Tank selects closest enemy
+ * const target = selectTarget(tankUnit, state, 'MEDIUM');
+ * 
+ * @example
+ * // Assassin targets backline
+ * const target = selectTarget(assassinUnit, state, 'HARD');
+ * 
+ * @example
+ * // Deterministic selection for testing
+ * const target = selectTarget(unit, state, 'MEDIUM', { deterministic: true });
+ * 
+ * **Validates: Requirements 7.4, 7.5**
  */
 export function selectTarget(attacker, state, difficulty = 'MEDIUM', options = {}) {
   const enemySide = attacker.side === 'LEFT' ? 'RIGHT' : 'LEFT';
@@ -366,12 +475,18 @@ export function selectTarget(attacker, state, difficulty = 'MEDIUM', options = {
 }
 
 /**
- * Find target for melee frontline units (Tank/Fighter)
- * Prioritizes closest column, same row
+ * Finds target for melee frontline units (Tank/Fighter)
+ * Prioritizes closest column, then same row, then closest row
  * 
- * @param {Object} attacker - Attacking unit
- * @param {Array} enemies - Array of enemy units
- * @returns {Object|null} Selected target or null
+ * @param {Object} attacker - Attacking unit with position
+ * @param {Array<Object>} enemies - Array of enemy units to choose from
+ * @returns {Object|null} Selected target or null if no enemies
+ * 
+ * @example
+ * const target = findTargetMeleeFrontline(tankUnit, enemyUnits);
+ * // Returns enemy in closest column, preferring same row
+ * 
+ * @private
  */
 function findTargetMeleeFrontline(attacker, enemies) {
   const myRow = attacker.row;
@@ -399,12 +514,19 @@ function findTargetMeleeFrontline(attacker, enemies) {
 }
 
 /**
- * Find target for assassin units
- * Prioritizes farthest column (backline), same row
+ * Finds target for assassin units
+ * Prioritizes farthest column (backline), then same row, then closest row
+ * Assassins prefer to target squishy backline units like mages and archers
  * 
- * @param {Object} attacker - Attacking unit
- * @param {Array} enemies - Array of enemy units
- * @returns {Object|null} Selected target or null
+ * @param {Object} attacker - Attacking assassin unit with position
+ * @param {Array<Object>} enemies - Array of enemy units to choose from
+ * @returns {Object|null} Selected target or null if no enemies
+ * 
+ * @example
+ * const target = findTargetAssassin(assassinUnit, enemyUnits);
+ * // Returns enemy in farthest column (backline), preferring same row
+ * 
+ * @private
  */
 function findTargetAssassin(attacker, enemies) {
   const myRow = attacker.row;
@@ -431,12 +553,18 @@ function findTargetAssassin(attacker, enemies) {
 }
 
 /**
- * Find target for ranged units (Archer/Mage/Support)
- * Prioritizes same row, then closest
+ * Finds target for ranged units (Archer/Mage/Support)
+ * Prioritizes same row first, then closest by row distance, then column distance
  * 
- * @param {Object} attacker - Attacking unit
- * @param {Array} enemies - Array of enemy units
- * @returns {Object|null} Selected target or null
+ * @param {Object} attacker - Attacking ranged unit with position
+ * @param {Array<Object>} enemies - Array of enemy units to choose from
+ * @returns {Object|null} Selected target or null if no enemies
+ * 
+ * @example
+ * const target = findTargetRanged(archerUnit, enemyUnits);
+ * // Returns enemy in same row if possible, otherwise closest enemy
+ * 
+ * @private
  */
 function findTargetRanged(attacker, enemies) {
   const myRow = attacker.row;
@@ -464,12 +592,15 @@ function findTargetRanged(attacker, enemies) {
 }
 
 /**
- * Compare two targets for priority sorting
+ * Compares two targets for priority sorting
+ * Uses scoreTarget to calculate priority scores and compares them
  * 
  * @param {Object} attacker - Attacking unit
- * @param {Object} a - First target
- * @param {Object} b - Second target
- * @returns {number} Comparison result (-1, 0, 1)
+ * @param {Object} a - First target to compare
+ * @param {Object} b - Second target to compare
+ * @returns {number} Comparison result: negative if a has higher priority, positive if b has higher priority, 0 if equal
+ * 
+ * @private
  */
 function compareTargets(attacker, a, b) {
   const sa = scoreTarget(attacker, a);
@@ -483,12 +614,18 @@ function compareTargets(attacker, a, b) {
 }
 
 /**
- * Score a target for priority calculation
- * Returns array of priority values for comparison
+ * Scores a target for priority calculation
+ * Returns array of priority values for lexicographic comparison
+ * Lower scores indicate higher priority
  * 
- * @param {Object} attacker - Attacking unit
- * @param {Object} target - Target unit
- * @returns {Array<number>} Priority score array
+ * @param {Object} attacker - Attacking unit with position and role
+ * @param {Object} target - Target unit to score
+ * @returns {Array<number>} Priority score array [primary, secondary, tertiary, ...]
+ *   - For melee frontline: [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw]
+ *   - For assassins: [farthestCol, sameRow, rowDist, totalDist, hpRatio, hpRaw]
+ *   - For ranged: [sameRow, rowDist, colDist, totalDist, hpRatio, hpRaw]
+ * 
+ * @private
  */
 function scoreTarget(attacker, target) {
   const myRow = attacker.row;
@@ -522,10 +659,19 @@ function scoreTarget(attacker, target) {
 }
 
 /**
- * Pick a class based on weighted probabilities
+ * Picks a class type based on weighted probabilities
+ * Uses random roll to select from weighted distribution
  * 
- * @param {Object} weights - Class weights {TANKER: 0.3, FIGHTER: 0.2, ...}
- * @returns {string} Selected class type
+ * @param {Object} weights - Class weights object {TANKER: 0.3, FIGHTER: 0.2, ...}
+ *   Weights should sum to 1.0 for proper probability distribution
+ * @returns {string} Selected class type (TANKER, FIGHTER, ARCHER, MAGE, SUPPORT, ASSASSIN)
+ * 
+ * @example
+ * const weights = { TANKER: 0.3, FIGHTER: 0.3, ARCHER: 0.2, MAGE: 0.2 };
+ * const classType = pickClassByWeights(weights);
+ * // Returns class type with probability matching weights
+ * 
+ * @private
  */
 function pickClassByWeights(weights) {
   const roll = Math.random();
@@ -538,10 +684,35 @@ function pickClassByWeights(weights) {
 }
 
 /**
- * Assign board positions to enemy units based on their roles
+ * Assigns board positions to enemy units based on their roles
+ * Places units in tactical positions:
+ * - Frontline (Tank/Fighter): Columns 5-7, center rows first
+ * - Backline (Mage/Archer/Support): Columns 8-9, center rows first
+ * - Assassins: Edge rows (0, 4) in backline columns
  * 
- * @param {Array<{baseId: string, classType: string, tier: number, star: number}>} picks - Unit picks
- * @returns {Array<{baseId: string, star: number, row: number, col: number}>} Units with positions
+ * @param {Array<Object>} picks - Unit picks with baseId, classType, tier, and star
+ * @param {string} picks[].baseId - Unit base ID
+ * @param {string} picks[].classType - Unit class type (TANKER, FIGHTER, etc.)
+ * @param {number} picks[].tier - Unit tier (1-5)
+ * @param {number} picks[].star - Star level (1-3)
+ * @returns {Array<Object>} Units with assigned positions
+ * @returns {string} return[].baseId - Unit base ID
+ * @returns {number} return[].star - Star level
+ * @returns {number} return[].row - Board row (0-4)
+ * @returns {number} return[].col - Board column (5-9 for enemy side)
+ * 
+ * @example
+ * const picks = [
+ *   {baseId: 'warrior', classType: 'TANKER', tier: 2, star: 1},
+ *   {baseId: 'mage', classType: 'MAGE', tier: 3, star: 1}
+ * ];
+ * const positioned = assignPositions(picks);
+ * // Returns: [
+ * //   {baseId: 'warrior', star: 1, row: 2, col: 5},
+ * //   {baseId: 'mage', star: 1, row: 2, col: 9}
+ * // ]
+ * 
+ * @private
  */
 function assignPositions(picks) {
   // Define position slots for different roles
@@ -596,4 +767,21 @@ function assignPositions(picks) {
   return units;
 }
 
+/**
+ * AISystem - Main export object with all AI operations
+ */
+export const AISystem = {
+  // AI settings
+  getAISettings,
+  getAIDifficultyMultiplier,
+  
+  // Enemy team generation
+  generateEnemyTeam,
+  computeEnemyTeamSize,
+  
+  // AI decision making
+  makeAIDecision,
+  selectTarget
+};
 
+export default AISystem;
