@@ -463,7 +463,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test combat log updates
       - _Requirements: 11.4, 11.5_
     
-    - [-] 5.2.6 Verify and commit CombatScene refactor
+    - [x] 5.2.6 Verify and commit CombatScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test combat in game
@@ -474,26 +474,26 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
 
 
   - [ ] 5.3 Refactor MainMenuScene (1-2 days)
-    - [~] 5.3.1 Extract any remaining game mode logic
+    - [x] 5.3.1 Extract any remaining game mode logic
       - Identify any game initialization logic
       - Extract to appropriate system or game mode config
       - Keep only menu UI and scene transitions
       - _Requirements: 8.1, 8.2, 8.5_
     
-    - [~] 5.3.2 Refactor MainMenuScene to orchestration only
+    - [x] 5.3.2 Refactor MainMenuScene to orchestration only
       - Scene contains only Phaser lifecycle methods
       - Scene contains only menu UI rendering
       - Scene contains only menu navigation
       - Scene handles game start with game mode selection
       - _Requirements: 8.2, 8.3, 8.4_
     
-    - [~] 5.3.3 Write integration tests for MainMenuScene
+    - [x] 5.3.3 Write integration tests for MainMenuScene
       - Test menu navigation
       - Test game start flow
       - Test scene transitions
       - _Requirements: 11.4_
     
-    - [~] 5.3.4 Verify and commit MainMenuScene refactor
+    - [-] 5.3.4 Verify and commit MainMenuScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test menu in game
