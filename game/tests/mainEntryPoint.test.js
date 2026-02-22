@@ -6,28 +6,28 @@
 
 import { describe, it, expect, beforeAll } from 'vitest'
 import GameModeRegistry from '../src/gameModes/GameModeRegistry.js'
-import '../src/gameModes/PVEJourneyMode.js' // Auto-registers PVE_JOURNEY
+import '../src/gameModes/EndlessPvEClassicMode.js' // Auto-registers EndlessPvEClassic
 
 describe('Main Entry Point', () => {
   beforeAll(() => {
-    // Ensure PVE_JOURNEY mode is registered
+    // Ensure EndlessPvEClassic mode is registered
     // It should be auto-registered by the import above
   })
 
   describe('Game Mode Registry Integration', () => {
-    it('should have PVE_JOURNEY mode registered after import', () => {
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+    it('should have EndlessPvEClassic mode registered after import', () => {
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).toBeDefined()
-      expect(mode.id).toBe('PVE_JOURNEY')
-      expect(mode.name).toBe('PVE Journey')
+      expect(mode.id).toBe('EndlessPvEClassic')
+      expect(mode.name).toBe('Endless PvE Classic')
     })
 
-    it('should have valid PVE_JOURNEY configuration', () => {
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+    it('should have valid EndlessPvEClassic configuration', () => {
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       // Verify all required properties exist
-      expect(mode.id).toBe('PVE_JOURNEY')
-      expect(mode.name).toBe('PVE Journey')
+      expect(mode.id).toBe('EndlessPvEClassic')
+      expect(mode.name).toBe('Endless PvE Classic')
       expect(mode.description).toBeDefined()
       expect(Array.isArray(mode.scenes)).toBe(true)
       expect(mode.scenes).toContain('LoadingScene')
@@ -70,7 +70,7 @@ describe('Main Entry Point', () => {
       expect(result.success).toBe(true)
       
       // Both modes should be available
-      expect(GameModeRegistry.get('PVE_JOURNEY')).toBeDefined()
+      expect(GameModeRegistry.get('EndlessPvEClassic')).toBeDefined()
       expect(GameModeRegistry.get('TEST_MODE')).toBeDefined()
       
       const allModes = GameModeRegistry.getAll()
@@ -83,33 +83,33 @@ describe('Main Entry Point', () => {
       // This test verifies the integration pattern used in the codebase
       // MainMenuScene passes mode to PlanningScene via scene.start(sceneName, { mode: ... })
       
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).toBeDefined()
       
       // Simulate what MainMenuScene does
       const sceneData = {
         settings: {},
-        mode: 'PVE_JOURNEY',
+        mode: 'EndlessPvEClassic',
         forceNewRun: true
       }
       
       // Verify the mode can be retrieved
-      expect(sceneData.mode).toBe('PVE_JOURNEY')
+      expect(sceneData.mode).toBe('EndlessPvEClassic')
       
       // Verify the mode config exists
       const modeConfig = GameModeRegistry.get(sceneData.mode)
       expect(modeConfig).toBeDefined()
-      expect(modeConfig.id).toBe('PVE_JOURNEY')
+      expect(modeConfig.id).toBe('EndlessPvEClassic')
     })
 
     it('should allow scenes to access game mode configuration', () => {
       // Simulate what PlanningScene does in create()
       const incomingData = {
-        mode: 'PVE_JOURNEY',
+        mode: 'EndlessPvEClassic',
         settings: {}
       }
       
-      const gameMode = incomingData.mode ?? 'PVE_JOURNEY'
+      const gameMode = incomingData.mode ?? 'EndlessPvEClassic'
       const modeConfig = GameModeRegistry.get(gameMode)
       
       expect(modeConfig).toBeDefined()
@@ -119,7 +119,7 @@ describe('Main Entry Point', () => {
     })
 
     it('should support game mode-based system initialization', () => {
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       // Scenes can check which systems are enabled
       expect(mode.enabledSystems.shop).toBe(true)
@@ -139,33 +139,33 @@ describe('Main Entry Point', () => {
   describe('Main.js Integration', () => {
     it('should import GameModeRegistry in main.js', () => {
       // Verify that main.js imports and uses GameModeRegistry
-      // This is tested by checking that PVE_JOURNEY mode is available
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      // This is tested by checking that EndlessPvEClassic mode is available
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).toBeDefined()
-      expect(mode.id).toBe('PVE_JOURNEY')
+      expect(mode.id).toBe('EndlessPvEClassic')
     })
 
-    it('should auto-register PVE_JOURNEY mode on import', () => {
-      // PVEJourneyMode.js auto-registers itself when imported
+    it('should auto-register EndlessPvEClassic mode on import', () => {
+      // EndlessPvEClassicMode.js auto-registers itself when imported
       // This is verified by checking the registry
-      expect(GameModeRegistry.has('PVE_JOURNEY')).toBe(true)
+      expect(GameModeRegistry.has('EndlessPvEClassic')).toBe(true)
       
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).not.toBeNull()
-      expect(mode.id).toBe('PVE_JOURNEY')
+      expect(mode.id).toBe('EndlessPvEClassic')
     })
 
     it('should support backward compatibility with existing game flow', () => {
       // The existing game flow should work with game mode support
       // MainMenuScene → PlanningScene with mode parameter
       
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).toBeDefined()
       
       // Simulate existing flow
       const sceneData = {
         settings: {},
-        mode: 'PVE_JOURNEY'
+        mode: 'EndlessPvEClassic'
       }
       
       // PlanningScene should be able to get mode config
@@ -176,34 +176,34 @@ describe('Main Entry Point', () => {
     })
   })
 
-  describe('Game Initialization with PVEJourneyMode', () => {
-    it('should start game with PVEJourneyMode by default', () => {
-      // Verify that the game starts with PVE_JOURNEY mode when no mode is specified
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+  describe('Game Initialization with EndlessPvEClassicMode', () => {
+    it('should start game with EndlessPvEClassicMode by default', () => {
+      // Verify that the game starts with EndlessPvEClassic mode when no mode is specified
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       expect(mode).toBeDefined()
-      expect(mode.id).toBe('PVE_JOURNEY')
+      expect(mode.id).toBe('EndlessPvEClassic')
       
       // Verify this is the default mode that would be used
-      const defaultModeId = 'PVE_JOURNEY'
+      const defaultModeId = 'EndlessPvEClassic'
       const defaultMode = GameModeRegistry.get(defaultModeId)
       expect(defaultMode).toBe(mode)
     })
 
-    it('should pass PVEJourneyMode configuration to scenes', () => {
+    it('should pass EndlessPvEClassicMode configuration to scenes', () => {
       // Verify that scenes receive the correct game mode configuration
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       // Simulate what happens when MainMenuScene starts PlanningScene
       const sceneData = {
         settings: {},
-        mode: 'PVE_JOURNEY',
+        mode: 'EndlessPvEClassic',
         forceNewRun: true
       }
       
       // Verify the mode can be retrieved and used by the scene
       const modeConfig = GameModeRegistry.get(sceneData.mode)
       expect(modeConfig).toBeDefined()
-      expect(modeConfig.id).toBe('PVE_JOURNEY')
+      expect(modeConfig.id).toBe('EndlessPvEClassic')
       expect(modeConfig.startingGold).toBe(10)
       expect(modeConfig.startingHP).toBe(3)
       expect(modeConfig.aiDifficulty).toBe('MEDIUM')
@@ -216,7 +216,7 @@ describe('Main Entry Point', () => {
 
     it('should allow scenes to initialize systems based on game mode', () => {
       // Verify that scenes can conditionally initialize systems based on mode config
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       // Simulate scene initialization logic
       const shouldInitializeShop = mode.enabledSystems.shop
@@ -232,7 +232,7 @@ describe('Main Entry Point', () => {
 
     it('should provide correct scene list for game flow', () => {
       // Verify that the game mode specifies the correct scenes
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       expect(mode.scenes).toBeDefined()
       expect(Array.isArray(mode.scenes)).toBe(true)
@@ -245,7 +245,7 @@ describe('Main Entry Point', () => {
 
     it('should provide scaling functions for game progression', () => {
       // Verify that the game mode provides valid scaling functions
-      const mode = GameModeRegistry.get('PVE_JOURNEY')
+      const mode = GameModeRegistry.get('EndlessPvEClassic')
       
       // Test gold scaling
       expect(typeof mode.goldScaling).toBe('function')

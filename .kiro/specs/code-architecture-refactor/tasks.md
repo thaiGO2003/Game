@@ -42,8 +42,8 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
   - Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 3. Phase 2: Extract Systems (2-3 weeks)
-  - [ ] 3.1 Extract BoardSystem (2-3 days)
+- [x] 3. Phase 2: Extract Systems (2-3 weeks)
+  - [x] 3.1 Extract BoardSystem (2-3 days)
     - [x] 3.1.1 Create BoardSystem file and interface
       - Create `src/systems/BoardSystem.js`
       - Define interface: placeUnit, removeUnit, moveUnit, getUnitAt, getDeployedUnits, getDeployCount, canDeploy, isValidPosition, isPositionEmpty, calculateSynergies
@@ -90,7 +90,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
 
-  - [ ] 3.2 Extract UpgradeSystem (2-3 days)
+  - [x] 3.2 Extract UpgradeSystem (2-3 days)
     - [x] 3.2.1 Create UpgradeSystem file and interface
       - Create `src/systems/UpgradeSystem.js`
       - Define interface: canUpgrade, upgradeUnit, findUpgradeCandidates, combineUnits, transferEquipment
@@ -132,7 +132,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
 
-  - [ ] 3.3 Extract SynergySystem (2-3 days)
+  - [x] 3.3 Extract SynergySystem (2-3 days)
     - [x] 3.3.1 Create SynergySystem file and interface
       - Create `src/systems/SynergySystem.js`
       - Define interface: calculateSynergies, applySynergiesToUnit, getSynergyDescription, getSynergyIcon
@@ -173,7 +173,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
 
-  - [ ] 3.4 Extract ShopSystem (3-4 days)
+  - [x] 3.4 Extract ShopSystem (3-4 days)
     - [x] 3.4.1 Create ShopSystem file and interface
       - Create `src/systems/ShopSystem.js`
       - Define interface: refreshShop, buyUnit, sellUnit, lockShop, unlockShop, generateShopOffers, calculateRefreshCost, getTierOdds
@@ -238,7 +238,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
 
-  - [ ] 3.5 Extract AISystem (3-4 days)
+  - [x] 3.5 Extract AISystem (3-4 days)
     - [x] 3.5.1 Create AISystem file and interface
       - Create `src/systems/AISystem.js`
       - Define interface: generateEnemyTeam, makeAIDecision, getAIDifficultyMultiplier
@@ -287,7 +287,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 1.5, 14.1, 14.2, 14.3_
 
 
-  - [ ] 3.6 Extract CombatSystem (4-5 days)
+  - [x] 3.6 Extract CombatSystem (4-5 days)
     - [x] 3.6.1 Create CombatSystem file and interface
       - Create `src/systems/CombatSystem.js`
       - Define interface: initializeCombat, getNextActor, executeAction, executeSkill, calculateDamage, applyDamage, applyStatusEffect, tickStatusEffects, checkCombatEnd
@@ -427,7 +427,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 8.8, 14.1, 14.2, 14.3_
 
 
-  - [ ] 5.2 Refactor CombatScene (4-5 days)
+  - [x] 5.2 Refactor CombatScene (4-5 days)
     - [x] 5.2.1 Remove combat logic from CombatScene
       - Remove combat initialization (use CombatSystem)
       - Remove turn order logic (use CombatSystem)
@@ -473,7 +473,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 8.8, 14.1, 14.2, 14.3_
 
 
-  - [ ] 5.3 Refactor MainMenuScene (1-2 days)
+  - [x] 5.3 Refactor MainMenuScene (1-2 days)
     - [x] 5.3.1 Extract any remaining game mode logic
       - Identify any game initialization logic
       - Extract to appropriate system or game mode config
@@ -504,8 +504,8 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
   - Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 7. Phase 4: Game Mode Support (1 week)
-  - [ ] 7.1 Create Game Mode Layer (2 days)
+- [x] 7. Phase 4: Game Mode Support (1 week)
+  - [x] 7.1 Create Game Mode Layer (2 days)
     - [x] 7.1.1 Create GameModeConfig interface and validation
       - Create `src/gameModes/` directory
       - Create `src/gameModes/GameModeConfig.js`
@@ -547,7 +547,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 11.1_
 
 
-  - [ ] 7.2 Update Main Entry Point (1 day)
+  - [x] 7.2 Update Main Entry Point (1 day)
     - [x] 7.2.1 Modify main.js to accept game mode
       - Import GameModeRegistry
       - Accept game mode parameter
@@ -560,7 +560,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test game mode passed to scenes correctly
       - _Requirements: 11.4_
   
-  - [ ] 7.3 Update Scenes for Game Modes (2 days)
+  - [x] 7.3 Update Scenes for Game Modes (2 days)
     - [x] 7.3.1 Update PlanningScene to read game mode config
       - Read config from scene data
       - Use config.startingGold and config.startingHP
@@ -588,7 +588,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - _Requirements: 9.8, 11.4_
 
 
-  - [ ] 7.4 Create Example Modes (2 days)
+  - [x] 7.4 Create Example Modes (2 days)
     - [x] 7.4.1 Create EndlessMode config (example)
       - Create `src/gameModes/EndlessMode.js`
       - Define config: startingGold: 15, startingHP: 5
@@ -630,8 +630,8 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
   - Ensure all tests pass, ask the user if questions arise.
 
 
-- [ ] 9. Phase 5: Documentation & Cleanup (3-4 days)
-  - [ ] 9.1 Architecture Documentation (1 day)
+- [x] 9. Phase 5: Documentation & Cleanup (3-4 days)
+  - [x] 9.1 Architecture Documentation (1 day)
     - [x] 9.1.1 Document layer responsibilities
       - Document Game Modes Layer purpose and usage
       - Document Scene Layer responsibilities (orchestration only)
@@ -656,7 +656,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Document how to register and use modes
       - _Requirements: 18.5_
   
-  - [ ] 9.2 Code Documentation (1 day)
+  - [x] 9.2 Code Documentation (1 day)
     - [x] 9.2.1 Add JSDoc comments to all systems
       - Add JSDoc to BoardSystem functions
       - Add JSDoc to UpgradeSystem functions
@@ -710,7 +710,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Fix any violations
       - _Requirements: 13.1, 13.2, 13.3_
   
-  - [ ] 9.4 Final Testing (1 day)
+  - [x] 9.4 Final Testing (1 day)
     - [x] 9.4.1 Run full test suite
       - Run all unit tests
       - Run all integration tests

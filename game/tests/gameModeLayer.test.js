@@ -4,7 +4,7 @@
  * Tests the complete game mode layer including:
  * - GameModeConfig creation and validation
  * - GameModeRegistry registration and retrieval
- * - PVEJourneyMode configuration
+ * - EndlessPvEClassicMode configuration
  * - Multiple game modes support
  * 
  * **Property 37: Game Mode Configuration Completeness**
@@ -21,7 +21,7 @@ import {
   AI_DIFFICULTY
 } from '../src/gameModes/GameModeConfig.js'
 import GameModeRegistry from '../src/gameModes/GameModeRegistry.js'
-import PVEJourneyMode from '../src/gameModes/PVEJourneyMode.js'
+import EndlessPvEClassicMode from '../src/gameModes/EndlessPvEClassicMode.js'
 
 describe('Game Mode Layer - Comprehensive Tests', () => {
   beforeEach(() => {
@@ -550,47 +550,47 @@ describe('Game Mode Layer - Comprehensive Tests', () => {
     })
   })
 
-  describe('PVEJourneyMode Configuration', () => {
+  describe('EndlessPvEClassicMode Configuration', () => {
     it('should have correct id', () => {
-      expect(PVEJourneyMode.id).toBe('PVE_JOURNEY')
+      expect(EndlessPvEClassicMode.id).toBe('EndlessPvEClassic')
     })
 
     it('should have correct starting resources', () => {
-      expect(PVEJourneyMode.startingGold).toBe(10)
-      expect(PVEJourneyMode.startingHP).toBe(3)
+      expect(EndlessPvEClassicMode.startingGold).toBe(10)
+      expect(EndlessPvEClassicMode.startingHP).toBe(3)
     })
 
     it('should have correct lose condition', () => {
-      expect(PVEJourneyMode.loseCondition).toBe(LOSE_CONDITION.NO_HEARTS)
+      expect(EndlessPvEClassicMode.loseCondition).toBe(LOSE_CONDITION.NO_HEARTS)
     })
 
     it('should have all core systems enabled', () => {
-      expect(PVEJourneyMode.enabledSystems.shop).toBe(true)
-      expect(PVEJourneyMode.enabledSystems.crafting).toBe(true)
-      expect(PVEJourneyMode.enabledSystems.augments).toBe(true)
-      expect(PVEJourneyMode.enabledSystems.pvp).toBe(false)
+      expect(EndlessPvEClassicMode.enabledSystems.shop).toBe(true)
+      expect(EndlessPvEClassicMode.enabledSystems.crafting).toBe(true)
+      expect(EndlessPvEClassicMode.enabledSystems.augments).toBe(true)
+      expect(EndlessPvEClassicMode.enabledSystems.pvp).toBe(false)
     })
 
     it('should have medium AI difficulty', () => {
-      expect(PVEJourneyMode.aiDifficulty).toBe(AI_DIFFICULTY.MEDIUM)
+      expect(EndlessPvEClassicMode.aiDifficulty).toBe(AI_DIFFICULTY.MEDIUM)
     })
 
     it('should have standard gold scaling (10 per round)', () => {
-      expect(PVEJourneyMode.goldScaling(1)).toBe(10)
-      expect(PVEJourneyMode.goldScaling(5)).toBe(10)
-      expect(PVEJourneyMode.goldScaling(10)).toBe(10)
-      expect(PVEJourneyMode.goldScaling(100)).toBe(10)
+      expect(EndlessPvEClassicMode.goldScaling(1)).toBe(10)
+      expect(EndlessPvEClassicMode.goldScaling(5)).toBe(10)
+      expect(EndlessPvEClassicMode.goldScaling(10)).toBe(10)
+      expect(EndlessPvEClassicMode.goldScaling(100)).toBe(10)
     })
 
     it('should have linear enemy scaling', () => {
-      expect(PVEJourneyMode.enemyScaling(1)).toBe(1)
-      expect(PVEJourneyMode.enemyScaling(5)).toBe(5)
-      expect(PVEJourneyMode.enemyScaling(10)).toBe(10)
-      expect(PVEJourneyMode.enemyScaling(20)).toBe(20)
+      expect(EndlessPvEClassicMode.enemyScaling(1)).toBe(1)
+      expect(EndlessPvEClassicMode.enemyScaling(5)).toBe(5)
+      expect(EndlessPvEClassicMode.enemyScaling(10)).toBe(10)
+      expect(EndlessPvEClassicMode.enemyScaling(20)).toBe(20)
     })
 
     it('should have standard scene flow', () => {
-      expect(PVEJourneyMode.scenes).toEqual([
+      expect(EndlessPvEClassicMode.scenes).toEqual([
         'LoadingScene',
         'MainMenuScene',
         'PlanningScene',
@@ -599,29 +599,29 @@ describe('Game Mode Layer - Comprehensive Tests', () => {
     })
 
     it('should be a valid configuration', () => {
-      const result = validateGameModeConfig(PVEJourneyMode)
+      const result = validateGameModeConfig(EndlessPvEClassicMode)
       
       expect(result.valid).toBe(true)
       expect(result.errors).toEqual([])
     })
 
     it('should be registerable in registry', () => {
-      // PVEJourneyMode can be registered
-      const result = GameModeRegistry.register(PVEJourneyMode)
+      // EndlessPvEClassicMode can be registered
+      const result = GameModeRegistry.register(EndlessPvEClassicMode)
       expect(result.success).toBe(true)
       
-      expect(GameModeRegistry.has('PVE_JOURNEY')).toBe(true)
+      expect(GameModeRegistry.has('EndlessPvEClassic')).toBe(true)
       
-      const retrieved = GameModeRegistry.get('PVE_JOURNEY')
+      const retrieved = GameModeRegistry.get('EndlessPvEClassic')
       expect(retrieved).not.toBeNull()
-      expect(retrieved.id).toBe('PVE_JOURNEY')
+      expect(retrieved.id).toBe('EndlessPvEClassic')
     })
 
     it('should have descriptive name and description', () => {
-      expect(PVEJourneyMode.name).toBeTruthy()
-      expect(PVEJourneyMode.name.length).toBeGreaterThan(0)
-      expect(PVEJourneyMode.description).toBeTruthy()
-      expect(PVEJourneyMode.description.length).toBeGreaterThan(0)
+      expect(EndlessPvEClassicMode.name).toBeTruthy()
+      expect(EndlessPvEClassicMode.name.length).toBeGreaterThan(0)
+      expect(EndlessPvEClassicMode.description).toBeTruthy()
+      expect(EndlessPvEClassicMode.description.length).toBeGreaterThan(0)
     })
   })
 
@@ -673,15 +673,15 @@ describe('Game Mode Layer - Comprehensive Tests', () => {
       GameModeRegistry.register(mode1)
       GameModeRegistry.register(mode2)
       
-      // Re-import PVEJourneyMode to re-register it
-      GameModeRegistry.register(PVEJourneyMode)
+      // Re-import EndlessPvEClassicMode to re-register it
+      GameModeRegistry.register(EndlessPvEClassicMode)
       
       const allModes = GameModeRegistry.getAll()
       
       expect(allModes.length).toBeGreaterThanOrEqual(3)
       expect(allModes.some(m => m.id === 'QUERY_1')).toBe(true)
       expect(allModes.some(m => m.id === 'QUERY_2')).toBe(true)
-      expect(allModes.some(m => m.id === 'PVE_JOURNEY')).toBe(true)
+      expect(allModes.some(m => m.id === 'EndlessPvEClassic')).toBe(true)
     })
   })
 })

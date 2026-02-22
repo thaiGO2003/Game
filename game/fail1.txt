@@ -1,0 +1,84 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mP:/DigiGO/games/game[39m
+
+ [31mΓ¥»[39m tests/synergySystem.test.js [2m([22m[2m74 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 137[2mms[22m[39m
+       [32mΓ£ô[39m should calculate synergies for empty unit list[32m 12[2mms[22m[39m
+       [32mΓ£ô[39m should count units by class type[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should count units by tribe[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with undefined/null class or tribe[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should apply extra class count to top class for player side[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply extra tribe count to top tribe for player side[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should not apply extra counts for enemy side[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should not apply extra counts when units list is empty[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return null for invalid synergy definition[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return null when count does not meet any threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return first tier bonus when count meets first threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return highest tier bonus when count meets multiple thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return middle tier bonus when count is between thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should work with real CLASS_SYNERGY data[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return -1 for invalid thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return -1 when count does not meet any threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return 0 for first tier[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return highest tier index when count meets multiple thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return correct tier for count between thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle null/undefined inputs gracefully[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should apply class synergy bonus to unit mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply tribe synergy bonus to unit mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply both class and tribe synergies cumulatively[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not apply synergy if count does not meet threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should initialize mods object if not present[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle null bonus gracefully[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply flat defense bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply flat magic defense bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply HP percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply attack percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply magic attack percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply mod-based bonuses[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply shield and rage bonuses[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply status effect bonuses[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamHpPct as hpPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamAtkPct as atkPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamMatkPct as matkPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle empty team[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should handle null/undefined team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply synergies to all units in team[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should apply starting rage from mods[39m[32m 23[2mms[22m[39m
+[31m       [31m├ù[31m should cap starting rage at rageMax[39m[32m 49[2mms[22m[39m
+       [32mΓ£ô[39m should apply starting shield from mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle multiple synergies simultaneously[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should support extra counts from options[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return empty string for invalid synergy[32m 10[2mms[22m[39m
+       [32mΓ£ô[39m should return empty string for invalid level[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return description for valid class synergy[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return description for valid tribe synergy[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should include threshold in description[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return class icons[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return tribe icons[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return default icon for unknown synergy[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return empty array for empty team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return active class synergies[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return active tribe synergies[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should return multiple active synergies[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should not return synergies below threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should support extra counts in getActiveSynergies[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return higher tier for higher counts[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should calculate and apply synergies for a complete team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should recalculate synergies when team composition changes[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle team with all different classes and tribes[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle team with maximum synergy tiers[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle mixed star levels (star level should not affect synergy count)[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with missing base property[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with string "undefined" or "null" values[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle very large teams[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with whitespace in class/tribe values[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not crash with circular references in unit objects[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle bonus with zero values[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should handle negative bonus values gracefully[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should export all required functions[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should have functions that match named exports[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m72 passed[39m[22m[90m (74)[39m
+[2m   Start at [22m 20:50:34
+[2m   Duration [22m 6.89s[2m (transform 598ms, setup 254ms, import 493ms, tests 137ms, environment 4.44s)[22m
+

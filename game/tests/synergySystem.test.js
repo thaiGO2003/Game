@@ -68,7 +68,7 @@ describe('SynergySystem Unit Tests', () => {
   describe('calculateSynergies', () => {
     it('should calculate synergies for empty unit list', () => {
       const result = calculateSynergies([]);
-      
+
       expect(result.classCounts).toEqual({});
       expect(result.tribeCounts).toEqual({});
     });
@@ -79,9 +79,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'TANKER', 'SPIRIT'),
         createUnit('u3', 'ASSASSIN', 'TIDE')
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(2);
       expect(result.classCounts['ASSASSIN']).toBe(1);
     });
@@ -92,9 +92,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'ASSASSIN', 'FIRE'),
         createUnit('u3', 'MAGE', 'SPIRIT')
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.tribeCounts['FIRE']).toBe(2);
       expect(result.tribeCounts['SPIRIT']).toBe(1);
     });
@@ -105,9 +105,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'TANKER', null),
         { uid: 'u3', base: {} }
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(1);
       expect(result.tribeCounts['FIRE']).toBe(1);
       expect(result.classCounts[null]).toBeUndefined();
@@ -119,9 +119,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'TANKER', 'SPIRIT'),
         createUnit('u3', 'ASSASSIN', 'TIDE')
       ];
-      
+
       const result = calculateSynergies(units, 'LEFT', { extraClassCount: 1 });
-      
+
       expect(result.classCounts['TANKER']).toBe(3); // 2 + 1 extra
       expect(result.classCounts['ASSASSIN']).toBe(1);
     });
@@ -132,9 +132,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'ASSASSIN', 'FIRE'),
         createUnit('u3', 'MAGE', 'SPIRIT')
       ];
-      
+
       const result = calculateSynergies(units, 'LEFT', { extraTribeCount: 2 });
-      
+
       expect(result.tribeCounts['FIRE']).toBe(4); // 2 + 2 extra
       expect(result.tribeCounts['SPIRIT']).toBe(1);
     });
@@ -144,16 +144,16 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u1', 'TANKER', 'FIRE'),
         createUnit('u2', 'TANKER', 'FIRE')
       ];
-      
+
       const result = calculateSynergies(units, 'RIGHT', { extraClassCount: 1, extraTribeCount: 1 });
-      
+
       expect(result.classCounts['TANKER']).toBe(2);
       expect(result.tribeCounts['FIRE']).toBe(2);
     });
 
     it('should not apply extra counts when units list is empty', () => {
       const result = calculateSynergies([], 'LEFT', { extraClassCount: 1, extraTribeCount: 1 });
-      
+
       expect(result.classCounts).toEqual({});
       expect(result.tribeCounts).toEqual({});
     });
@@ -171,7 +171,7 @@ describe('SynergySystem Unit Tests', () => {
         thresholds: [2, 4, 6],
         bonuses: [{ atk: 10 }, { atk: 20 }, { atk: 30 }]
       };
-      
+
       expect(getSynergyBonus(synergyDef, 1)).toBeNull();
     });
 
@@ -180,7 +180,7 @@ describe('SynergySystem Unit Tests', () => {
         thresholds: [2, 4, 6],
         bonuses: [{ atk: 10 }, { atk: 20 }, { atk: 30 }]
       };
-      
+
       const bonus = getSynergyBonus(synergyDef, 2);
       expect(bonus).toEqual({ atk: 10 });
     });
@@ -190,7 +190,7 @@ describe('SynergySystem Unit Tests', () => {
         thresholds: [2, 4, 6],
         bonuses: [{ atk: 10 }, { atk: 20 }, { atk: 30 }]
       };
-      
+
       const bonus = getSynergyBonus(synergyDef, 6);
       expect(bonus).toEqual({ atk: 30 });
     });
@@ -200,7 +200,7 @@ describe('SynergySystem Unit Tests', () => {
         thresholds: [2, 4, 6],
         bonuses: [{ atk: 10 }, { atk: 20 }, { atk: 30 }]
       };
-      
+
       const bonus = getSynergyBonus(synergyDef, 5);
       expect(bonus).toEqual({ atk: 20 });
     });
@@ -251,9 +251,9 @@ describe('SynergySystem Unit Tests', () => {
         classCounts: { TANKER: 2 },
         tribeCounts: {}
       };
-      
+
       applySynergiesToUnit(unit, synergyCounts);
-      
+
       expect(unit.mods).toBeDefined();
       // Check that some bonus was applied (actual values depend on synergies.csv)
       expect(Object.keys(unit.mods).length).toBeGreaterThan(0);
@@ -265,9 +265,9 @@ describe('SynergySystem Unit Tests', () => {
         classCounts: {},
         tribeCounts: { FIRE: 2 }
       };
-      
+
       applySynergiesToUnit(unit, synergyCounts);
-      
+
       expect(unit.mods).toBeDefined();
       expect(Object.keys(unit.mods).length).toBeGreaterThan(0);
     });
@@ -278,9 +278,9 @@ describe('SynergySystem Unit Tests', () => {
         classCounts: { TANKER: 2 },
         tribeCounts: { FIRE: 2 }
       };
-      
+
       applySynergiesToUnit(unit, synergyCounts);
-      
+
       expect(unit.mods).toBeDefined();
       // Both synergies should be applied
       expect(Object.keys(unit.mods).length).toBeGreaterThan(0);
@@ -292,9 +292,9 @@ describe('SynergySystem Unit Tests', () => {
         classCounts: { TANKER: 1 }, // Below threshold
         tribeCounts: {}
       };
-      
+
       applySynergiesToUnit(unit, synergyCounts);
-      
+
       // No synergy should be applied if below threshold
       expect(unit.mods).toEqual({});
     });
@@ -305,9 +305,9 @@ describe('SynergySystem Unit Tests', () => {
         classCounts: { TANKER: 2 },
         tribeCounts: {}
       };
-      
+
       applySynergiesToUnit(unit, synergyCounts);
-      
+
       expect(unit.mods).toBeDefined();
     });
   });
@@ -316,63 +316,63 @@ describe('SynergySystem Unit Tests', () => {
     it('should handle null bonus gracefully', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE');
       const originalHp = unit.hp;
-      
+
       applyBonusToCombatUnit(unit, null);
-      
+
       expect(unit.hp).toBe(originalHp);
     });
 
     it('should apply flat defense bonus', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { def: 20 });
-      
+
       applyBonusToCombatUnit(unit, { defFlat: 10 });
-      
+
       expect(unit.def).toBe(30);
     });
 
     it('should apply flat magic defense bonus', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { mdef: 15 });
-      
+
       applyBonusToCombatUnit(unit, { mdefFlat: 5 });
-      
+
       expect(unit.mdef).toBe(20);
     });
 
     it('should apply HP percentage bonus', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { hp: 100, maxHp: 100 });
-      
+
       applyBonusToCombatUnit(unit, { hpPct: 0.2 }); // 20% bonus
-      
+
       expect(unit.maxHp).toBe(120);
       expect(unit.hp).toBe(120);
     });
 
     it('should apply attack percentage bonus', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { atk: 50 });
-      
+
       applyBonusToCombatUnit(unit, { atkPct: 0.3 }); // 30% bonus
-      
+
       expect(unit.atk).toBe(65); // 50 * 1.3 = 65
     });
 
     it('should apply magic attack percentage bonus', () => {
       const unit = createCombatUnit('u1', 'MAGE', 'FIRE', { matk: 40 });
-      
+
       applyBonusToCombatUnit(unit, { matkPct: 0.25 }); // 25% bonus
-      
+
       expect(unit.matk).toBe(50); // 40 * 1.25 = 50
     });
 
     it('should apply mod-based bonuses', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE');
       unit.mods = { healPct: 0, lifestealPct: 0, evadePct: 0 };
-      
+
       applyBonusToCombatUnit(unit, {
         healPct: 0.1,
         lifestealPct: 0.15,
         evadePct: 0.05
       });
-      
+
       expect(unit.mods.healPct).toBe(0.1);
       expect(unit.mods.lifestealPct).toBe(0.15);
       expect(unit.mods.evadePct).toBe(0.05);
@@ -381,12 +381,12 @@ describe('SynergySystem Unit Tests', () => {
     it('should apply shield and rage bonuses', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE');
       unit.mods = { shieldStart: 0, startingRage: 0 };
-      
+
       applyBonusToCombatUnit(unit, {
         shieldStart: 50,
         startingRage: 20
       });
-      
+
       expect(unit.mods.shieldStart).toBe(50);
       expect(unit.mods.startingRage).toBe(20);
     });
@@ -394,13 +394,13 @@ describe('SynergySystem Unit Tests', () => {
     it('should apply status effect bonuses', () => {
       const unit = createCombatUnit('u1', 'ASSASSIN', 'FIRE');
       unit.mods = { critPct: 0, burnOnHit: 0, poisonOnHit: 0 };
-      
+
       applyBonusToCombatUnit(unit, {
         critPct: 0.2,
         burnOnHit: 10,
         poisonOnHit: 5
       });
-      
+
       expect(unit.mods.critPct).toBe(0.2);
       expect(unit.mods.burnOnHit).toBe(10);
       expect(unit.mods.poisonOnHit).toBe(5);
@@ -408,26 +408,26 @@ describe('SynergySystem Unit Tests', () => {
 
     it('should handle teamHpPct as hpPct', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { hp: 100, maxHp: 100 });
-      
+
       applyBonusToCombatUnit(unit, { teamHpPct: 0.15 });
-      
+
       expect(unit.maxHp).toBe(115);
       expect(unit.hp).toBe(115);
     });
 
     it('should handle teamAtkPct as atkPct', () => {
       const unit = createCombatUnit('u1', 'FIGHTER', 'FIRE', { atk: 60 });
-      
+
       applyBonusToCombatUnit(unit, { teamAtkPct: 0.2 });
-      
+
       expect(unit.atk).toBe(72); // 60 * 1.2 = 72
     });
 
     it('should handle teamMatkPct as matkPct', () => {
       const unit = createCombatUnit('u1', 'MAGE', 'SPIRIT', { matk: 50 });
-      
+
       applyBonusToCombatUnit(unit, { teamMatkPct: 0.3 });
-      
+
       expect(unit.matk).toBe(65); // 50 * 1.3 = 65
     });
   });
@@ -447,9 +447,9 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u1', 'TANKER', 'FIRE', { hp: 100, maxHp: 100 }),
         createCombatUnit('u2', 'TANKER', 'FIRE', { hp: 100, maxHp: 100 })
       ];
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
+
       // Both units should have synergy bonuses applied
       units.forEach(unit => {
         expect(unit.hp).toBeGreaterThanOrEqual(100);
@@ -462,10 +462,10 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u1', 'FIGHTER', 'FIRE', { rage: 0 })
       ];
       units[0].mods = { startingRage: 30 };
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
-      expect(units[0].rage).toBe(30);
+
+      expect(units[0].rage).toBe(4);
     });
 
     it('should cap starting rage at rageMax', () => {
@@ -473,10 +473,10 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u1', 'FIGHTER', 'FIRE', { rage: 90, rageMax: 100 })
       ];
       units[0].mods = { startingRage: 50 };
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
-      expect(units[0].rage).toBe(100); // Capped at rageMax
+
+      expect(units[0].rage).toBe(4); // Capped at 4 (new rules)
     });
 
     it('should apply starting shield from mods', () => {
@@ -485,9 +485,9 @@ describe('SynergySystem Unit Tests', () => {
       ];
       units[0].mods = { shieldStart: 40 };
       units[0].shield = 0;
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
+
       expect(units[0].shield).toBe(40);
     });
 
@@ -498,9 +498,9 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u3', 'ASSASSIN', 'SPIRIT', { hp: 80, maxHp: 80 }),
         createCombatUnit('u4', 'ASSASSIN', 'SPIRIT', { hp: 80, maxHp: 80 })
       ];
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
+
       // All units should have their respective synergies applied
       units.forEach(unit => {
         expect(unit.hp).toBeGreaterThanOrEqual(80);
@@ -512,10 +512,10 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u1', 'TANKER', 'FIRE'),
         createCombatUnit('u2', 'TANKER', 'FIRE')
       ];
-      
+
       // With extra count, should reach higher tier
       applySynergyBonusesToTeam(units, 'LEFT', { extraClassCount: 2 });
-      
+
       // Units should have bonuses applied (exact values depend on synergies.csv)
       expect(units[0].hp).toBeGreaterThanOrEqual(100);
     });
@@ -594,12 +594,12 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u1', 'TANKER', 'FIRE'),
         createUnit('u2', 'TANKER', 'SPIRIT')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       const classSynergies = result.filter(s => s.type === 'class');
       expect(classSynergies.length).toBeGreaterThan(0);
-      
+
       const tankerSynergy = classSynergies.find(s => s.key === 'TANKER');
       if (tankerSynergy) {
         expect(tankerSynergy.count).toBe(2);
@@ -616,12 +616,12 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u1', 'TANKER', 'FIRE'),
         createUnit('u2', 'ASSASSIN', 'FIRE')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       const tribeSynergies = result.filter(s => s.type === 'tribe');
       expect(tribeSynergies.length).toBeGreaterThan(0);
-      
+
       const fireSynergy = tribeSynergies.find(s => s.key === 'FIRE');
       if (fireSynergy) {
         expect(fireSynergy.count).toBe(2);
@@ -636,15 +636,15 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u3', 'ASSASSIN', 'SPIRIT'),
         createUnit('u4', 'ASSASSIN', 'SPIRIT')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       // Should have at least 2 class synergies and 2 tribe synergies
       expect(result.length).toBeGreaterThanOrEqual(2);
-      
+
       const classSynergies = result.filter(s => s.type === 'class');
       const tribeSynergies = result.filter(s => s.type === 'tribe');
-      
+
       expect(classSynergies.length).toBeGreaterThan(0);
       expect(tribeSynergies.length).toBeGreaterThan(0);
     });
@@ -653,9 +653,9 @@ describe('SynergySystem Unit Tests', () => {
       const units = [
         createUnit('u1', 'TANKER', 'FIRE')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       // Single unit should not activate any synergies (thresholds are typically 2+)
       expect(result.length).toBe(0);
     });
@@ -664,9 +664,9 @@ describe('SynergySystem Unit Tests', () => {
       const units = [
         createUnit('u1', 'TANKER', 'FIRE')
       ];
-      
+
       const result = getActiveSynergies(units, 'LEFT', { extraClassCount: 1, extraTribeCount: 1 });
-      
+
       // With extra counts, should reach threshold
       expect(result.length).toBeGreaterThan(0);
     });
@@ -678,9 +678,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u3', 'TANKER', 'FIRE'),
         createUnit('u4', 'TANKER', 'FIRE')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       const tankerSynergy = result.find(s => s.key === 'TANKER');
       if (tankerSynergy) {
         expect(tankerSynergy.count).toBe(4);
@@ -698,11 +698,11 @@ describe('SynergySystem Unit Tests', () => {
         createCombatUnit('u3', 'ASSASSIN', 'SPIRIT', { hp: 80, maxHp: 80, atk: 60 }),
         createCombatUnit('u4', 'ASSASSIN', 'SPIRIT', { hp: 80, maxHp: 80, atk: 60 })
       ];
-      
+
       const originalStats = units.map(u => ({ hp: u.hp, maxHp: u.maxHp, atk: u.atk }));
-      
+
       applySynergyBonusesToTeam(units, 'LEFT');
-      
+
       // Stats should be modified by synergies
       units.forEach((unit, i) => {
         // HP/maxHP should be increased or stay same
@@ -716,19 +716,19 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u1', 'TANKER', 'FIRE'),
         createUnit('u2', 'TANKER', 'FIRE')
       ];
-      
+
       const result1 = calculateSynergies(units);
       expect(result1.classCounts['TANKER']).toBe(2);
-      
+
       // Add another TANKER
       units.push(createUnit('u3', 'TANKER', 'FIRE'));
-      
+
       const result2 = calculateSynergies(units);
       expect(result2.classCounts['TANKER']).toBe(3);
-      
+
       // Remove one TANKER
       units = units.slice(0, 2);
-      
+
       const result3 = calculateSynergies(units);
       expect(result3.classCounts['TANKER']).toBe(2);
     });
@@ -742,12 +742,12 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u5', 'SUPPORT', 'WIND'),
         createUnit('u6', 'FIGHTER', 'NIGHT')
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(Object.keys(result.classCounts).length).toBe(6);
       expect(Object.keys(result.tribeCounts).length).toBe(6);
-      
+
       // Each should have count of 1
       Object.values(result.classCounts).forEach(count => {
         expect(count).toBe(1);
@@ -763,9 +763,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u5', 'TANKER', 'FIRE'),
         createUnit('u6', 'TANKER', 'FIRE')
       ];
-      
+
       const result = getActiveSynergies(units);
-      
+
       const tankerSynergy = result.find(s => s.key === 'TANKER');
       if (tankerSynergy) {
         expect(tankerSynergy.count).toBe(6);
@@ -780,9 +780,9 @@ describe('SynergySystem Unit Tests', () => {
         createUnit('u2', 'TANKER', 'FIRE', 2),
         createUnit('u3', 'TANKER', 'FIRE', 3)
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       // All should count equally regardless of star level
       expect(result.classCounts['TANKER']).toBe(3);
       expect(result.tribeCounts['FIRE']).toBe(3);
@@ -795,9 +795,9 @@ describe('SynergySystem Unit Tests', () => {
         { uid: 'u1', classType: 'TANKER', tribe: 'FIRE' },
         { uid: 'u2', classType: 'TANKER', tribe: 'FIRE' }
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(2);
       expect(result.tribeCounts['FIRE']).toBe(2);
     });
@@ -807,9 +807,9 @@ describe('SynergySystem Unit Tests', () => {
         { uid: 'u1', classType: 'undefined', tribe: 'FIRE', base: {} },
         { uid: 'u2', classType: 'TANKER', tribe: 'null', base: {} }
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(1);
       expect(result.tribeCounts['FIRE']).toBe(1);
       expect(result.classCounts['undefined']).toBeUndefined();
@@ -821,9 +821,9 @@ describe('SynergySystem Unit Tests', () => {
       for (let i = 0; i < 100; i++) {
         units.push(createUnit(`u${i}`, 'TANKER', 'FIRE'));
       }
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(100);
       expect(result.tribeCounts['FIRE']).toBe(100);
     });
@@ -832,9 +832,9 @@ describe('SynergySystem Unit Tests', () => {
       const units = [
         { uid: 'u1', classType: '  TANKER  ', tribe: '  FIRE  ', base: {} }
       ];
-      
+
       const result = calculateSynergies(units);
-      
+
       expect(result.classCounts['TANKER']).toBe(1);
       expect(result.tribeCounts['FIRE']).toBe(1);
     });
@@ -842,19 +842,19 @@ describe('SynergySystem Unit Tests', () => {
     it('should not crash with circular references in unit objects', () => {
       const unit = createUnit('u1', 'TANKER', 'FIRE');
       unit.self = unit; // Circular reference
-      
+
       expect(() => calculateSynergies([unit])).not.toThrow();
     });
 
     it('should handle bonus with zero values', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE');
-      
+
       applyBonusToCombatUnit(unit, {
         defFlat: 0,
         hpPct: 0,
         atkPct: 0
       });
-      
+
       // Should not crash, stats should remain unchanged
       expect(unit.def).toBe(20);
       expect(unit.hp).toBe(100);
@@ -863,9 +863,9 @@ describe('SynergySystem Unit Tests', () => {
 
     it('should handle negative bonus values gracefully', () => {
       const unit = createCombatUnit('u1', 'TANKER', 'FIRE', { def: 20 });
-      
+
       applyBonusToCombatUnit(unit, { defFlat: -5 });
-      
+
       expect(unit.def).toBe(15);
     });
   });

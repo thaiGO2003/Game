@@ -59,7 +59,7 @@ export function register(gameMode) {
  * @returns {GameModeConfig | null} The game mode config, or null if not found
  * 
  * @example
- * const mode = GameModeRegistry.get("PVE_JOURNEY")
+ * const mode = GameModeRegistry.get("EndlessPvEClassic")
  * if (mode) {
  *   console.log("Starting gold:", mode.startingGold)
  * }

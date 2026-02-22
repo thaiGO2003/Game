@@ -30,11 +30,11 @@ class MockCombatScene {
 
   create() {
     // Get game mode configuration (simulating CombatScene.create)
-    const gameMode = this.runStatePayload?.player?.gameMode ?? 'PVE_JOURNEY'
+    const gameMode = this.runStatePayload?.player?.gameMode ?? 'EndlessPvEClassic'
     this.gameModeConfig = GameModeRegistry.get(gameMode)
     if (!this.gameModeConfig) {
-      console.warn(`Game mode "${gameMode}" not found, falling back to PVE_JOURNEY`)
-      this.gameModeConfig = GameModeRegistry.get('PVE_JOURNEY')
+      console.warn(`Game mode "${gameMode}" not found, falling back to EndlessPvEClassic`)
+      this.gameModeConfig = GameModeRegistry.get('EndlessPvEClassic')
     }
   }
 
@@ -119,8 +119,8 @@ describe('CombatScene Game Mode Integration', () => {
     })
     GameModeRegistry.register(testMode)
 
-    // Register PVE_JOURNEY as fallback
-    const pveMode = createGameModeConfig('PVE_JOURNEY', {
+    // Register EndlessPvEClassic as fallback
+    const pveMode = createGameModeConfig('EndlessPvEClassic', {
       name: 'PVE Journey',
       description: 'Standard mode',
       scenes: ['LoadingScene', 'MainMenuScene', 'PlanningScene', 'CombatScene'],
@@ -162,7 +162,7 @@ describe('CombatScene Game Mode Integration', () => {
     expect(scene.gameModeConfig.id).toBe('TEST_MODE')
   })
 
-  it('should fallback to PVE_JOURNEY if mode not found', () => {
+  it('should fallback to EndlessPvEClassic if mode not found', () => {
     // Initialize with invalid mode
     scene.init({
       runState: {
@@ -175,7 +175,7 @@ describe('CombatScene Game Mode Integration', () => {
     scene.create()
 
     expect(scene.gameModeConfig).toBeDefined()
-    expect(scene.gameModeConfig.id).toBe('PVE_JOURNEY')
+    expect(scene.gameModeConfig.id).toBe('EndlessPvEClassic')
   })
 
   it('should use config.aiDifficulty for AI mode', () => {
@@ -199,7 +199,7 @@ describe('CombatScene Game Mode Integration', () => {
       runState: {
         aiMode: 'EASY',
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           board: [[null]]
         }
       }
@@ -239,7 +239,7 @@ describe('CombatScene Game Mode Integration', () => {
     scene.init({
       runState: {
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           board: [[null]],
           loseCondition: 'TIME_LIMIT'
         }
@@ -454,11 +454,11 @@ describe('CombatScene Game Mode Integration', () => {
     expect(enemy.hp).toBe(95)
   })
 
-  it('should preserve backward compatibility with PVE_JOURNEY', () => {
+  it('should preserve backward compatibility with EndlessPvEClassic', () => {
     scene.init({
       runState: {
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           board: [[null]],
           round: 1
         }
@@ -467,7 +467,7 @@ describe('CombatScene Game Mode Integration', () => {
     scene.create()
     scene.startFromPayload()
 
-    // PVE_JOURNEY should work as before
+    // EndlessPvEClassic should work as before
     expect(scene.aiMode).toBe('MEDIUM')
     expect(scene.loseCondition).toBe('NO_HEARTS')
 

@@ -5,7 +5,7 @@
  * - Reading available game modes from GameModeRegistry
  * - Displaying game mode options in UI
  * - Passing selected mode to PlanningScene
- * - Defaulting to PVE_JOURNEY mode
+ * - Defaulting to EndlessPvEClassic mode
  * 
  * **Validates: Requirements 9.8**
  * 
@@ -24,7 +24,7 @@ import { createDefaultUiSettings } from '../src/core/uiSettings.js';
 class MockMainMenuSceneWithGameModes {
   constructor() {
     this.settings = createDefaultUiSettings();
-    this.selectedMode = 'PVE_JOURNEY'; // Default mode
+    this.selectedMode = 'EndlessPvEClassic'; // Default mode
     this.savedRun = null;
     
     // Scene transition tracking
@@ -219,8 +219,8 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
   });
 
   describe('Game mode selection', () => {
-    it('should default to PVE_JOURNEY mode', () => {
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+    it('should default to EndlessPvEClassic mode', () => {
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
     });
 
     it('should select a valid game mode', () => {
@@ -236,7 +236,7 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toContain('not found in registry');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY'); // Should remain unchanged
+      expect(scene.selectedMode).toBe('EndlessPvEClassic'); // Should remain unchanged
     });
 
     it('should switch between game modes', () => {
@@ -287,11 +287,11 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
     });
 
     it('should pass default mode when no mode selected', () => {
-      // selectedMode defaults to PVE_JOURNEY
+      // selectedMode defaults to EndlessPvEClassic
       const result = scene.startNewGame();
       
       expect(result.success).toBe(true);
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
     });
 
     it('should pass different modes correctly', () => {
@@ -361,11 +361,11 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
         aiMode: 'MEDIUM'
       };
       
-      scene.selectedMode = 'PVE_JOURNEY';
+      scene.selectedMode = 'EndlessPvEClassic';
       const result = scene.continueRun(savedRun);
       
       expect(result.success).toBe(true);
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
     });
 
     it('should use selected mode as fallback', () => {
@@ -423,12 +423,12 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
   });
 
   describe('Default mode behavior', () => {
-    it('should use PVE_JOURNEY as default when no mode selected', () => {
+    it('should use EndlessPvEClassic as default when no mode selected', () => {
       const result = scene.startNewGame();
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
     });
 
-    it('should fall back to PVE_JOURNEY if selected mode not in registry', () => {
+    it('should fall back to EndlessPvEClassic if selected mode not in registry', () => {
       // Manually set invalid mode
       scene.selectedMode = 'INVALID_MODE';
       
@@ -438,11 +438,11 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
       expect(result.data.mode).toBe('INVALID_MODE');
     });
 
-    it('should maintain PVE_JOURNEY as default after registry clear', () => {
+    it('should maintain EndlessPvEClassic as default after registry clear', () => {
       GameModeRegistry.clear();
       
-      // Re-register only PVE_JOURNEY
-      const pveJourney = createGameModeConfig('PVE_JOURNEY', {
+      // Re-register only EndlessPvEClassic
+      const pveJourney = createGameModeConfig('EndlessPvEClassic', {
         name: 'PVE Journey',
         description: 'Default mode',
         scenes: ['LoadingScene', 'MainMenuScene', 'PlanningScene', 'CombatScene'],
@@ -462,10 +462,10 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
       GameModeRegistry.register(pveJourney);
       
       const newScene = new MockMainMenuSceneWithGameModes();
-      expect(newScene.selectedMode).toBe('PVE_JOURNEY');
+      expect(newScene.selectedMode).toBe('EndlessPvEClassic');
       
       const result = newScene.startNewGame();
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
     });
   });
 
@@ -550,21 +550,21 @@ describe('MainMenuScene Game Mode Selection Tests', () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(scene.selectedMode).toBe('PVE_JOURNEY'); // Should not change
+      expect(scene.selectedMode).toBe('EndlessPvEClassic'); // Should not change
     });
 
     it('should handle empty mode id', () => {
       const result = scene.selectGameMode('');
       
       expect(result.success).toBe(false);
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
     });
 
     it('should handle null mode id', () => {
       const result = scene.selectGameMode(null);
       
       expect(result.success).toBe(false);
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
     });
 
     it('should handle continue with no saved run', () => {

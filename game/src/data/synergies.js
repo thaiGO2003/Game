@@ -78,7 +78,7 @@ const parsedSynergies = parseSynergiesCsv(synergiesCsv);
 export const CLASS_SYNERGY = parsedSynergies.CLASS_SYNERGY;
 export const TRIBE_SYNERGY = parsedSynergies.TRIBE_SYNERGY;
 
-/** Khắc chế nguyên tố: key khắc value (+20% dmg tấn công HOẶC -20% dmg nhận phòng thủ) */
+/** Khắc chế nguyên tố: key khắc value (+50% sát thương tấn công HOẶC -50% sát thương nhận được) */
 export const TRIBE_COUNTER = {
   FIRE: "SPIRIT",
   SPIRIT: "TIDE",

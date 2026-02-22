@@ -16,7 +16,7 @@ import { createGameModeConfig, LOSE_CONDITION, AI_DIFFICULTY } from '../src/game
  */
 class MockPlanningScene {
   constructor() {
-    this.gameMode = 'PVE_JOURNEY'
+    this.gameMode = 'EndlessPvEClassic'
     this.gameModeConfig = null
     this.player = null
     this.buttons = {}
@@ -31,8 +31,8 @@ class MockPlanningScene {
     // Get game mode configuration (simulating PlanningScene.create)
     this.gameModeConfig = GameModeRegistry.get(this.gameMode)
     if (!this.gameModeConfig) {
-      console.warn(`Game mode "${this.gameMode}" not found, falling back to PVE_JOURNEY`)
-      this.gameMode = 'PVE_JOURNEY'
+      console.warn(`Game mode "${this.gameMode}" not found, falling back to EndlessPvEClassic`)
+      this.gameMode = 'EndlessPvEClassic'
       this.gameModeConfig = GameModeRegistry.get(this.gameMode)
     }
 
@@ -119,8 +119,8 @@ describe('PlanningScene Game Mode Integration', () => {
     })
     GameModeRegistry.register(testMode)
 
-    // Register PVE_JOURNEY as fallback
-    const pveMode = createGameModeConfig('PVE_JOURNEY', {
+    // Register EndlessPvEClassic as fallback
+    const pveMode = createGameModeConfig('EndlessPvEClassic', {
       name: 'PVE Journey',
       description: 'Standard mode',
       scenes: ['LoadingScene', 'MainMenuScene', 'PlanningScene', 'CombatScene'],
@@ -156,14 +156,14 @@ describe('PlanningScene Game Mode Integration', () => {
     expect(scene.gameModeConfig.id).toBe('TEST_MODE')
   })
 
-  it('should fallback to PVE_JOURNEY if mode not found', () => {
+  it('should fallback to EndlessPvEClassic if mode not found', () => {
     // Initialize with invalid mode
     scene.init({ mode: 'INVALID_MODE' })
     scene.create()
 
-    expect(scene.gameMode).toBe('PVE_JOURNEY')
+    expect(scene.gameMode).toBe('EndlessPvEClassic')
     expect(scene.gameModeConfig).toBeDefined()
-    expect(scene.gameModeConfig.id).toBe('PVE_JOURNEY')
+    expect(scene.gameModeConfig.id).toBe('EndlessPvEClassic')
   })
 
   it('should use config.startingGold when starting new run', () => {
@@ -209,10 +209,10 @@ describe('PlanningScene Game Mode Integration', () => {
   })
 
   it('should create craft button when crafting enabled', () => {
-    scene.init({ mode: 'PVE_JOURNEY' })
+    scene.init({ mode: 'EndlessPvEClassic' })
     scene.create()
 
-    // PVE_JOURNEY has crafting: true
+    // EndlessPvEClassic has crafting: true
     expect(scene.buttons.upgradeCraft).toBeDefined()
   })
 
@@ -242,7 +242,7 @@ describe('PlanningScene Game Mode Integration', () => {
   })
 
   it('should show augments when augments enabled', () => {
-    scene.init({ mode: 'PVE_JOURNEY' })
+    scene.init({ mode: 'EndlessPvEClassic' })
     scene.create()
     scene.startNewRun()
 
@@ -252,7 +252,7 @@ describe('PlanningScene Game Mode Integration', () => {
     // Enter planning should show augments
     scene.enterPlanning(false)
 
-    // PVE_JOURNEY has augments: true, so phase should switch to AUGMENT
+    // EndlessPvEClassic has augments: true, so phase should switch to AUGMENT
     expect(scene.phase).toBe('AUGMENT')
   })
 

@@ -18,7 +18,7 @@ import { CLASS_SYNERGY, TRIBE_SYNERGY } from '../src/data/synergies.js';
 function getUnitTooltip(baseId, star = 1, ownedUnit = null) {
   const base = UNIT_BY_ID[baseId];
   if (!base) return { title: "Không rõ", body: "Không có dữ liệu linh thú." };
-  
+
   const visual = getUnitVisual(baseId, base.classType);
   const skill = SKILL_LIBRARY[base.skillId];
   const classDef = CLASS_SYNERGY[base.classType];
@@ -30,7 +30,7 @@ function getUnitTooltip(baseId, star = 1, ownedUnit = null) {
   // Calculate evasion stat
   const baseEvasion = getBaseEvasion(base.classType);
   let evasionText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}%`;
-  
+
   // If ownedUnit is provided, check for modified evasion
   if (ownedUnit) {
     const effectiveEvasion = getEffectiveEvasion(ownedUnit);
@@ -40,13 +40,13 @@ function getUnitTooltip(baseId, star = 1, ownedUnit = null) {
   }
 
   const equipmentLine = "Trang bị: Chưa có";
-  
+
   return {
     title: `${visual.icon} ${visual.nameVi} (${star}★)`,
     body: [
       `🏷️ Bậc:${base.tier}  ${getTribeLabelVi(base.tribe)}/${getClassLabelVi(base.classType)}`,
       `❤️ HP:${Math.round(base.stats.hp * statScale)}  ATK:${Math.round(base.stats.atk * statScale)}  DEF:${Math.round(base.stats.def * statScale)}`,
-      `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm:${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`,
+      `✨ MATK:${Math.round(base.stats.matk * statScale)}  MDEF:${Math.round(base.stats.mdef * statScale)}  Tầm: ${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`,
       evasionText,
       `🔥 Nộ tối đa:${base.stats.rageMax}`,
       `🎒 ${equipmentLine}`,
@@ -69,14 +69,14 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
   describe('Requirement 13.1: Tooltip displays evasion percentage', () => {
     it('should include evasion stat in tooltip body', () => {
       const tooltip = getUnitTooltip(testUnitId, 1);
-      
+
       expect(tooltip.body).toContain('💨 Né tránh:');
       expect(tooltip.body).toMatch(/💨 Né tránh: \d+\.\d%/);
     });
 
     it('should display evasion for all class types', () => {
       const classTypes = ['TANKER', 'FIGHTER', 'ASSASSIN', 'ARCHER', 'MAGE', 'SUPPORT'];
-      
+
       classTypes.forEach(classType => {
         // Find a unit with this class type
         const unitId = Object.keys(UNIT_BY_ID).find(id => UNIT_BY_ID[id].classType === classType);
@@ -93,7 +93,7 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
       const tooltip = getUnitTooltip(testUnitId, 1);
       const baseEvasion = getBaseEvasion(testUnit.classType);
       const expectedText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}%`;
-      
+
       expect(tooltip.body).toContain(expectedText);
       expect(tooltip.body).not.toContain('→');
     });
@@ -111,7 +111,7 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
       };
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
-      
+
       expect(tooltip.body).toContain('→');
       expect(tooltip.body).toMatch(/💨 Né tránh: \d+\.\d% → \d+\.\d%/);
     });
@@ -129,7 +129,7 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
       };
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
-      
+
       expect(tooltip.body).toContain('→');
       expect(tooltip.body).toMatch(/💨 Né tránh: \d+\.\d% → \d+\.\d%/);
     });
@@ -138,11 +138,11 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
   describe('Requirement 13.3: Format evasion with one decimal place', () => {
     it('should format evasion percentage with exactly one decimal place', () => {
       const tooltip = getUnitTooltip(testUnitId, 1);
-      
+
       // Extract evasion value from tooltip
       const evasionMatch = tooltip.body.match(/💨 Né tránh: (\d+\.\d)%/);
       expect(evasionMatch).toBeTruthy();
-      
+
       const evasionStr = evasionMatch[1];
       const decimalPart = evasionStr.split('.')[1];
       expect(decimalPart.length).toBe(1);
@@ -161,14 +161,14 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
       };
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
-      
+
       // Extract both evasion values
       const evasionMatch = tooltip.body.match(/💨 Né tránh: (\d+\.\d)% → (\d+\.\d)%/);
       expect(evasionMatch).toBeTruthy();
-      
+
       const baseStr = evasionMatch[1];
       const modifiedStr = evasionMatch[2];
-      
+
       expect(baseStr.split('.')[1].length).toBe(1);
       expect(modifiedStr.split('.')[1].length).toBe(1);
     });
@@ -178,26 +178,26 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
     it('should position evasion stat after range and before rage max', () => {
       const tooltip = getUnitTooltip(testUnitId, 1);
       const lines = tooltip.body.split('\n');
-      
+
       // Find the indices of relevant stats
       const rangeIndex = lines.findIndex(line => line.includes('Tầm:'));
       const evasionIndex = lines.findIndex(line => line.includes('💨 Né tránh:'));
       const rageIndex = lines.findIndex(line => line.includes('🔥 Nộ tối đa:'));
-      
+
       expect(evasionIndex).toBeGreaterThan(rangeIndex);
       expect(evasionIndex).toBeLessThan(rageIndex);
     });
 
     it('should maintain consistent stat ordering across different units', () => {
       const unitIds = Object.keys(UNIT_BY_ID).slice(0, 5);
-      
+
       unitIds.forEach(unitId => {
         const tooltip = getUnitTooltip(unitId, 1);
         const lines = tooltip.body.split('\n');
-        
+
         const evasionIndex = lines.findIndex(line => line.includes('💨 Né tránh:'));
         const rageIndex = lines.findIndex(line => line.includes('🔥 Nộ tối đa:'));
-        
+
         expect(evasionIndex).toBeGreaterThan(-1);
         expect(evasionIndex).toBeLessThan(rageIndex);
       });
@@ -207,7 +207,7 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
   describe('Requirement 7.6: Tooltip updates when evasion is modified', () => {
     it('should reflect evasion changes from buffs', () => {
       const baseEvasion = getBaseEvasion(testUnit.classType);
-      
+
       const ownedUnit = {
         baseId: testUnitId,
         mods: { evadePct: baseEvasion },
@@ -221,14 +221,14 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
       const effectiveEvasion = getEffectiveEvasion(ownedUnit);
-      
+
       const expectedText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}% → ${(effectiveEvasion * 100).toFixed(1)}%`;
       expect(tooltip.body).toContain(expectedText);
     });
 
     it('should reflect evasion changes from debuffs', () => {
       const baseEvasion = getBaseEvasion(testUnit.classType);
-      
+
       const ownedUnit = {
         baseId: testUnitId,
         mods: { evadePct: baseEvasion },
@@ -242,14 +242,14 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
       const effectiveEvasion = getEffectiveEvasion(ownedUnit);
-      
+
       const expectedText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}% → ${(effectiveEvasion * 100).toFixed(1)}%`;
       expect(tooltip.body).toContain(expectedText);
     });
 
     it('should reflect combined buff and debuff effects', () => {
       const baseEvasion = getBaseEvasion(testUnit.classType);
-      
+
       const ownedUnit = {
         baseId: testUnitId,
         mods: { evadePct: baseEvasion },
@@ -263,7 +263,7 @@ describe('Task 12.1: Tooltip Evasion Display Integration', () => {
 
       const tooltip = getUnitTooltip(testUnitId, 1, ownedUnit);
       const effectiveEvasion = getEffectiveEvasion(ownedUnit);
-      
+
       const expectedText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}% → ${(effectiveEvasion * 100).toFixed(1)}%`;
       expect(tooltip.body).toContain(expectedText);
     });

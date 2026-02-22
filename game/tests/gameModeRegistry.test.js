@@ -232,7 +232,7 @@ describe('GameModeRegistry', () => {
   describe('Multiple game modes support', () => {
     it('should support multiple game modes registered simultaneously', () => {
       // Create different game modes with different configs
-      const pveMode = createGameModeConfig('PVE_JOURNEY', {
+      const pveMode = createGameModeConfig('EndlessPvEClassic', {
         name: 'PVE Journey',
         startingGold: 10,
         startingHP: 3,
@@ -260,12 +260,12 @@ describe('GameModeRegistry', () => {
       GameModeRegistry.register(easyMode)
 
       // Verify all are registered
-      expect(GameModeRegistry.has('PVE_JOURNEY')).toBe(true)
+      expect(GameModeRegistry.has('EndlessPvEClassic')).toBe(true)
       expect(GameModeRegistry.has('ENDLESS')).toBe(true)
       expect(GameModeRegistry.has('EASY_MODE')).toBe(true)
 
       // Verify each can be retrieved with correct config
-      const retrievedPVE = GameModeRegistry.get('PVE_JOURNEY')
+      const retrievedPVE = GameModeRegistry.get('EndlessPvEClassic')
       expect(retrievedPVE.startingGold).toBe(10)
       expect(retrievedPVE.aiDifficulty).toBe(AI_DIFFICULTY.MEDIUM)
 

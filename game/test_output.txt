@@ -1,0 +1,561 @@
+
+> forest-throne-phaser@0.2.0 test
+> vitest --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mP:/DigiGO/games/game[39m
+
+ [31mΓ¥»[39m tests/thoroughFeatureTesting.test.js [2m([22m[2m29 tests[22m[2m | [22m[31m20 failed[39m[2m)[22m[32m 55[2mms[22m[39m
+       [32mΓ£ô[39m should refresh shop and deduct gold[32m 3[2mms[22m[39m
+[31m       [31m├ù[31m should buy unit and add to bench[39m[32m 12[2mms[22m[39m
+[31m       [31m├ù[31m should sell unit and add gold[39m[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should lock shop and preserve offers[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should unlock shop[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should place unit on board[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should move unit on board[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should remove unit from board[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should enforce deploy limit[39m[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should detect upgrade opportunity with 3 matching units[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should upgrade to 3-star unit[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should transfer equipment during upgrade[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should auto-detect upgrade candidates[39m[32m 3[2mms[22m[39m
+[31m       [31m├ù[31m should calculate synergies from deployed units[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should activate multiple synergies simultaneously[39m[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should apply synergy bonuses to units[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should execute skills when rage is full[39m[32m 3[2mms[22m[39m
+[31m       [31m├ù[31m should calculate damage with modifiers[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should apply status effects[39m[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should detect victory when all enemies dead[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should detect defeat when all player units dead[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should generate enemy team with EASY difficulty[39m[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should generate enemy team with MEDIUM difficulty[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should generate enemy team with HARD difficulty[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should scale enemy strength with round number[32m 3[2mms[22m[39m
+[31m       [31m├ù[31m should apply difficulty multipliers[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should save game state mid-game[39m[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should load saved game state[39m[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should continue game from loaded state[39m[32m 1[2mms[22m[39m
+ [31mΓ¥»[39m tests/synergySystem.test.js [2m([22m[2m74 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 78[2mms[22m[39m
+       [32mΓ£ô[39m should calculate synergies for empty unit list[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should count units by class type[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should count units by tribe[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with undefined/null class or tribe[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should apply extra class count to top class for player side[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply extra tribe count to top tribe for player side[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not apply extra counts for enemy side[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not apply extra counts when units list is empty[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return null for invalid synergy definition[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return null when count does not meet any threshold[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return first tier bonus when count meets first threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return highest tier bonus when count meets multiple thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return middle tier bonus when count is between thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should work with real CLASS_SYNERGY data[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return -1 for invalid thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return -1 when count does not meet any threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return 0 for first tier[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return highest tier index when count meets multiple thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return correct tier for count between thresholds[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle null/undefined inputs gracefully[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should apply class synergy bonus to unit mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply tribe synergy bonus to unit mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply both class and tribe synergies cumulatively[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not apply synergy if count does not meet threshold[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should initialize mods object if not present[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle null bonus gracefully[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply flat defense bonus[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should apply flat magic defense bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply HP percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply attack percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply magic attack percentage bonus[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply mod-based bonuses[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should apply shield and rage bonuses[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply status effect bonuses[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamHpPct as hpPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamAtkPct as atkPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle teamMatkPct as matkPct[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle empty team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle null/undefined team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should apply synergies to all units in team[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should apply starting rage from mods[39m[32m 14[2mms[22m[39m
+[31m       [31m├ù[31m should cap starting rage at rageMax[39m[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should apply starting shield from mods[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle multiple synergies simultaneously[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should support extra counts from options[32m 9[2mms[22m[39m
+       [32mΓ£ô[39m should return empty string for invalid synergy[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return empty string for invalid level[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should return description for valid class synergy[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should return description for valid tribe synergy[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should include threshold in description[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return class icons[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return tribe icons[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should return default icon for unknown synergy[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return empty array for empty team[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return active class synergies[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return active tribe synergies[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should return multiple active synergies[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not return synergies below threshold[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should support extra counts in getActiveSynergies[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should return higher tier for higher counts[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should calculate and apply synergies for a complete team[32m 5[2mms[22m[39m
+       [32mΓ£ô[39m should recalculate synergies when team composition changes[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle team with all different classes and tribes[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle team with maximum synergy tiers[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle mixed star levels (star level should not affect synergy count)[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with missing base property[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with string "undefined" or "null" values[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle very large teams[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle units with whitespace in class/tribe values[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should not crash with circular references in unit objects[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle bonus with zero values[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should handle negative bonus values gracefully[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should export all required functions[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m should have functions that match named exports[32m 0[2mms[22m[39m
+ [31mΓ¥»[39m tests/libraryModalProperties.test.js [2m([22m[2m5 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 483[2mms[22m[39m
+[31m     [31m├ù[31m should keep open/close/toggle behavior deterministic[39m[32m 21[2mms[22m[39m
+[31m     [31m├ù[31m should invoke onClose and return interaction when modal closes[39m[32m 7[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m should clamp modal size inside viewport for any valid resolution [33m 430[2mms[22m[39m
+     [32mΓ£ô[39m should block planning interactions while library is visible[32m 2[2mms[22m[39m
+[31m     [31m├ù[31m should preserve scene phase/state after opening and closing library[39m[32m 19[2mms[22m[39m
+ [31mΓ¥»[39m tests/assassinTargetingBug.test.js [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 50[2mms[22m[39m
+     [32mΓ£ô[39m Property 1: Assassin should target farthest enemy[32m 10[2mms[22m[39m
+     [32mΓ£ô[39m Property 2: When multiple enemies equidistant, prefer same row[32m 0[2mms[22m[39m
+     [32mΓ£ô[39m Property 3: When no same row target, prefer top row over bottom[32m 0[2mms[22m[39m
+[31m     [31m├ù[31m Property 4: Assassin always targets enemy with highest column[39m[32m 31[2mms[22m[39m
+     [32mΓ£ô[39m Property 5: Assassin skills with ASSASSIN_BACK pattern target farthest (control)[32m 0[2mms[22m[39m
+     [32mΓ£ô[39m Property 6: Comprehensive tie-breaking with multiple farthest enemies[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m tests/craftingPreservation.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [31mΓ¥»[39m tests/smokeTest.test.js [2m([22m[2m12 tests[22m[2m | [22m[31m10 failed[39m[2m)[22m[32m 212[2mms[22m[39m
+[31m       [31m├ù[31m should refresh shop and buy unit[39m[32m 187[2mms[22m[39m
+[31m       [31m├ù[31m should lock and preserve shop[39m[32m 8[2mms[22m[39m
+[31m       [31m├ù[31m should place and move units on board[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should enforce deploy limit[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should initialize combat and execute turns[39m[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should detect combat end[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should detect and perform upgrade[39m[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should not upgrade star 3 units[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m should calculate synergies[39m[32m 2[2mms[22m[39m
+[31m       [31m├ù[31m should generate enemy team[39m[32m 2[2mms[22m[39m
+[31m       [31m├ù[31m should scale difficulty[39m[32m 1[2mms[22m[39m
+[31m       [31m├ù[31m should simulate a complete game flow[39m[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould create 25 unit sprites within 100ms
+[22m[39mSprite creation time for 25 units: 18.30ms
+
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould update 25 units within 33ms frame budget
+[22m[39mUpdate cycle time for 25 units: 0.48ms
+
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould track sprite count for 25 units
+[22m[39mTotal sprites for 25 units: 350
+Sprites per unit: 14
+
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould support sprite cleanup and recreation
+[22m[39mSprite creation: 15.83ms
+Sprite cleanup: 0.62ms
+
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould maintain 30+ FPS with full frame simulation
+[22m[39mFull frame time for 25 units: 0.62ms
+Estimated FPS: 1602.1
+
+[90mstdout[2m | tests/performanceProfile.test.js[2m > [22m[2mPerformance Profile - 25 Units on Board[2m > [22m[2mshould demonstrate sprite pooling benefits
+[22m[39mCreate/Destroy pattern: 205.17ms
+Pooling pattern: 19.56ms
+Improvement: 90.5%
+
+ [32mΓ£ô[39m tests/performanceProfile.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 288[2mms[22m[39m
+ [32mΓ£ô[39m tests/csvRoundTrip.test.js [2m([22m[2m7 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m should produce consistent validation results across multiple parses (property-based) [33m 308[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiSearchFilter.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 290[2mms[22m[39m
+ [32mΓ£ô[39m tests/rageGain.test.js [2m([22m[2m3 tests[22m[2m)[22m[33m 454[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Property 1: Attacker gains rage only on hit, defender gains rage when attacked [33m 432[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopSystemProperties.test.js [2m([22m[2m26 tests[22m[2m)[22m[33m 1171[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shop offers have sequential slot numbers (property-based) [33m 356[2mms[22m[39m
+[90mstdout[2m | tests/saveDataLevelValidation.test.js[2m > [22m[2mSave Data Level Validation[2m > [22m[2mproperty-based tests[2m > [22m[2mmigration scenarios[2m > [22m[2mold save with level 9 (old cap) is preserved
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataLevelValidation.test.js[2m > [22m[2mSave Data Level Validation[2m > [22m[2mproperty-based tests[2m > [22m[2mmigration scenarios[2m > [22m[2mold save with level 12 (old Planning cap) is preserved
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 12 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataLevelValidation.test.js[2m > [22m[2mSave Data Level Validation[2m > [22m[2mproperty-based tests[2m > [22m[2mmigration scenarios[2m > [22m[2mcorrupted save with invalid level is handled
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+ [32mΓ£ô[39m tests/saveDataLevelValidation.test.js [2m([22m[2m17 tests[22m[2m)[22m[32m 224[2mms[22m[39m
+ [32mΓ£ô[39m tests/progression.test.js [2m([22m[2m14 tests[22m[2m)[22m[33m 653[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should generate no tier 1 or 2 units at level 12+ [33m 623[2mms[22m[39m
+ [32mΓ£ô[39m tests/aiSystemProperties.test.js [2m([22m[2m27 tests[22m[2m)[22m[33m 325[2mms[22m[39m
+ [32mΓ£ô[39m tests/boardSystemProperties.test.js [2m([22m[2m17 tests[22m[2m)[22m[33m 436[2mms[22m[39m
+ [32mΓ£ô[39m tests/evasionSystemProperties.test.js [2m([22m[2m19 tests[22m[2m)[22m[32m 250[2mms[22m[39m
+ [32mΓ£ô[39m tests/recipeDiagramProperties.test.js [2m([22m[2m9 tests[22m[2m)[22m[33m 22517[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should display input pattern, output unit, and stat benefits for all recipe nodes [33m 3356[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should assign each recipe to exactly one category: Offense, Defense, or Magic [33m 2305[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should categorize offense recipes based on atk, atkPct, or critPct [33m 4015[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should categorize defense recipes based on hp, def, or mdef stats [33m 4126[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should categorize magic recipes based on matk or matkPct [33m 3956[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should track selected node when any recipe node is clicked [33m 1734[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should process related recipes when highlighting [33m 2482[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should maintain connection data structure when highlighting [33m 436[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSystemProperties.test.js [2m([22m[2m19 tests[22m[2m)[22m[33m 579[2mms[22m[39m
+[90mstdout[2m | tests/libraryModalStats.test.js[2m > [22m[2mLibraryModal Stats Display[2m > [22m[2mLibraryModal renderUnitDetail logic should work
+[22m[39m
+Test unit stats:
+  HP: 340 (should not be 100 unless actual value)
+  ATK: 42 (should not be 50 unless actual value)
+  DEF: 30 (should not be 20 unless actual value)
+
+ [32mΓ£ô[39m tests/libraryModalStats.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 286[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopRefreshIntegration.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 185[2mms[22m[39m
+ [32mΓ£ô[39m tests/damageDisplayProperties.test.js [2m([22m[2m16 tests[22m[2m)[22m[33m 406[2mms[22m[39m
+ [32mΓ£ô[39m tests/equipmentRagePreservation.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 188[2mms[22m[39m
+ [32mΓ£ô[39m tests/goldReserveScaling.test.js [2m([22m[2m20 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32mΓ£ô[39m tests/probabilityScaling.test.js [2m([22m[2m17 tests[22m[2m)[22m[33m 373[2mms[22m[39m
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mCombat Turn Performance[2m > [22m[2mshould execute combat turn in < 16ms
+[22m[39mCombat turn execution time: 0.04ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mCombat Turn Performance[2m > [22m[2mshould execute multiple combat turns efficiently
+[22m[39mAverage combat turn time: 0.00ms
+Max combat turn time: 0.00ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mShop Refresh Performance[2m > [22m[2mshould refresh shop in < 50ms
+[22m[39mShop refresh time: 0.40ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mShop Refresh Performance[2m > [22m[2mshould refresh shop multiple times efficiently
+[22m[39mAverage shop refresh time: 0.04ms
+Max shop refresh time: 0.15ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mShop Refresh Performance[2m > [22m[2mshould generate shop offers at different levels efficiently
+[22m[39mAverage shop refresh across all levels: 0.02ms
+Max shop refresh time: 0.05ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mSynergy Calculation Performance[2m > [22m[2mshould calculate synergies in < 10ms
+[22m[39mSynergy calculation time: 0.34ms
+Active synergies: undefined
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mSynergy Calculation Performance[2m > [22m[2mshould calculate synergies with full board efficiently
+[22m[39mSynergy calculation time (25 units): 0.06ms
+Active synergies: undefined
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mSynergy Calculation Performance[2m > [22m[2mshould calculate synergies repeatedly without degradation
+[22m[39mAverage synergy calculation time (100 runs): 0.00ms
+Max synergy calculation time: 0.03ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mScene Transition Performance[2m > [22m[2mshould prepare combat state for scene transition in < 100ms
+[22m[39mScene transition preparation time: 0.22ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mScene Transition Performance[2m > [22m[2mshould prepare planning state for scene transition in < 100ms
+[22m[39mPlanning scene preparation time: 0.10ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mPerformance Regression Tests[2m > [22m[2mshould maintain consistent performance across operations
+[22m[39mshopRefresh: avg=0.03ms, p95=0.09ms, stdDev=0.03ms
+synergyCalc: avg=0.00ms, p95=0.01ms, stdDev=0.00ms
+combatTurn: avg=0.00ms, p95=0.00ms, stdDev=0.00ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mPerformance Regression Tests[2m > [22m[2mshould not accumulate memory during repeated operations
+[22m[39mAverage time per iteration (1000 runs): 0.02ms
+
+[90mstdout[2m | tests/performanceBenchmarks.test.js[2m > [22m[2mPerformance Benchmarks - Task 9.4.2[2m > [22m[2mPerformance Requirements Summary[2m > [22m[2mshould meet all performance targets
+[22m[39m
+=== Performance Requirements Summary ===
+Combat Turn:       0.00ms (target: < 16ms)
+Shop Refresh:      0.02ms (target: < 50ms)
+Synergy Calc:      0.01ms (target: < 10ms)
+Scene Transition:  0.10ms (target: < 100ms)
+========================================
+
+
+ [32mΓ£ô[39m tests/performanceBenchmarks.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32mΓ£ô[39m tests/levelCapEnforcement.test.js [2m([22m[2m24 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSpeedScalingProperties.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 292[2mms[22m[39m
+ [32mΓ£ô[39m tests/levelBasedCalculations.test.js [2m([22m[2m24 tests[22m[2m)[22m[32m 190[2mms[22m[39m
+ [32mΓ£ô[39m tests/unitCatalog.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 124[2mms[22m[39m
+ [32mΓ£ô[39m tests/unitVisualCsvIntegration.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 197[2mms[22m[39m
+ [32mΓ£ô[39m tests/encyclopedia.test.js [2m([22m[2m11 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+ [32mΓ£ô[39m tests/tierOdds.test.js [2m([22m[2m7 tests[22m[2m)[22m[32m 264[2mms[22m[39m
+[90mstdout[2m | tests/skillCountAndUniqueness.test.js[2m > [22m[2mSkill Count and Uniqueness Property Tests[2m > [22m[2mshould report the exact skill count
+[22m[39mTotal skills in SKILL_LIBRARY: 270
+
+ [32mΓ£ô[39m tests/skillCountAndUniqueness.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32mΓ£ô[39m tests/skillUpgradeProperties.test.js [2m([22m[2m15 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+ [32mΓ£ô[39m tests/tankerAutoCastBug.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32mΓ£ô[39m tests/upgradeSystem.test.js [2m([22m[2m82 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32mΓ£ô[39m tests/damageScaling.test.js [2m([22m[2m19 tests[22m[2m)[22m[32m 155[2mms[22m[39m
+ [32mΓ£ô[39m tests/missingSkillErrorHandling.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopProgressionIntegration.test.js [2m([22m[2m27 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32mΓ£ô[39m tests/finalIntegration.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32mΓ£ô[39m tests/targetingSystemPreservation.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 235[2mms[22m[39m
+ [32mΓ£ô[39m tests/triceratopsSaveCompatibility.test.js [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m tests/tooltipEvasionProperties.test.js [2m([22m[2m15 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+[90mstdout[2m | tests/skillDifferentiation.test.js[2m > [22m[2mSkill Differentiation Property Tests[2m > [22m[2mshould report skill usage statistics
+[22m[39m
+Skill Usage Statistics:
+  Total skills in library: 270
+  Skills used by units: 120
+  Unused skills: 150
+  Total units: 120
+
+ [32mΓ£ô[39m tests/skillDifferentiation.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopTierOdds.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32mΓ£ô[39m tests/boardSystem.test.js [2m([22m[2m85 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+ [32mΓ£ô[39m tests/elementalCounterProperties.test.js [2m([22m[2m14 tests[22m[2m)[22m[32m 237[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiStatDisplayProperties.test.js [2m([22m[2m17 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m tests/recipeDiagram.test.js [2m([22m[2m16 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32mΓ£ô[39m tests/aiSystem.test.js [2m([22m[2m56 tests[22m[2m)[22m[32m 114[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopSystem.test.js [2m([22m[2m54 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+[90mstdout[2m | tests/mainMenuSceneIntegration.test.js[2m > [22m[2mMainMenuScene Integration Tests[2m > [22m[2mError handling[2m > [22m[2mshould handle continue with corrupted save data
+[22m[39m[Save Data Migration]
+  ERROR: Player data is corrupted
+[Save Data Migration]
+  ERROR: Player data is corrupted
+[Save Data Migration]
+  ERROR: Player data is corrupted
+
+ [32mΓ£ô[39m tests/mainMenuSceneIntegration.test.js [2m([22m[2m34 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m tests/backwardCompatibility.test.js [2m([22m[2m14 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32mΓ£ô[39m tests/equipmentRageBonusBug.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 127[2mms[22m[39m
+ [32mΓ£ô[39m tests/emojiUniqueness.test.js [2m([22m[2m7 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould migrate version 1 save data to version 2
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould clamp level to valid range [1, 25]
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 15 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 25 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 30 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 100 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould reset invalid deployCapBonus to 0
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+  WARNING: Invalid deployCapBonus -10, resetting to 0
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould clamp negative values to valid minimums
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mUnit Replacement[2m > [22m[2mshould handle units that exist in catalog
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mUnit Replacement[2m > [22m[2mshould remove units with invalid IDs
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Removed invalid unit invalid_unit_id_12345 from board[0][0]
+  Removed invalid unit another_invalid_unit from bench[0]
+  Removed invalid unit yet_another_invalid_unit from shop[0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing payload
+[22m[39m[Save Data Migration]
+  ERROR: Save payload is corrupted
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing player data
+[22m[39m[Save Data Migration]
+  ERROR: Player data is corrupted
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for invalid payload type
+[22m[39m[Save Data Migration]
+  ERROR: Save payload is corrupted
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mMigration Logging[2m > [22m[2mshould log migration actions to console
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle missing board array
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle missing bench and shop arrays
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+ [32mΓ£ô[39m tests/saveDataCompatibility.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+ [32mΓ£ô[39m tests/rageResetBug.test.js [2m([22m[2m4 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatFlowPreservation.test.js [2m([22m[2m7 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatOverlayInteractionBlocking.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32mΓ£ô[39m tests/waspSkillBalancing.test.js [2m([22m[2m24 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32mΓ£ô[39m tests/unitUpgradeMerge.test.js [2m([22m[2m31 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+[90mstdout[2m | tests/spritePool.test.js[2m > [22m[2mSpritePool[2m > [22m[2mshould reduce allocation overhead with pooling
+[22m[39mPooling time for 100 iterations: 3.63ms
+
+ [32mΓ£ô[39m tests/spritePool.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m tests/exampleModes.test.js [2m([22m[2m46 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32mΓ£ô[39m tests/skillMechanicsPreservation.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+ [32mΓ£ô[39m tests/animationPreview.test.js [2m([22m[2m34 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+[90mstdout[2m | tests/saveDataIntegration.test.js[2m > [22m[2mSave Data Integration[2m > [22m[2mshould handle old version 1 save with level 9
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+ [32mΓ£ô[39m tests/saveDataIntegration.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSystemStatusEffects.test.js [2m([22m[2m63 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiButtonCombat.test.js [2m([22m[2m27 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32mΓ£ô[39m tests/planningSceneIntegration.test.js [2m([22m[2m27 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32mΓ£ô[39m tests/unitVisualRoundTripConsistency.test.js [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopSellPrice.test.js [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32mΓ£ô[39m tests/boardOperations.test.js [2m([22m[2m35 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32mΓ£ô[39m tests/mainMenuSceneGameMode.test.js [2m([22m[2m32 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32mΓ£ô[39m tests/knockbackErrorHandling.test.js [2m([22m[2m23 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mslowTurns to evadeDebuffTurns Migration[2m > [22m[2mshould migrate slowTurns to evadeDebuffTurns on board units
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit bear_ancient at board[0][0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mslowTurns to evadeDebuffTurns Migration[2m > [22m[2mshould migrate slowTurns to evadeDebuffTurns on bench units
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit wolf_alpha on bench[0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mslowTurns to evadeDebuffTurns Migration[2m > [22m[2mshould not migrate slowTurns if value is 0
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mhasteTurns to evadeBuffTurns Migration[2m > [22m[2mshould migrate hasteTurns to evadeBuffTurns on board units
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit fox_flame at board[0][0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mhasteTurns to evadeBuffTurns Migration[2m > [22m[2mshould migrate hasteTurns to evadeBuffTurns on bench units
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit fox_flame on bench[0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mhasteTurns to evadeBuffTurns Migration[2m > [22m[2mshould not migrate hasteTurns if value is 0
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mCombined Migration[2m > [22m[2mshould migrate both slowTurns and hasteTurns on different units
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit bear_ancient at board[0][0]
+  Migrated legacy speed statuses for unit fox_flame at board[0][1]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mCombined Migration[2m > [22m[2mshould handle units without legacy statuses
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mCombined Migration[2m > [22m[2mshould handle units without statuses object
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mMigration Logging[2m > [22m[2mshould log migration of legacy statuses
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit bear_ancient at board[0][0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle multiple units with legacy statuses
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit bear_ancient at board[0][0]
+  Migrated legacy speed statuses for unit wolf_alpha at board[0][1]
+  Migrated legacy speed statuses for unit fox_flame on bench[0]
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/legacyStatusMigration.test.js[2m > [22m[2mLegacy Status Migration[2m > [22m[2mEdge Cases[2m > [22m[2mshould preserve other status effects during migration
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migrated legacy speed statuses for unit bear_ancient at board[0][0]
+  Migration to version 2 complete
+
+ [32mΓ£ô[39m tests/legacyStatusMigration.test.js [2m([22m[2m12 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSystemDamage.test.js [2m([22m[2m43 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m tests/errorRecovery.test.js [2m([22m[2m19 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSceneIntegration.test.js [2m([22m[2m21 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiSearch.test.js [2m([22m[2m32 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSceneGameMode.test.js [2m([22m[2m14 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSystemInitialization.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m tests/damageNumberOffset.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m tests/csvParsing.test.js [2m([22m[2m16 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m tests/gameModeLayer.test.js [2m([22m[2m43 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32mΓ£ô[39m tests/assassinSkillUpgradeIntegration.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32mΓ£ô[39m tests/gameModeRegistry.test.js [2m([22m[2m23 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatIntegration.test.js [2m([22m[2m22 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m tests/shopLockUnlock.test.js [2m([22m[2m25 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m tests/fullGameFlowIntegration.test.js [2m([22m[2m10 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiStatDisplay.test.js [2m([22m[2m23 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m tests/mainEntryPoint.test.js [2m([22m[2m14 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m tests/elementalAdvantageLogging.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m tests/gameModeConfig.test.js [2m([22m[2m34 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+[90mstdout[2m | tests/tier3RecipesBug.test.js[2m > [22m[2mBug Condition Exploration - Tier 3 Recipe Requirements[2m > [22m[2mProperty 3: Equipment tier restrictions should prevent 1-star units from equipping tier 3 items
+[22m[39m
+=== BUG DOCUMENTATION ===
+EXPECTED: 1-star units cannot equip tier 3 items
+ACTUAL: No restriction code exists - any unit can equip any tier
+FIX NEEDED: Implement canEquipByStarLevel validation in equipment system
+=========================
+
+
+ [32mΓ£ô[39m tests/tier3RecipesBug.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m tests/errorScenarios.test.js [2m([22m[2m30 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m tests/sceneGameModeIntegration.test.js [2m([22m[2m22 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32mΓ£ô[39m tests/animationPreviewProperties.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m tests/crossBrowserSmoke.test.js [2m([22m[2m12 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m tests/tooltipEvasionIntegration.test.js [2m([22m[2m12 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSystemActionExecution.test.js [2m([22m[2m37 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m tests/rageOverflow.test.js [2m([22m[2m15 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mΓ£ô[39m tests/wikiOverlayInteractionBlocking.test.js [2m([22m[2m14 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m tests/easyModeScaling.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m tests/knockback.test.js [2m([22m[2m22 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m tests/i18n.test.js [2m([22m[2m12 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m tests/planningSceneGameMode.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m tests/sharedConstants.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m tests/combatSpeedScaling.test.js [2m([22m[2m22 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m tests/assassinSkillUpgrade.test.js [2m([22m[2m16 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m tests/leopardBuff.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32mΓ£ô[39m tests/endlessScaling.test.js [2m([22m[2m11 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m tests/equipmentRageFixVerification.test.js [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m tests/evasionBuffDebuff.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32mΓ£ô[39m tests/controlEffectScaling.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m tests/hitChanceIntegration.test.js [2m([22m[2m6 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32mΓ£ô[39m tests/goldScalingIntegration.test.js [2m([22m[2m13 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32mΓ£ô[39m tests/hitChance.test.js [2m([22m[2m9 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m112 passed[39m[22m[90m (117)[39m
+[2m      Tests [22m [1m[31m36 failed[39m[22m[2m | [22m[1m[32m2137 passed[39m[22m[90m (2173)[39m
+[2m   Start at [22m 20:34:02
+[2m   Duration [22m 148.79s[2m (transform 4.47s, setup 5.51s, import 50.23s, tests 35.03s, environment 465.21s)[22m
+

@@ -28,7 +28,7 @@ describe('Save Data Integration', () => {
         xp: 50,
         level: 15,
         round: 25,
-        gameMode: 'PVE_JOURNEY',
+        gameMode: 'EndlessPvEClassic',
         board: Array.from({ length: 5 }, () => Array(5).fill(null)),
         bench: [],
         shop: []

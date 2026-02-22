@@ -44,7 +44,7 @@ describe('Performance Profile - 25 Units on Board', () => {
       },
       combatSprites: [],
       player: {
-        gameMode: 'PVE_JOURNEY',
+        gameMode: 'EndlessPvEClassic',
         round: 35,
         teamHpPct: 0,
         teamAtkPct: 0,

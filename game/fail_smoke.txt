@@ -1,0 +1,190 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mP:/DigiGO/games/game[39m
+
+ [31m❯[39m tests/smokeTest.test.js [2m([22m[2m12 tests[22m[2m | [22m[31m10 failed[39m[2m)[22m[32m 149[2mms[22m[39m
+[31m       [31m×[31m should refresh shop and buy unit[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m should lock and preserve shop[39m[32m 20[2mms[22m[39m
+[31m       [31m×[31m should place and move units on board[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should enforce deploy limit[39m[32m 1[2mms[22m[39m
+[31m       [31m×[31m should initialize combat and execute turns[39m[32m 1[2mms[22m[39m
+       [32m✓[39m should detect combat end[32m 1[2mms[22m[39m
+[31m       [31m×[31m should detect and perform upgrade[39m[32m 4[2mms[22m[39m
+       [32m✓[39m should not upgrade star 3 units[32m 1[2mms[22m[39m
+[31m       [31m×[31m should calculate synergies[39m[32m 14[2mms[22m[39m
+[31m       [31m×[31m should generate enemy team[39m[32m 70[2mms[22m[39m
+[31m       [31m×[31m should scale difficulty[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m should simulate a complete game flow[39m[32m 1[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mShop System Smoke Test[2m > [22mshould refresh shop and buy unit
+[31m[1mTypeError[22m: createUnitFn is not a function[39m
+[36m [2m❯[22m Object.buyUnit src/systems/ShopSystem.js:[2m134:21[22m[39m
+    [90m132| [39m
+    [90m133| [39m  [90m// Create owned unit[39m
+    [90m134| [39m  [35mconst[39m ownedUnit [33m=[39m [34mcreateUnitFn[39m(base[33m.[39mid[33m,[39m [34m1[39m)[33m;[39m
+    [90m   | [39m                    [31m^[39m
+    [90m135| [39m  [35mif[39m ([33m![39mownedUnit) {
+    [90m136| [39m    [35mreturn[39m { success[33m:[39m [35mfalse[39m[33m,[39m error[33m:[39m [32m'Failed to create unit'[39m }[33m;[39m
+[90m [2m❯[22m tests/smokeTest.test.js:[2m34:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mShop System Smoke Test[2m > [22mshould lock and preserve shop
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m53:47[22m[39m
+    [90m 51| [39m
+    [90m 52| [39m      [33mShopSystem[39m[33m.[39m[34mlockShop[39m(refreshResult[33m.[39mplayer)
+    [90m 53| [39m      [34mexpect[39m(refreshResult[33m.[39mplayer[33m.[39mshopLocked)[33m.[39m[34mtoBe[39m([35mtrue[39m)
+    [90m   | [39m                                              [31m^[39m
+    [90m 54| [39m      [34mexpect[39m(refreshResult[33m.[39mplayer[33m.[39mshop)[33m.[39m[34mtoEqual[39m(shopOffers)
+    [90m 55| [39m    })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mBoard System Smoke Test[2m > [22mshould place and move units on board
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m70:35[22m[39m
+    [90m 68| [39m      [90m// Place unit[39m
+    [90m 69| [39m      [35mconst[39m placeResult [33m=[39m [33mBoardSystem[39m[33m.[39m[34mplaceUnit[39m(board[33m,[39m unit[33m,[39m [34m2[39m[33m,[39m [34m2[39m)
+    [90m 70| [39m      [34mexpect[39m(placeResult[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)
+    [90m   | [39m                                  [31m^[39m
+    [90m 71| [39m      [34mexpect[39m([33mBoardSystem[39m[33m.[39m[34mgetUnitAt[39m(board[33m,[39m [34m2[39m[33m,[39m [34m2[39m))[33m.[39m[34mtoBe[39m(unit)
+    [90m 72| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mBoard System Smoke Test[2m > [22mshould enforce deploy limit
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m95:57[22m[39m
+    [90m 93| [39m      }
+    [90m 94| [39m
+    [90m 95| [39m      [34mexpect[39m([33mBoardSystem[39m[33m.[39m[34mcanDeploy[39m(board[33m,[39m deployLimit))[33m.[39m[34mtoBe[39m([35mfalse[39m)
+    [90m   | [39m                                                        [31m^[39m
+    [90m 96| [39m    })
+    [90m 97| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mCombat System Smoke Test[2m > [22mshould initialize combat and execute turns
+[31m[1mAssertionError[22m: expected +0 to be 2 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 2[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m132:38[22m[39m
+    [90m130| [39m      [34mexpect[39m(state[33m.[39mplayerUnits[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)
+    [90m131| [39m      [34mexpect[39m(state[33m.[39menemyUnits[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)
+    [90m132| [39m      [34mexpect[39m(state[33m.[39mturnOrder[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m2[39m)
+    [90m   | [39m                                     [31m^[39m
+    [90m133| [39m
+    [90m134| [39m      [90m// Execute one turn[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mUpgrade System Smoke Test[2m > [22mshould detect and perform upgrade
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'forEach')[39m
+[36m [2m❯[22m Object.findUpgradeCandidates src/systems/UpgradeSystem.js:[2m152:9[22m[39m
+    [90m150| [39m
+    [90m151| [39m  [90m// Collect units from bench[39m
+    [90m152| [39m  bench[33m.[39m[34mforEach[39m((unit[33m,[39m index) [33m=>[39m {
+    [90m   | [39m        [31m^[39m
+    [90m153| [39m    [35mif[39m (unit) {
+    [90m154| [39m      unitRefs[33m.[39m[34mpush[39m({
+[90m [2m❯[22m tests/smokeTest.test.js:[2m205:40[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mSynergy System Smoke Test[2m > [22mshould calculate synergies
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m257:40[22m[39m
+    [90m255| [39m
+    [90m256| [39m      [35mconst[39m synergies [33m=[39m [33mSynergySystem[39m[33m.[39m[34mcalculateSynergies[39m(units)
+    [90m257| [39m      [34mexpect[39m([33mArray[39m[33m.[39m[34misArray[39m(synergies))[33m.[39m[34mtoBe[39m([35mtrue[39m)
+    [90m   | [39m                                       [31m^[39m
+    [90m258| [39m    })
+    [90m259| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mAI System Smoke Test[2m > [22mshould generate enemy team
+[31m[1mAssertionError[22m: expected 1 to be 4 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 4[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m tests/smokeTest.test.js:[2m274:31[22m[39m
+    [90m272| [39m      [35mconst[39m uids [33m=[39m enemyTeam[33m.[39m[34mmap[39m(u [33m=>[39m u[33m.[39muid)
+    [90m273| [39m      [35mconst[39m uniqueUids [33m=[39m [35mnew[39m [33mSet[39m(uids)
+    [90m274| [39m      [34mexpect[39m(uniqueUids[33m.[39msize)[33m.[39m[34mtoBe[39m(uids[33m.[39mlength)
+    [90m   | [39m                              [31m^[39m
+    [90m275| [39m    })
+    [90m276| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mAI System Smoke Test[2m > [22mshould scale difficulty
+[31m[1mTypeError[22m: actual value must be number or bigint, received "object"[39m
+[36m [2m❯[22m tests/smokeTest.test.js:[2m282:30[22m[39m
+    [90m280| [39m      [35mconst[39m hardMultiplier [33m=[39m [33mAISystem[39m[33m.[39m[34mgetAIDifficultyMultiplier[39m([32m'HARD'[39m)
+    [90m281| [39m
+    [90m282| [39m      [34mexpect[39m(easyMultiplier)[33m.[39m[34mtoBeLessThan[39m(mediumMultiplier)
+    [90m   | [39m                             [31m^[39m
+    [90m283| [39m      [34mexpect[39m(mediumMultiplier)[33m.[39m[34mtoBeLessThan[39m(hardMultiplier)
+    [90m284| [39m    })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/smokeTest.test.js[2m > [22mSmoke Tests - Core Game Functionality[2m > [22mIntegration Smoke Test[2m > [22mshould simulate a complete game flow
+[31m[1mTypeError[22m: createUnitFn is not a function[39m
+[36m [2m❯[22m Object.buyUnit src/systems/ShopSystem.js:[2m134:21[22m[39m
+    [90m132| [39m
+    [90m133| [39m  [90m// Create owned unit[39m
+    [90m134| [39m  [35mconst[39m ownedUnit [33m=[39m [34mcreateUnitFn[39m(base[33m.[39mid[33m,[39m [34m1[39m)[33m;[39m
+    [90m   | [39m                    [31m^[39m
+    [90m135| [39m  [35mif[39m ([33m![39mownedUnit) {
+    [90m136| [39m    [35mreturn[39m { success[33m:[39m [35mfalse[39m[33m,[39m error[33m:[39m [32m'Failed to create unit'[39m }[33m;[39m
+[90m [2m❯[22m tests/smokeTest.test.js:[2m307:38[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (12)[39m
+[2m   Start at [22m 20:55:49
+[2m   Duration [22m 7.69s[2m (transform 1.43s, setup 219ms, import 1.61s, tests 149ms, environment 4.71s)[22m
+

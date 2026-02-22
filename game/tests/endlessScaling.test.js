@@ -8,7 +8,7 @@
  * - AI units (RIGHT side) receive scaling buffs when round > 30 in Endless mode
  * - Scaling formula is correct: 1 + (round - 30) * 0.05
  * - Scaling applies to HP, ATK, and MATK
- * - Scaling does NOT apply when game mode is not PVE_JOURNEY (Endless)
+ * - Scaling does NOT apply when game mode is not EndlessPvEClassic (Endless)
  * - Scaling does NOT apply when round <= 30
  */
 
@@ -47,7 +47,7 @@ class MockCombatScene {
     let matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
 
     // Apply Endless mode scaling for AI units when round > 30
-    if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
+    if (side === "RIGHT" && this.player.gameMode === "EndlessPvEClassic" && this.player.round > 30) {
       const scaleFactor = 1 + (this.player.round - 30) * 0.05;
       hpBase = Math.round(hpBase * scaleFactor);
       atkBase = Math.round(atkBase * scaleFactor);
@@ -67,7 +67,7 @@ describe('Endless Mode AI Scaling', () => {
 
   describe('Requirement 5.1: No player healing buffs', () => {
     it('should NOT apply healing buffs to player units in Endless mode', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 35);
+      const scene = new MockCombatScene('EndlessPvEClassic', 35);
       const playerStats = scene.calculateUnitStats('LEFT', baseStats);
       
       // Player stats should be base stats (no healing buff)
@@ -79,7 +79,7 @@ describe('Endless Mode AI Scaling', () => {
 
   describe('Requirement 5.2: AI scaling when round > 30 in Endless mode', () => {
     it('should apply scaling buffs to AI units when round > 30', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 35);
+      const scene = new MockCombatScene('EndlessPvEClassic', 35);
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // Expected: base * aiMult * scaleFactor
@@ -96,7 +96,7 @@ describe('Endless Mode AI Scaling', () => {
 
   describe('Requirement 5.3: AI scaling affects HP, ATK, and MATK', () => {
     it('should increase all three stats (HP, ATK, MATK) for AI units', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 40);
+      const scene = new MockCombatScene('EndlessPvEClassic', 40);
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // scaleFactor = 1 + (40 - 30) * 0.05 = 1.5
@@ -133,7 +133,7 @@ describe('Endless Mode AI Scaling', () => {
       ];
 
       testCases.forEach(({ round, expectedFactor }) => {
-        const scene = new MockCombatScene('PVE_JOURNEY', round);
+        const scene = new MockCombatScene('EndlessPvEClassic', round);
         const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
         
         const expectedHp = Math.round(baseStats.hp * 1.0 * expectedFactor);
@@ -150,7 +150,7 @@ describe('Endless Mode AI Scaling', () => {
       const testCases = [1, 10, 20, 30];
 
       testCases.forEach((round) => {
-        const scene = new MockCombatScene('PVE_JOURNEY', round);
+        const scene = new MockCombatScene('EndlessPvEClassic', round);
         const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
         
         // No scaling, only AI multiplier
@@ -167,7 +167,7 @@ describe('Endless Mode AI Scaling', () => {
 
   describe('Integration: Scaling with different AI difficulties', () => {
     it('should apply scaling on top of EASY mode AI multipliers', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 40, 'EASY');
+      const scene = new MockCombatScene('EndlessPvEClassic', 40, 'EASY');
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // scaleFactor = 1.5, EASY hpMult = 0.84
@@ -176,7 +176,7 @@ describe('Endless Mode AI Scaling', () => {
     });
 
     it('should apply scaling on top of HARD mode AI multipliers', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 40, 'HARD');
+      const scene = new MockCombatScene('EndlessPvEClassic', 40, 'HARD');
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // scaleFactor = 1.5, HARD hpMult = 1.15
@@ -187,7 +187,7 @@ describe('Endless Mode AI Scaling', () => {
 
   describe('Edge cases', () => {
     it('should handle round 31 (first round with scaling)', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 31);
+      const scene = new MockCombatScene('EndlessPvEClassic', 31);
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // scaleFactor = 1 + (31 - 30) * 0.05 = 1.05
@@ -196,7 +196,7 @@ describe('Endless Mode AI Scaling', () => {
     });
 
     it('should handle very high rounds (round 100)', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 100);
+      const scene = new MockCombatScene('EndlessPvEClassic', 100);
       const aiStats = scene.calculateUnitStats('RIGHT', baseStats);
       
       // scaleFactor = 1 + (100 - 30) * 0.05 = 4.5
@@ -205,7 +205,7 @@ describe('Endless Mode AI Scaling', () => {
     });
 
     it('should NOT affect player units even at high rounds', () => {
-      const scene = new MockCombatScene('PVE_JOURNEY', 100);
+      const scene = new MockCombatScene('EndlessPvEClassic', 100);
       const playerStats = scene.calculateUnitStats('LEFT', baseStats);
       
       // Player stats should remain base stats

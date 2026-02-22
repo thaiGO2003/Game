@@ -3,6 +3,13 @@ import { SKILL_LIBRARY } from "../data/skills.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
+import { getElementLabel } from "../data/elementInfo.js";
+import {
+  describeBasicAttack,
+  describeSkillWithElement,
+  getSpeciesEvasion,
+  getClassAccuracy
+} from "../core/unitDescriptionHelper.js";
 import { RecipeDiagram } from "./RecipeDiagram.js";
 import { AttackPreview } from "./AttackPreview.js";
 import { SkillPreview } from "./SkillPreview.js";
@@ -465,16 +472,12 @@ export class LibraryModal {
     const range = toNumber(stats.range, 1);
     const rageMax = toNumber(stats.rageMax, 3);
 
-    // Tính toán Accuracy và Evasion
-    const accuracyMap = {
-      TANKER: 85, FIGHTER: 95, ASSASSIN: 105,
-      ARCHER: 110, MAGE: 100, SUPPORT: 90
-    };
-    const accuracy = accuracyMap[unit.classType] || 100;
+    // Accuracy & Evasion from shared helpers (species-based from CSV)
+    const accuracy = getClassAccuracy(unit.classType, unit.tier);
+    const evasion = getSpeciesEvasion(unit.species);
 
-    // Evasion dựa trên ATK (proxy cho speed)
-    const baseSpeed = atk;
-    const evasion = Math.min(35, Math.max(5, Math.floor(baseSpeed / 10)));
+    // Element label
+    const elementLabel = getElementLabel(unit.tribe);
 
     const back = this.scene.add.text(0, y, "← Quay lại danh sách", {
       fontFamily: UI_FONT,
@@ -489,7 +492,7 @@ export class LibraryModal {
     this.contentContainer.add(back);
     y += 28;
 
-    const panelH = 400;
+    const panelH = 500;
     const panel = this.scene.add.rectangle(0, y, this.layout.viewportW - 14, panelH, 0x0f1e30, 0.95).setOrigin(0, 0);
     panel.setStrokeStyle(1, 0x5a8ab0, 0.8);
     this.contentContainer.add(panel);
@@ -507,7 +510,7 @@ export class LibraryModal {
     }).setOrigin(1, 0);
 
     const desc = [
-      `🏷️ Tộc: ${getTribeLabelVi(unit.tribe)}    ⚔️ Nghề: ${getClassLabelVi(unit.classType)}`,
+      `${elementLabel ? elementLabel + " " : ""}🏷️ Tộc: ${getTribeLabelVi(unit.tribe)}    ⚔️ Nghề: ${getClassLabelVi(unit.classType)}`,
       `❤️ HP: ${hp}    🗡️ ATK: ${atk}    🛡️ DEF: ${def}`,
       `✨ MATK: ${matk}    🔰 MDEF: ${mdef}`,
       `🎯 Chính xác: ${accuracy}%    💨 Né tránh: ${evasion}%`,
@@ -540,7 +543,28 @@ export class LibraryModal {
       wordWrap: { width: this.layout.viewportW - 48 }
     });
 
-    this.contentContainer.add([title, tier, meta, skillTitle, skillName, skillDesc]);
+    // Element effect lines per star
+    const skillElementLines = describeSkillWithElement(skill, unit.tribe, unit);
+    const elementEffectsText = skillElementLines.filter(l => l.startsWith("⭐")).join("\n");
+    const elementSection = this.scene.add.text(16, y + 290, elementEffectsText, {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#b8e8b0",
+      lineSpacing: 6,
+      wordWrap: { width: this.layout.viewportW - 48 }
+    });
+
+    // Basic attack description
+    const basicAtkLines = describeBasicAttack(unit.classType, range);
+    const basicAtkSection = this.scene.add.text(16, y + 340, `🎯 Đánh thường:\n${basicAtkLines.map(l => `  • ${l}`).join("\n")}`, {
+      fontFamily: UI_FONT,
+      fontSize: "12px",
+      color: "#c8d8f0",
+      lineSpacing: 5,
+      wordWrap: { width: this.layout.viewportW - 48 }
+    });
+
+    this.contentContainer.add([title, tier, meta, skillTitle, skillName, skillDesc, elementSection, basicAtkSection]);
 
     let currentY = y + panelH + 16;
 

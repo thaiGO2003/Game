@@ -23,7 +23,7 @@ import { createDefaultUiSettings } from '../src/core/uiSettings.js';
 class MockMainMenuScene {
   constructor() {
     this.settings = createDefaultUiSettings();
-    this.selectedMode = 'PVE_JOURNEY';
+    this.selectedMode = 'EndlessPvEClassic';
     this.selectedDifficulty = 'MEDIUM';
     this.savedRun = null;
     
@@ -91,7 +91,7 @@ class MockMainMenuScene {
 
   // Game mode selection
   selectMode(mode) {
-    const validModes = ['PVE_JOURNEY', 'PVE_SANDBOX'];
+    const validModes = ['EndlessPvEClassic', 'PVE_SANDBOX'];
     if (!validModes.includes(mode)) {
       return { success: false, error: 'Invalid mode' };
     }
@@ -273,19 +273,19 @@ describe('MainMenuScene Integration Tests', () => {
 
   describe('Game start flow', () => {
     it('should select game mode', () => {
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
       
-      const result = scene.selectMode('PVE_JOURNEY');
+      const result = scene.selectMode('EndlessPvEClassic');
       expect(result.success).toBe(true);
-      expect(result.mode).toBe('PVE_JOURNEY');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      expect(result.mode).toBe('EndlessPvEClassic');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
     });
 
     it('should reject invalid game mode', () => {
       const result = scene.selectMode('INVALID_MODE');
       expect(result.success).toBe(false);
       expect(result.error).toBe('Invalid mode');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY'); // Should remain unchanged
+      expect(scene.selectedMode).toBe('EndlessPvEClassic'); // Should remain unchanged
     });
 
     it('should select difficulty', () => {
@@ -310,7 +310,7 @@ describe('MainMenuScene Integration Tests', () => {
     });
 
     it('should start new game with selected mode', () => {
-      scene.selectMode('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
       scene.selectDifficulty('HARD');
       
       const result = scene.startNewGame();
@@ -318,7 +318,7 @@ describe('MainMenuScene Integration Tests', () => {
       expect(result.success).toBe(true);
       expect(result.scene).toBe('PlanningScene');
       expect(result.data).toBeDefined();
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
       expect(result.data.forceNewRun).toBe(true);
       expect(result.data.settings).toBeDefined();
     });
@@ -326,7 +326,7 @@ describe('MainMenuScene Integration Tests', () => {
     it('should clear saved progress when starting new game', () => {
       // Create a fake saved run
       const fakeRun = {
-        player: { gameMode: 'PVE_JOURNEY', level: 5, gold: 20 },
+        player: { gameMode: 'EndlessPvEClassic', level: 5, gold: 20 },
         aiMode: 'MEDIUM'
       };
       saveProgress(fakeRun);
@@ -347,8 +347,8 @@ describe('MainMenuScene Integration Tests', () => {
       expect(scene.startPanelVisible).toBe(true);
       
       // Select mode
-      scene.selectMode('PVE_JOURNEY');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
       
       // Select difficulty
       scene.selectDifficulty('EASY');
@@ -357,7 +357,7 @@ describe('MainMenuScene Integration Tests', () => {
       // Start game
       const result = scene.startNewGame();
       expect(result.success).toBe(true);
-      expect(result.data.mode).toBe('PVE_JOURNEY');
+      expect(result.data.mode).toBe('EndlessPvEClassic');
     });
   });
 
@@ -368,7 +368,7 @@ describe('MainMenuScene Integration Tests', () => {
       expect(result.success).toBe(true);
       expect(scene.sceneStarted).toBe('PlanningScene');
       expect(scene.sceneData).toBeDefined();
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
       expect(scene.sceneData.forceNewRun).toBe(true);
       expect(scene.sceneData.settings).toBeDefined();
     });
@@ -377,7 +377,7 @@ describe('MainMenuScene Integration Tests', () => {
       // Create a saved run
       const savedRun = {
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           level: 5,
           gold: 20,
           round: 3,
@@ -393,7 +393,7 @@ describe('MainMenuScene Integration Tests', () => {
       expect(result.success).toBe(true);
       expect(scene.sceneStarted).toBe('PlanningScene');
       expect(scene.sceneData).toBeDefined();
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
       expect(scene.sceneData.restoredState).toBeDefined();
       expect(scene.sceneData.restoredState.player.level).toBe(5);
       expect(scene.sceneData.restoredState.player.round).toBe(3);
@@ -411,12 +411,12 @@ describe('MainMenuScene Integration Tests', () => {
     });
 
     it('should pass selected mode to PlanningScene', () => {
-      scene.selectMode('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
       
       const result = scene.startNewGame();
       
       expect(result.success).toBe(true);
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
     });
 
     it('should handle continue with no saved game', () => {
@@ -435,7 +435,7 @@ describe('MainMenuScene Integration Tests', () => {
       // Create a saved run with specific mode
       const savedRun = {
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           level: 10,
           gold: 50
         },
@@ -447,7 +447,7 @@ describe('MainMenuScene Integration Tests', () => {
       const result = scene.continueRun();
       
       expect(result.success).toBe(true);
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
       expect(scene.settings.aiMode).toBe('HARD');
     });
 
@@ -463,11 +463,11 @@ describe('MainMenuScene Integration Tests', () => {
       saveProgress(savedRun);
       scene.create();
       
-      scene.selectedMode = 'PVE_JOURNEY';
+      scene.selectedMode = 'EndlessPvEClassic';
       const result = scene.continueRun();
       
       expect(result.success).toBe(true);
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
     });
   });
 
@@ -475,7 +475,7 @@ describe('MainMenuScene Integration Tests', () => {
     it('should enable continue button when save exists', () => {
       // Create a saved run
       const savedRun = {
-        player: { gameMode: 'PVE_JOURNEY', level: 5, gold: 20 },
+        player: { gameMode: 'EndlessPvEClassic', level: 5, gold: 20 },
         aiMode: 'MEDIUM'
       };
       saveProgress(savedRun);
@@ -494,7 +494,7 @@ describe('MainMenuScene Integration Tests', () => {
     it('should update continue button state after clearing progress', () => {
       // Create a saved run
       const savedRun = {
-        player: { gameMode: 'PVE_JOURNEY', level: 5, gold: 20 },
+        player: { gameMode: 'EndlessPvEClassic', level: 5, gold: 20 },
         aiMode: 'MEDIUM'
       };
       saveProgress(savedRun);
@@ -519,7 +519,7 @@ describe('MainMenuScene Integration Tests', () => {
       expect(scene.startPanelVisible).toBe(true);
       
       // 3. Select mode and difficulty
-      scene.selectMode('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
       scene.selectDifficulty('HARD');
       
       // 4. Start new game
@@ -527,7 +527,7 @@ describe('MainMenuScene Integration Tests', () => {
       
       expect(result.success).toBe(true);
       expect(scene.sceneStarted).toBe('PlanningScene');
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
       expect(scene.sceneData.forceNewRun).toBe(true);
     });
 
@@ -535,7 +535,7 @@ describe('MainMenuScene Integration Tests', () => {
       // 1. Create saved run
       const savedRun = {
         player: {
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           level: 8,
           gold: 35,
           round: 5
@@ -582,7 +582,7 @@ describe('MainMenuScene Integration Tests', () => {
     it('should handle clear progress and start new game', () => {
       // 1. Create saved run
       const savedRun = {
-        player: { gameMode: 'PVE_JOURNEY', level: 5, gold: 20 },
+        player: { gameMode: 'EndlessPvEClassic', level: 5, gold: 20 },
         aiMode: 'MEDIUM'
       };
       saveProgress(savedRun);
@@ -595,7 +595,7 @@ describe('MainMenuScene Integration Tests', () => {
       expect(scene.canContinue()).toBe(false);
       
       // 3. Start new game
-      scene.selectMode('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
       const result = scene.startNewGame();
       
       expect(result.success).toBe(true);
@@ -619,16 +619,16 @@ describe('MainMenuScene Integration Tests', () => {
 
     it('should handle mode selection changes before starting', () => {
       // Change mode multiple times
-      scene.selectMode('PVE_JOURNEY');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
       
-      scene.selectMode('PVE_JOURNEY');
-      expect(scene.selectedMode).toBe('PVE_JOURNEY');
+      scene.selectMode('EndlessPvEClassic');
+      expect(scene.selectedMode).toBe('EndlessPvEClassic');
       
       // Start game with final selection
       const result = scene.startNewGame();
       expect(result.success).toBe(true);
-      expect(scene.sceneData.mode).toBe('PVE_JOURNEY');
+      expect(scene.sceneData.mode).toBe('EndlessPvEClassic');
     });
   });
 
@@ -637,7 +637,7 @@ describe('MainMenuScene Integration Tests', () => {
       const result = scene.selectMode('INVALID');
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(scene.selectedMode).toBe('PVE_JOURNEY'); // Should not change
+      expect(scene.selectedMode).toBe('EndlessPvEClassic'); // Should not change
     });
 
     it('should handle invalid difficulty selection gracefully', () => {

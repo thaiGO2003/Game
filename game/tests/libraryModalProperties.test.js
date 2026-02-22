@@ -10,6 +10,7 @@ function makeObj(extra = {}) {
     y: 0,
     width: 0,
     height: 0,
+    setFontSize: vi.fn().mockReturnThis(),
     setOrigin: vi.fn().mockReturnThis(),
     setDepth: vi.fn().mockReturnThis(),
     setInteractive: vi.fn().mockReturnThis(),

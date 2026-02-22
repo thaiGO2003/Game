@@ -1,0 +1,7 @@
+ [31mΓ¥»[39m tests/thoroughFeatureTesting.test.js [2m([22m[2m29 tests[22m[2m | [22m[31m20 failed[39m[2m)[22m[32m 55[2mms[22m[39m
+ [31mΓ¥»[39m tests/synergySystem.test.js [2m([22m[2m74 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 78[2mms[22m[39m
+ [31mΓ¥»[39m tests/libraryModalProperties.test.js [2m([22m[2m5 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 483[2mms[22m[39m
+ [31mΓ¥»[39m tests/assassinTargetingBug.test.js [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 50[2mms[22m[39m
+ [31mΓ¥»[39m tests/smokeTest.test.js [2m([22m[2m12 tests[22m[2m | [22m[31m10 failed[39m[2m)[22m[32m 212[2mms[22m[39m
+[2m Test Files [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m112 passed[39m[22m[90m (117)[39m
+[2m      Tests [22m [1m[31m36 failed[39m[22m[2m | [22m[1m[32m2137 passed[39m[22m[90m (2173)[39m

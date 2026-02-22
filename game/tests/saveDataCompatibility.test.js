@@ -37,7 +37,7 @@ describe('Save Data Compatibility Layer', () => {
             xp: 10,
             level: 5,
             round: 10,
-            gameMode: 'PVE_JOURNEY',
+            gameMode: 'EndlessPvEClassic',
             board: Array.from({ length: 5 }, () => Array(5).fill(null)),
             bench: [],
             shop: []
@@ -386,7 +386,7 @@ describe('Save Data Compatibility Layer', () => {
           xp: 50,
           level: 15,
           round: 25,
-          gameMode: 'PVE_JOURNEY',
+          gameMode: 'EndlessPvEClassic',
           winStreak: 3,
           loseStreak: 0,
           board: Array.from({ length: 5 }, () => Array(5).fill(null)),

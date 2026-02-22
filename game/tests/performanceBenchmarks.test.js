@@ -33,7 +33,7 @@ describe('Performance Benchmarks - Task 9.4.2', () => {
       shop: [],
       shopLocked: false,
       bench: [],
-      gameMode: 'PVE_JOURNEY'
+      gameMode: 'EndlessPvEClassic'
     };
 
     // Create mock board

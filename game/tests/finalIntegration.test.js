@@ -42,7 +42,7 @@ class MockGameState {
       round: 1,
       xp: 0,
       hp: 3,
-      gameMode: 'PVE_JOURNEY',
+      gameMode: 'EndlessPvEClassic',
       board: BoardSystem.createEmptyBoard(),
       bench: [],
       shop: [],

@@ -77,9 +77,8 @@ describe('Preservation - Tier 1 and Tier 2 Crafting Recipes', () => {
         tier1Recipes.forEach(recipe => {
             const requires = Array.isArray(recipe.requires) ? recipe.requires.filter(Boolean) : [];
 
-            // Tier 1 recipes should have 1-4 ingredients
-            expect(requires.length).toBeGreaterThanOrEqual(1);
-            expect(requires.length).toBeLessThanOrEqual(4);
+            // Tier 1 recipes should have exactly 1 ingredient
+            expect(requires.length).toBe(1);
 
             // Tier 1 recipes should use gridSize 2
             expect(recipe.gridSize).toBe(2);
@@ -107,8 +106,8 @@ describe('Preservation - Tier 1 and Tier 2 Crafting Recipes', () => {
         tier2Recipes.forEach(recipe => {
             const requires = Array.isArray(recipe.requires) ? recipe.requires.filter(Boolean) : [];
 
-            // Tier 2 recipes should have exactly 3 ingredients
-            expect(requires.length).toBe(3);
+            // Tier 2 recipes should have exactly 4 ingredients
+            expect(requires.length).toBe(4);
 
             // Tier 2 recipes should use gridSize 2
             expect(recipe.gridSize).toBe(2);

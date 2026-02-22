@@ -1,0 +1,63 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mP:/DigiGO/games/game[39m
+
+ [31m❯[39m tests/libraryModalProperties.test.js [2m([22m[2m5 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[33m 353[2mms[22m[39m
+[31m     [31m×[31m should keep open/close/toggle behavior deterministic[39m[32m 29[2mms[22m[39m
+[31m     [31m×[31m should invoke onClose and return interaction when modal closes[39m[32m 5[2mms[22m[39m
+     [32m✓[39m should clamp modal size inside viewport for any valid resolution[32m 296[2mms[22m[39m
+     [32m✓[39m should block planning interactions while library is visible[32m 3[2mms[22m[39m
+[31m     [31m×[31m should preserve scene phase/state after opening and closing library[39m[32m 17[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/libraryModalProperties.test.js[2m > [22mProperty 8: Library Behavior Consistency[2m > [22mshould keep open/close/toggle behavior deterministic
+[31m[1mTypeError[22m: this.createButton(...).label.setFontSize is not a function[39m
+[36m [2m❯[22m LibraryModal.refreshSearchUi src/ui/LibraryModal.js:[2m353:56[22m[39m
+    [90m351| [39m        [35mthis[39m[33m.[39m[34mrefresh[39m()[33m;[39m
+    [90m352| [39m      }
+    [90m353| [39m    }[33m,[39m [34m0x112235[39m[33m,[39m [34m0x3a5070[39m[33m,[39m [35mthis[39m[33m.[39mfilterContainer)[33m.[39mlabel[33m.[39m[34msetFontSize[39m([34m13[39m)[33m;[39m
+    [90m   | [39m                                                       [31m^[39m
+    [90m354| [39m    filterX [33m+=[39m searchW [33m+[39m spacing[33m;[39m
+    [90m355| [39m
+[90m [2m❯[22m LibraryModal.refresh src/ui/LibraryModal.js:[2m257:10[22m[39m
+[90m [2m❯[22m LibraryModal.show src/ui/LibraryModal.js:[2m224:10[22m[39m
+[90m [2m❯[22m tests/libraryModalProperties.test.js:[2m65:11[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/libraryModalProperties.test.js[2m > [22mProperty 9: Library Scene Return[2m > [22mshould invoke onClose and return interaction when modal closes
+[31m[1mTypeError[22m: this.createButton(...).label.setFontSize is not a function[39m
+[36m [2m❯[22m LibraryModal.refreshSearchUi src/ui/LibraryModal.js:[2m353:56[22m[39m
+    [90m351| [39m        [35mthis[39m[33m.[39m[34mrefresh[39m()[33m;[39m
+    [90m352| [39m      }
+    [90m353| [39m    }[33m,[39m [34m0x112235[39m[33m,[39m [34m0x3a5070[39m[33m,[39m [35mthis[39m[33m.[39mfilterContainer)[33m.[39mlabel[33m.[39m[34msetFontSize[39m([34m13[39m)[33m;[39m
+    [90m   | [39m                                                       [31m^[39m
+    [90m354| [39m    filterX [33m+=[39m searchW [33m+[39m spacing[33m;[39m
+    [90m355| [39m
+[90m [2m❯[22m LibraryModal.refresh src/ui/LibraryModal.js:[2m257:10[22m[39m
+[90m [2m❯[22m LibraryModal.show src/ui/LibraryModal.js:[2m224:10[22m[39m
+[90m [2m❯[22m tests/libraryModalProperties.test.js:[2m84:11[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/libraryModalProperties.test.js[2m > [22mProperty 13: Planning Scene Library Return[2m > [22mshould preserve scene phase/state after opening and closing library
+[31m[1mTypeError[22m: this.createButton(...).label.setFontSize is not a function[39m
+[36m [2m❯[22m LibraryModal.refreshSearchUi src/ui/LibraryModal.js:[2m353:56[22m[39m
+    [90m351| [39m        [35mthis[39m[33m.[39m[34mrefresh[39m()[33m;[39m
+    [90m352| [39m      }
+    [90m353| [39m    }[33m,[39m [34m0x112235[39m[33m,[39m [34m0x3a5070[39m[33m,[39m [35mthis[39m[33m.[39mfilterContainer)[33m.[39mlabel[33m.[39m[34msetFontSize[39m([34m13[39m)[33m;[39m
+    [90m   | [39m                                                       [31m^[39m
+    [90m354| [39m    filterX [33m+=[39m searchW [33m+[39m spacing[33m;[39m
+    [90m355| [39m
+[90m [2m❯[22m LibraryModal.refresh src/ui/LibraryModal.js:[2m257:10[22m[39m
+[90m [2m❯[22m LibraryModal.show src/ui/LibraryModal.js:[2m224:10[22m[39m
+[90m [2m❯[22m tests/libraryModalProperties.test.js:[2m130:11[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 20:52:50
+[2m   Duration [22m 7.90s[2m (transform 832ms, setup 101ms, import 1.67s, tests 353ms, environment 4.41s)[22m
+

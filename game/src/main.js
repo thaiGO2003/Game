@@ -4,7 +4,7 @@ import { MainMenuScene } from "./scenes/MainMenuScene.js";
 import { PlanningScene } from "./scenes/PlanningScene.js";
 import { CombatScene } from "./scenes/CombatScene.js";
 import GameModeRegistry from "./gameModes/GameModeRegistry.js";
-import "./gameModes/PVEJourneyMode.js"; // Auto-registers PVE_JOURNEY mode
+import "./gameModes/EndlessPvEClassicMode.js"; // Auto-registers EndlessPvEClassic mode
 import "./gameModes/EndlessMode.js"; // Auto-registers ENDLESS mode
 import "./gameModes/PVPMode.js"; // Auto-registers PVP mode (stub)
 
@@ -15,20 +15,20 @@ const RENDER_DPR = Math.min(window.devicePixelRatio || 1, 2);
 /**
  * Initialize the game with an optional game mode
  * 
- * @param {string} [gameModeId="PVE_JOURNEY"] - The game mode to use (default: PVE_JOURNEY)
+ * @param {string} [gameModeId="EndlessPvEClassic"] - The game mode to use
  * @returns {Phaser.Game} The initialized Phaser game instance
  */
-export function initGame(gameModeId = "PVE_JOURNEY") {
+export function initGame(gameModeId = "EndlessPvEClassic") {
   // Get the game mode configuration
   const gameMode = GameModeRegistry.get(gameModeId);
-  
+
   if (!gameMode) {
-    console.warn(`Game mode "${gameModeId}" not found, falling back to PVE_JOURNEY`);
-    const fallbackMode = GameModeRegistry.get("PVE_JOURNEY");
+    console.warn(`Game mode "${gameModeId}" not found, falling back to EndlessPvEClassic`);
+    const fallbackMode = GameModeRegistry.get("EndlessPvEClassic");
     if (!fallbackMode) {
-      throw new Error("PVE_JOURNEY mode not registered. Cannot start game.");
+      throw new Error("EndlessPvEClassic mode not registered. Cannot start game.");
     }
-    return initGame("PVE_JOURNEY");
+    return initGame("EndlessPvEClassic");
   }
 
   const config = {
@@ -54,13 +54,13 @@ export function initGame(gameModeId = "PVE_JOURNEY") {
   };
 
   const game = new Phaser.Game(config);
-  
+
   // Store game mode in game registry for scenes to access
   game.registry.set("gameMode", gameMode);
   game.registry.set("gameModeId", gameModeId);
-  
+
   return game;
 }
 
-// Initialize with default PVE_JOURNEY mode
+// Initialize with default EndlessPvEClassic mode
 initGame();

@@ -8,7 +8,7 @@ const PLAYER_TEMPLATE = {
   xp: 0,
   level: 1,
   round: 1,
-  gameMode: "PVE_JOURNEY",
+  gameMode: "EndlessPvEClassic",
   winStreak: 0,
   loseStreak: 0,
   shopLocked: false,
@@ -17,6 +17,7 @@ const PLAYER_TEMPLATE = {
   deployCapBonus: 0,
   benchBonus: 0,
   benchUpgradeLevel: 0,
+  inventoryUpgradeLevel: 0,
   interestCapBonus: 0,
   rollCostDelta: 0,
   startingRage: 0,
@@ -122,9 +123,9 @@ export function hydrateRunState(raw) {
   const bench = Array.isArray(p.bench) ? p.bench.map((u) => hydrateOwnedUnit(u)).filter(Boolean) : [];
   const shop = Array.isArray(p.shop)
     ? p.shop.map((offer, idx) => {
-        if (!offer || !UNIT_BY_ID[offer.baseId]) return null;
-        return { slot: Number.isInteger(offer.slot) ? offer.slot : idx, baseId: offer.baseId };
-      })
+      if (!offer || !UNIT_BY_ID[offer.baseId]) return null;
+      return { slot: Number.isInteger(offer.slot) ? offer.slot : idx, baseId: offer.baseId };
+    })
     : [];
 
   state.player = {
@@ -141,6 +142,9 @@ export function hydrateRunState(raw) {
   state.player.gold = Math.max(0, state.player.gold);
   state.player.benchUpgradeLevel = Number.isFinite(state.player.benchUpgradeLevel)
     ? Math.max(0, Math.min(1, Math.floor(state.player.benchUpgradeLevel)))
+    : 0;
+  state.player.inventoryUpgradeLevel = Number.isFinite(state.player.inventoryUpgradeLevel)
+    ? Math.max(0, Math.min(1, Math.floor(state.player.inventoryUpgradeLevel)))
     : 0;
   if (!Array.isArray(state.player.itemBag)) state.player.itemBag = [];
   if (!Array.isArray(state.player.craftedItems)) state.player.craftedItems = [];

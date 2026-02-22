@@ -5,7 +5,7 @@
  * factory and validation functions for creating and validating game mode configs.
  * 
  * A GameModeConfig defines all the rules, systems, and behavior for a specific
- * game mode (e.g., PVE Journey, Endless Mode, PVP Mode).
+ * game mode (e.g., Endless PvE Classic, Endless Mode, PVP Mode).
  * 
  * ## Creating a New Game Mode
  * 
@@ -64,7 +64,7 @@ export const AI_DIFFICULTY = {
  * GameModeConfig interface
  * 
  * @typedef {Object} GameModeConfig
- * @property {string} id - Unique identifier for the game mode (e.g., "PVE_JOURNEY")
+ * @property {string} id - Unique identifier for the game mode (e.g., "EndlessPvEClassic")
  * @property {string} name - Display name for the game mode
  * @property {string} description - Description of the game mode
  * @property {string[]} scenes - Array of scene names to use in this mode

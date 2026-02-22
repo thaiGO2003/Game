@@ -24,7 +24,7 @@ import { createDefaultUiSettings } from '../src/core/uiSettings.js';
 class MockMainMenuScene {
   constructor() {
     this.settings = createDefaultUiSettings();
-    this.selectedMode = 'PVE_JOURNEY';
+    this.selectedMode = 'EndlessPvEClassic';
     this.sceneStarted = null;
     this.sceneData = null;
   }
@@ -54,7 +54,7 @@ class MockMainMenuScene {
  */
 class MockPlanningScene {
   constructor() {
-    this.gameMode = 'PVE_JOURNEY';
+    this.gameMode = 'EndlessPvEClassic';
     this.gameModeConfig = null;
     this.player = null;
     this.buttons = {};
@@ -70,7 +70,7 @@ class MockPlanningScene {
   create() {
     this.gameModeConfig = GameModeRegistry.get(this.gameMode);
     if (!this.gameModeConfig) {
-      this.gameMode = 'PVE_JOURNEY';
+      this.gameMode = 'EndlessPvEClassic';
       this.gameModeConfig = GameModeRegistry.get(this.gameMode);
     }
 
@@ -132,10 +132,10 @@ class MockCombatScene {
   }
 
   create() {
-    const gameMode = this.runStatePayload?.player?.gameMode ?? 'PVE_JOURNEY';
+    const gameMode = this.runStatePayload?.player?.gameMode ?? 'EndlessPvEClassic';
     this.gameModeConfig = GameModeRegistry.get(gameMode);
     if (!this.gameModeConfig) {
-      this.gameModeConfig = GameModeRegistry.get('PVE_JOURNEY');
+      this.gameModeConfig = GameModeRegistry.get('EndlessPvEClassic');
     }
   }
 
@@ -660,8 +660,8 @@ describe('Scene Game Mode Integration Tests', () => {
       planning.init({ mode: 'INVALID_MODE' });
       planning.create();
 
-      // Should fallback to PVE_JOURNEY
-      expect(planning.gameMode).toBe('PVE_JOURNEY');
+      // Should fallback to EndlessPvEClassic
+      expect(planning.gameMode).toBe('EndlessPvEClassic');
     });
 
     it('should handle missing mode in scene data', () => {
@@ -670,7 +670,7 @@ describe('Scene Game Mode Integration Tests', () => {
       planning.create();
 
       // Should use default mode
-      expect(planning.gameMode).toBe('PVE_JOURNEY');
+      expect(planning.gameMode).toBe('EndlessPvEClassic');
     });
 
     it('should handle missing gameModeConfig in combat', () => {
@@ -682,7 +682,7 @@ describe('Scene Game Mode Integration Tests', () => {
       });
       combat.create();
 
-      // Should fallback to PVE_JOURNEY
+      // Should fallback to EndlessPvEClassic
       expect(combat.gameModeConfig).toBeDefined();
     });
 

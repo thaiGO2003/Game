@@ -1,0 +1,147 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mP:/DigiGO/games/game[39m
+
+ [32m✓[39m tests/gameModeConfig.test.js [2m([22m[2m34 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould migrate version 1 save data to version 2
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould clamp level to valid range [1, 25]
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 15 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 25 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 30 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  WARNING: Level 100 exceeds old cap of 9, clamping to 25
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould reset invalid deployCapBonus to 0
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+  WARNING: Invalid deployCapBonus -10, resetting to 0
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mVersion 1 to Version 2 Migration[2m > [22m[2mshould clamp negative values to valid minimums
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mUnit Replacement[2m > [22m[2mshould handle units that exist in catalog
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mUnit Replacement[2m > [22m[2mshould remove units with invalid IDs
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Removed invalid unit invalid_unit_id_12345 from board[0][0]
+  Removed invalid unit another_invalid_unit from bench[0]
+  Removed invalid unit yet_another_invalid_unit from shop[0]
+  Migration to version 2 complete
+
+[90mstderr[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for completely corrupted data
+[22m[39m[Save Data Migration] Error loading save data: SyntaxError: Unexpected token 'o', "not valid json {{{" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at loadProgress (P:/DigiGO/games/game/src/core/persistence.js:207:25)
+    at P:/DigiGO/games/game/tests/saveDataCompatibility.test.js:277:34
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///P:/DigiGO/games/game/[39mnode_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing payload
+[22m[39m[Save Data Migration]
+  ERROR: Save payload is corrupted
+
+[90mstderr[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing payload
+[22m[39m[Save Data Migration] Failed to migrate save data, starting new game
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing player data
+[22m[39m[Save Data Migration]
+  ERROR: Player data is corrupted
+
+[90mstderr[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for missing player data
+[22m[39m[Save Data Migration] Failed to migrate save data, starting new game
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for invalid payload type
+[22m[39m[Save Data Migration]
+  ERROR: Save payload is corrupted
+
+[90mstderr[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mCorrupted Save Data Handling[2m > [22m[2mshould return null for invalid payload type
+[22m[39m[Save Data Migration] Failed to migrate save data, starting new game
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mMigration Logging[2m > [22m[2mshould log migration actions to console
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstderr[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mMigration Logging[2m > [22m[2mshould log errors for corrupted data
+[22m[39m[Save Data Migration] Error loading save data: SyntaxError: Unexpected token 'i', "invalid json" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at loadProgress (P:/DigiGO/games/game/src/core/persistence.js:207:25)
+    at P:/DigiGO/games/game/tests/saveDataCompatibility.test.js:364:19
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///P:/DigiGO/games/game/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///P:/DigiGO/games/game/[39mnode_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle missing board array
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+[90mstdout[2m | tests/saveDataCompatibility.test.js[2m > [22m[2mSave Data Compatibility Layer[2m > [22m[2mEdge Cases[2m > [22m[2mshould handle missing bench and shop arrays
+[22m[39m[Save Data Migration]
+  Migrating save data from version 1 to version 2
+  Migration to version 2 complete
+
+ [32m✓[39m tests/saveDataCompatibility.test.js [2m([22m[2m18 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m tests/gameModeLayer.test.js [2m([22m[2m43 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+[90mstdout[2m | tests/mainMenuSceneIntegration.test.js[2m > [22m[2mMainMenuScene Integration Tests[2m > [22m[2mError handling[2m > [22m[2mshould handle continue with corrupted save data
+[22m[39m[Save Data Migration]
+  ERROR: Player data is corrupted
+[Save Data Migration]
+  ERROR: Player data is corrupted
+[Save Data Migration]
+  ERROR: Player data is corrupted
+
+[90mstderr[2m | tests/mainMenuSceneIntegration.test.js[2m > [22m[2mMainMenuScene Integration Tests[2m > [22m[2mError handling[2m > [22m[2mshould handle continue with corrupted save data
+[22m[39m[Save Data Migration] Failed to migrate save data, starting new game
+[Save Data Migration] Failed to migrate save data, starting new game
+[Save Data Migration] Failed to migrate save data, starting new game
+
+ [32m✓[39m tests/mainMenuSceneIntegration.test.js [2m([22m[2m34 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m129 passed[39m[22m[90m (129)[39m
+[2m   Start at [22m 20:57:18
+[2m   Duration [22m 9.16s[2m (transform 1.35s, setup 453ms, import 1.67s, tests 160ms, environment 26.75s)[22m
+

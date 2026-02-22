@@ -700,7 +700,7 @@ To start a game with a specific game mode, retrieve it from the registry and pas
 import GameModeRegistry from './gameModes/GameModeRegistry.js'
 
 // In your main game initialization or menu scene
-const gameMode = GameModeRegistry.get('PVE_JOURNEY')
+const gameMode = GameModeRegistry.get('EndlessPvEClassic')
 
 // Start the game with this mode
 this.scene.start('PlanningScene', { gameMode })
@@ -1014,7 +1014,7 @@ class PlanningScene extends Phaser.Scene {
 ```javascript
 class PlanningScene extends Phaser.Scene {
   init(data) {
-    this.gameMode = data.gameMode || GameModeRegistry.get('PVE_JOURNEY')
+    this.gameMode = data.gameMode || GameModeRegistry.get('EndlessPvEClassic')
   }
   
   create() {
@@ -1030,7 +1030,7 @@ class PlanningScene extends Phaser.Scene {
 
 ## Need Help?
 
-- Check existing modes (PVEJourneyMode.js, EndlessMode.js) for examples
+- Check existing modes (EndlessPvEClassicMode.js, EndlessMode.js) for examples
 - Review GameModeConfig.js for detailed JSDoc comments
 - Test your configuration with `validateGameModeConfig()`
 - Start simple and iterate based on playtesting
@@ -1044,7 +1044,7 @@ class PlanningScene extends Phaser.Scene {
 src/gameModes/
 ├── GameModeConfig.js      # Core configuration interface and validation
 ├── GameModeRegistry.js    # Registry for managing modes
-├── PVEJourneyMode.js      # Default PVE mode
+├── EndlessPvEClassicMode.js      # Default PVE mode
 ├── EndlessMode.js         # Endless challenge mode
 ├── PVPMode.js             # PVP mode (stub)
 ├── README.md              # This file
