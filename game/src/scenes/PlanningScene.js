@@ -984,8 +984,7 @@ export class PlanningScene extends Phaser.Scene {
     const benchRegionX = shopRegionX + shopRegionW + lowerSplitGap;
     const benchRegionInnerGap = UI_SPACING.MD;
 
-    // Swap positions: Bench Slots on the LEFT (closer to shop), Craft on the RIGHT (farther from shop, closer to bench)
-    // This puts craft "gß║ºn dự bị h╞ín, bß╗¢t s├ít v├áo cß╗¡a h├áng"
+    // Bench Slots on LEFT (closer to shop), Craft on RIGHT
     const benchSlotsRegionX = benchRegionX;
     const craftRegionW = Math.max(172, Math.floor(benchRegionW * 0.34));
     const benchSlotsRegionW = Math.max(220, benchRegionW - craftRegionW - benchRegionInnerGap);
@@ -1488,9 +1487,9 @@ export class PlanningScene extends Phaser.Scene {
           let extra = "";
           if (item?.kind === "equipment") {
             const recipe = RECIPE_BY_ID[item.fromRecipe];
-            if (recipe?.description) extra = "\n\n◆ Hiệu ứng: ";
-            extra += "\n◆ Nhấn vào thú ─æß╗â trang bị.";
-            extra += "\n◆ Nhấn lại lần 2 ─æß╗â ─æ╞░a v├áo bàn chế tß║ío.";
+            if (recipe?.description) extra = "\n\n◆ Hiệu ứng: " + recipe.description;
+            extra += "\n◆ Nhấn vào thú để trang bị.";
+            extra += "\n◆ Nhấn lại lần 2 để đưa vào bàn chế tạo.";
           } else {
             extra = "\n◆ Dùng để ghép đồ.";
           }
@@ -1548,7 +1547,7 @@ export class PlanningScene extends Phaser.Scene {
         if (!active) {
           return {
             title: "Ô chế tạo (khóa)",
-            body: "Ô này chỉ mở khi nâng bàn chế lên 3x3 (15 vàng)."
+            body: "Ô này chỉ mở khi nâng bàn chế lên 3x3 (15🪙)."
           };
         }
         const itemId = this.craftGridItems[idx];
@@ -1637,9 +1636,6 @@ export class PlanningScene extends Phaser.Scene {
       curX += 100 + gap;
     }
 
-    this.buttons.sell = this.createButton(curX, y1, 85, btnH, "Bán (S)", () => this.sellSelectedUnit(), { variant: "ghost" });
-    curX += 85 + gap;
-
     // —— Group 2: Action buttons LEFT of Start CTA ——
     const startX = l.boardPanelX + l.boardPanelW - ctaW;
     let actionX = startX;
@@ -1660,6 +1656,9 @@ export class PlanningScene extends Phaser.Scene {
 
     actionX -= 140 + gap;
     this.buttons.upgradeInventory = this.createButton(actionX, y1, 140, btnH, "Nâng kho đồ (5🪙)", () => this.upgradeInventory());
+
+    actionX -= 95 + gap;
+    this.buttons.sell = this.createButton(actionX, y1, 95, btnH, "Bán thú", () => this.sellSelectedUnit(), { variant: "ghost" });
 
     // —— Start CTA ——
     this.buttons.start = this.createButton(
@@ -2284,6 +2283,7 @@ export class PlanningScene extends Phaser.Scene {
     const slotW = l.benchSlotW;
     const slotH = l.benchSlotH;
     const cols = l.benchCols;
+
     for (let i = 0; i < maxSlots; i += 1) {
       const col = i % cols;
       const row = Math.floor(i / cols);
@@ -4560,13 +4560,19 @@ export class PlanningScene extends Phaser.Scene {
     const lock = this.player.shopLocked ? "Bật" : "Tắt";
     const rollCost = Math.max(1, 2 + this.player.rollCostDelta);
 
-    this.buttons.roll?.setLabel(`Đổi tướng (${rollCost} vàng)`);
-    this.buttons.xp?.setLabel("Mua XP (4 vàng)");
+    this.buttons.roll?.setLabel(`Đổi tướng (${rollCost}🪙)`);
+    this.buttons.xp?.setLabel("Mua XP (4🪙)");
     this.buttons.lock?.setLabel(`Khóa: ${lock}`);
     const craftLevel = this.player?.craftTableLevel ?? 0;
-    this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10 vàng)`);
+    this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10🪙)`);
     this.buttons.upgradeCraft?.setLabel(craftLevel >= 2 ? "Bàn chế: 3x3" : craftLevel >= 1 ? "Nâng 3x3 (15🪙)" : "Mở bàn chế (5🪙)");
-    this.buttons.sell.setLabel(this.selectedBenchIndex != null ? "Bán đã chọn" : "Bán (S)");
+    const selectedUnit = this.selectedBenchIndex != null ? this.player?.bench?.[this.selectedBenchIndex] : null;
+    if (selectedUnit) {
+      const sellPrice = this.getUnitSalePrice(selectedUnit);
+      this.buttons.sell.setLabel(`Bán thú (${sellPrice}🪙)`);
+    } else {
+      this.buttons.sell.setLabel("Bán thú");
+    }
     this.buttons.start.setLabel("BẮT ĐẦU GIAO TRANH");
     this.buttons.settings.setLabel("Cài đặt");
     this.buttons.history?.setLabel(`📋 Nhật ký (${this.logHistory.length})`);

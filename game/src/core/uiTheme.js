@@ -10,6 +10,7 @@ export const UI_FONT = "Segoe UI";
 export const UI_SPACING = {
     XS: 8,
     SM: 16,
+    MD: 12,
     LG: 24
 };
 
