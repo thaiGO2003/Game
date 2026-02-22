@@ -596,5 +596,4 @@ function assignPositions(picks) {
   return units;
 }
 
-// Export AI_SETTINGS for backward compatibility
-export { AI_SETTINGS };
+

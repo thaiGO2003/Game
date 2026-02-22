@@ -13,7 +13,7 @@ import { clearProgress } from "../core/persistence.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
 import { SynergySystem } from "../systems/SynergySystem.js";
 import { CombatSystem } from "../systems/CombatSystem.js";
-import { generateEnemyTeam, computeEnemyTeamSize, getAISettings, selectTarget as aiSelectTarget } from "../systems/AISystem.js";
+import { generateEnemyTeam, computeEnemyTeamSize, AI_SETTINGS, getAISettings, selectTarget as aiSelectTarget } from "../systems/AISystem.js";
 import {
   RESOLUTION_PRESETS,
   guiScaleToZoom,
@@ -1921,6 +1921,21 @@ export class CombatScene extends Phaser.Scene {
         break;
     }
   }
+  /**
+   * Begins combat phase
+   * 
+   * ARCHITECTURE NOTE (Task 5.2.1):
+   * Combat logic has been delegated to CombatSystem. This method now only handles:
+   * - Scene state management (phase transitions, clearing UI)
+   * - Unit spawning and visual setup
+   * - Combat initialization via CombatSystem.initializeCombat()
+   * - UI updates (header, synergy preview, queue preview)
+   * 
+   * Combat logic (turn order, action execution, damage calculation) is in CombatSystem.
+   * 
+   * @see CombatSystem.initializeCombat() - Initializes combat state and turn order
+   * @see stepCombat() - Executes combat turns using CombatSystem
+   */
   beginCombat() {
     if (this.phase !== PHASE.PLANNING) return;
     if (this.getDeployCount() <= 0) {
@@ -1928,6 +1943,7 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
 
+    // Scene state management - CombatScene responsibility
     this.phase = PHASE.COMBAT;
     this.selectedBenchIndex = null;
     this.clearPlanningSprites();
@@ -1941,24 +1957,39 @@ export class CombatScene extends Phaser.Scene {
     this.combatLootDrops = [];
     this.highlightLayer.clear();
 
+    // Unit spawning and visual setup - CombatScene responsibility
     this.spawnPlayerCombatUnits();
     this.spawnEnemyCombatUnits();
 
     // Calculate combat speed multiplier based on unit count (Requirement 11.1, 11.2, 11.3)
     this.combatSpeedMultiplier = this.calculateCombatSpeedMultiplier();
 
-    this.applySynergyBonuses("LEFT");
-    this.applySynergyBonuses("RIGHT");
+    // Apply synergy bonuses using SynergySystem
+    const leftTeam = this.getCombatUnits("LEFT");
+    const rightTeam = this.getCombatUnits("RIGHT");
     
-    // Use CombatSystem to initialize combat state (Requirements 8.1, 8.3, 8.4, 8.6)
+    const leftOptions = {
+      extraClassCount: this.player.extraClassCount || 0,
+      extraTribeCount: this.player.extraTribeCount || 0
+    };
+    SynergySystem.applySynergyBonusesToTeam(leftTeam, "LEFT", leftOptions);
+    leftTeam.forEach((unit) => this.updateCombatUnitUi(unit));
+    
+    SynergySystem.applySynergyBonusesToTeam(rightTeam, "RIGHT", {});
+    rightTeam.forEach((unit) => this.updateCombatUnitUi(unit));
+    
+    // COMBAT LOGIC DELEGATION: Use CombatSystem to initialize combat state
+    // CombatSystem handles: turn order calculation, combat state management
+    // Requirements: 8.1, 8.3, 8.4, 8.6
     const playerUnits = this.combatUnits.filter(u => u.side === "LEFT");
     const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT");
     this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
     
-    // Use turn order from CombatSystem
+    // Use turn order from CombatSystem (combat logic is delegated)
     this.turnQueue = this.combatState.turnOrder;
     this.turnIndex = 0;
     
+    // UI updates - CombatScene responsibility
     this.combatRound = this.turnQueue.length ? 1 : 0;
     this.refreshHeader();
     this.refreshSynergyPreview();
@@ -2002,7 +2033,7 @@ export class CombatScene extends Phaser.Scene {
       const owned = this.createOwnedUnit(base.id, ref.star ?? 1);
       
       // Apply equipment for HARD difficulty
-      const ai = this.getAI();
+      const ai = getAISettings(this.aiMode);
       if (ai.difficulty === "HARD" && EQUIPMENT_ITEMS.length > 0) {
         const equipChance = clamp(0.15 + (this.player.round - 5) * 0.04, 0, 0.65);
         if (Math.random() < equipChance) {
@@ -2021,7 +2052,7 @@ export class CombatScene extends Phaser.Scene {
     if (!owned || !base) return null;
     const star = Math.max(1, owned.star ?? 1);
     const baseStats = scaledBaseStats(base.stats, star, base.classType);
-    const ai = this.getAI();
+    const ai = getAISettings(this.aiMode);
     let hpBase = side === "RIGHT" ? Math.round(baseStats.hp * ai.hpMult) : baseStats.hp;
     let atkBase = side === "RIGHT" ? Math.round(baseStats.atk * ai.atkMult) : baseStats.atk;
     let matkBase = side === "RIGHT" ? Math.round(baseStats.matk * ai.matkMult) : baseStats.matk;
@@ -2742,7 +2773,10 @@ export class CombatScene extends Phaser.Scene {
           }
           return items;
         })();
-    const summary = this.computeSynergyCounts(deployed, "LEFT");
+    const summary = SynergySystem.calculateSynergies(deployed, "LEFT", {
+      extraClassCount: this.player.extraClassCount || 0,
+      extraTribeCount: this.player.extraTribeCount || 0
+    });
     const classLines = Object.keys(summary.classCounts)
       .sort((a, b) => summary.classCounts[b] - summary.classCounts[a])
       .map((key) => `${getClassLabelVi(key)}: ${summary.classCounts[key]}`);
@@ -2902,8 +2936,11 @@ export class CombatScene extends Phaser.Scene {
   getSynergyTooltip() {
     const leftTeam = this.getCombatUnits("LEFT");
     const rightTeam = this.getCombatUnits("RIGHT");
-    const leftSummary = this.computeSynergyCounts(leftTeam, "LEFT");
-    const rightSummary = this.computeSynergyCounts(rightTeam, "RIGHT");
+    const leftSummary = SynergySystem.calculateSynergies(leftTeam, "LEFT", {
+      extraClassCount: this.player.extraClassCount || 0,
+      extraTribeCount: this.player.extraTribeCount || 0
+    });
+    const rightSummary = SynergySystem.calculateSynergies(rightTeam, "RIGHT", {});
     const lines = [];
 
     const pushSide = (title, summary) => {
@@ -2913,7 +2950,7 @@ export class CombatScene extends Phaser.Scene {
         .forEach(([key, count]) => {
           const def = CLASS_SYNERGY[key];
           if (!def) return;
-          const tier = this.getSynergyTier(count, def.thresholds);
+          const tier = SynergySystem.getSynergyTier(count, def.thresholds);
           lines.push(`Nghề ${getClassLabelVi(key)}: ${count} -> ${tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích"}`);
         });
       Object.entries(summary.tribeCounts)
@@ -2921,7 +2958,7 @@ export class CombatScene extends Phaser.Scene {
         .forEach(([key, count]) => {
           const def = TRIBE_SYNERGY[key];
           if (!def) return;
-          const tier = this.getSynergyTier(count, def.thresholds);
+          const tier = SynergySystem.getSynergyTier(count, def.thresholds);
           lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} -> ${tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích"}`);
         });
       lines.push("");
@@ -2945,10 +2982,6 @@ export class CombatScene extends Phaser.Scene {
     };
   }
 
-  getSynergyTier(count, thresholds) {
-    // Delegate to SynergySystem
-    return SynergySystem.getSynergyTier(count, thresholds);
-  }
 
   formatBonusSet(bonus) {
     if (!bonus) return "chưa có hiệu ứng";
@@ -3314,45 +3347,11 @@ export class CombatScene extends Phaser.Scene {
     return map[effect] ?? effect;
   }
 
-  getAI() {
-    return getAISettings(this.aiMode);
-  }
 
-  computeSynergyCounts(units, side) {
-    // Delegate to SynergySystem
-    const options = {};
-    if (side === "LEFT" && units.length > 0) {
-      options.extraClassCount = this.player.extraClassCount || 0;
-      options.extraTribeCount = this.player.extraTribeCount || 0;
-    }
-    return SynergySystem.calculateSynergies(units, side, options);
-  }
 
-  applySynergyBonuses(side) {
-    // Delegate to SynergySystem
-    const team = this.getCombatUnits(side);
-    const options = {};
-    if (side === "LEFT") {
-      options.extraClassCount = this.player.extraClassCount || 0;
-      options.extraTribeCount = this.player.extraTribeCount || 0;
-    }
-    SynergySystem.applySynergyBonusesToTeam(team, side, options);
-    
-    // Update UI for all units
-    team.forEach((unit) => {
-      this.updateCombatUnitUi(unit);
-    });
-  }
 
-  getSynergyBonus(def, count) {
-    // Delegate to SynergySystem
-    return SynergySystem.getSynergyBonus(def, count);
-  }
 
-  applyBonusToUnit(unit, bonus) {
-    // Delegate to SynergySystem
-    SynergySystem.applyBonusToCombatUnit(unit, bonus);
-  }
+
 
   applyOwnedEquipmentBonuses(unit, owned) {
     const equips = normalizeEquipIds(owned?.equips);
@@ -3376,7 +3375,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     unit.equips = equipItems.map((item) => item.id).filter((id) => typeof id === "string");
-    equipItems.forEach((item) => this.applyBonusToUnit(unit, item.bonus));
+    equipItems.forEach((item) => SynergySystem.applyBonusToCombatUnit(unit, item.bonus));
   }
 
   buildTurnQueue() {
@@ -3497,6 +3496,27 @@ export class CombatScene extends Phaser.Scene {
     return finalCol;
   }
 
+  /**
+   * Executes one combat turn
+   * 
+   * ARCHITECTURE NOTE (Task 5.2.1):
+   * Combat logic has been delegated to CombatSystem. This method now only handles:
+   * - Combat flow orchestration (turn progression, round management)
+   * - Calling CombatSystem for combat logic:
+   *   - CombatSystem.checkCombatEnd() - Check if combat is finished
+   *   - CombatSystem.initializeCombat() - Rebuild turn queue each round
+   *   - CombatSystem.tickStatusEffects() - Process status effects
+   *   - CombatSystem.executeAction() - Determine skill vs basic attack
+   *   - CombatSystem.applyDamage() - Apply damage from effects
+   * - Rendering and animations (highlights, floating text, sprites)
+   * - UI updates (queue preview, header, combat log)
+   * 
+   * Combat calculations (damage, turn order, status effects) are in CombatSystem.
+   * 
+   * @see CombatSystem.checkCombatEnd() - Checks win/loss conditions
+   * @see CombatSystem.executeAction() - Determines action type (skill/attack)
+   * @see CombatSystem.tickStatusEffects() - Processes DoT and control effects
+   */
   async stepCombat() {
     // Comprehensive error recovery wrapper (Requirement 26.5)
     try {
@@ -3504,20 +3524,23 @@ export class CombatScene extends Phaser.Scene {
       if (this.isActing) return;
       this.clearAttackPreview();
 
-      // Use CombatSystem to check combat end (Requirements 8.1, 8.3, 8.4, 8.6)
+      // COMBAT LOGIC DELEGATION: Check if combat has ended
+      // CombatSystem handles: win/loss condition checking
       const combatEndResult = CombatSystem.checkCombatEnd(this.combatState);
       if (combatEndResult.isFinished) {
         this.resolveCombat(combatEndResult.winner === "player" ? "LEFT" : combatEndResult.winner === "enemy" ? "RIGHT" : "DRAW");
         return;
       }
 
+      // Turn queue management and round progression
       if (this.turnQueue.length === 0 || this.turnIndex >= this.turnQueue.length) {
         if (this.combatRound >= 20) {
           this.resolveCombat("DRAW");
           return;
         }
         
-        // Rebuild turn queue using CombatSystem
+        // COMBAT LOGIC DELEGATION: Rebuild turn queue using CombatSystem
+        // CombatSystem handles: turn order calculation based on speed
         const playerUnits = this.combatUnits.filter(u => u.side === "LEFT" && u.alive);
         const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT" && u.alive);
         this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
@@ -3548,17 +3571,19 @@ export class CombatScene extends Phaser.Scene {
       this.highlightUnit(actor, 0xffef9f);
 
       try {
-        // Use CombatSystem to tick status effects (Requirements 8.1, 8.3, 8.4, 8.6)
+        // COMBAT LOGIC DELEGATION: Tick status effects using CombatSystem
+        // CombatSystem handles: DoT damage calculation, control effect processing, status duration
         const statusResult = CombatSystem.tickStatusEffects(actor, this.combatState);
         
-        // Apply damage from DoT effects
+        // Rendering: Apply damage from DoT effects (visual feedback only)
         if (statusResult.success && statusResult.triggeredEffects) {
           for (const effect of statusResult.triggeredEffects) {
             if (effect.damage > 0) {
+              // CombatSystem already applied the damage, we just render it
               const damageResult = CombatSystem.applyDamage(actor, effect.damage, this.combatState);
               this.resolveDamage(null, actor, effect.damage, "true", effect.type.toUpperCase(), { noRage: true, noReflect: true });
               
-              // Handle disease spreading
+              // Handle disease spreading (game-specific mechanic)
               if (effect.spreads && effect.type === 'disease') {
                 const neighbors = [
                   { r: actor.row - 1, c: actor.col },
@@ -3569,6 +3594,7 @@ export class CombatScene extends Phaser.Scene {
                 neighbors.forEach((pos) => {
                   const neighbor = this.getCombatUnitAt(actor.side, pos.r, pos.c);
                   if (neighbor && neighbor.alive && !neighbor.statuses.diseaseTurns) {
+                    // COMBAT LOGIC DELEGATION: Apply status effect via CombatSystem
                     CombatSystem.applyStatusEffect(neighbor, { type: 'disease', duration: 2, value: effect.damage }, this.combatState);
                     this.showFloatingText(neighbor.sprite.x, neighbor.sprite.y - 45, "LÂY BỆNH", "#880088");
                     this.updateCombatUnitUi(neighbor);
@@ -3583,21 +3609,22 @@ export class CombatScene extends Phaser.Scene {
         if (!actor.alive) {
           this.addLog(`${actor.name} bỏ lượt (dot).`);
         }
-        // Check for control effects
+        // Check for control effects (stun, freeze, sleep)
         else if (statusResult.controlStatus) {
           this.addLog(`${actor.name} bỏ lượt (${statusResult.controlStatus}).`);
           this.updateCombatUnitUi(actor);
         }
-        // Execute action
+        // Execute action (skill or basic attack)
         else {
           const target = this.selectTarget(actor);
           if (target) {
-            // Use CombatSystem to determine action type (Requirements 8.1, 8.3, 8.4, 8.6)
+            // COMBAT LOGIC DELEGATION: Determine action type using CombatSystem
+            // CombatSystem handles: rage check, silence check, disarm check, action type determination
             const actionResult = CombatSystem.executeAction(this.combatState, actor);
             
             if (actionResult.success) {
               if (actionResult.actionType === 'SKILL') {
-                // Reset rage if needed
+                // Reset rage if needed (determined by CombatSystem)
                 if (actionResult.resetRage) {
                   actor.rage = 0;
                 }
@@ -3644,107 +3671,7 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
-  processStartTurn(unit) {
-    // Error recovery for status effects (Requirement 26.5)
-    try {
-      this.tickTimedStatus(unit, "tauntTurns");
-      this.tickTimedStatus(unit, "silence");
-      this.tickTimedStatus(unit, "armorBreakTurns");
-      this.tickTimedStatus(unit, "reflectTurns");
-      this.tickTimedStatus(unit, "atkBuffTurns");
-      this.tickTimedStatus(unit, "defBuffTurns");
-      this.tickTimedStatus(unit, "mdefBuffTurns");
-      this.tickTimedStatus(unit, "evadeBuffTurns");
-      this.tickTimedStatus(unit, "evadeDebuffTurns");
-      this.tickTimedStatus(unit, "disarmTurns");
-      this.tickTimedStatus(unit, "immuneTurns");
-      this.tickTimedStatus(unit, "physReflectTurns");
-      this.tickTimedStatus(unit, "counterTurns");
-      this.tickTimedStatus(unit, "isProtecting");
 
-      if (unit.statuses.burnTurns > 0) {
-        this.resolveDamage(null, unit, unit.statuses.burnDamage, "true", "THIÊU", { noRage: true, noReflect: true });
-        unit.statuses.burnTurns -= 1;
-      }
-      if (unit.statuses.poisonTurns > 0) {
-        this.resolveDamage(null, unit, unit.statuses.poisonDamage, "true", "ĐỘC", { noRage: true, noReflect: true });
-        unit.statuses.poisonTurns -= 1;
-      }
-      if (unit.statuses.bleedTurns > 0) {
-        this.resolveDamage(null, unit, unit.statuses.bleedDamage, "true", "MÁU", { noRage: true, noReflect: true });
-        unit.statuses.bleedTurns -= 1;
-      }
-      if (unit.statuses.diseaseTurns > 0) {
-        const neighbors = [
-          { r: unit.row - 1, c: unit.col },
-          { r: unit.row + 1, c: unit.col },
-          { r: unit.row, c: unit.col - 1 },
-          { r: unit.row, c: unit.col + 1 }
-        ];
-        neighbors.forEach((pos) => {
-          const neighbor = this.getCombatUnitAt(unit.side, pos.r, pos.c);
-          if (neighbor && neighbor.alive && !neighbor.statuses.diseaseTurns) {
-            neighbor.statuses.diseaseTurns = 2;
-            neighbor.statuses.diseaseDamage = unit.statuses.diseaseDamage;
-            this.showFloatingText(neighbor.sprite.x, neighbor.sprite.y - 45, "LÂY BỆNH", "#880088");
-            this.updateCombatUnitUi(neighbor);
-          }
-        });
-        this.resolveDamage(null, unit, unit.statuses.diseaseDamage, "true", "DỊCH", { noRage: true, noReflect: true });
-        unit.statuses.diseaseTurns -= 1;
-      }
-
-      if (!unit.alive) return "dot";
-
-      if (unit.statuses.freeze > 0) {
-        unit.statuses.freeze -= 1;
-        this.updateCombatUnitUi(unit);
-        return "freeze";
-      }
-      if (unit.statuses.stun > 0) {
-        unit.statuses.stun -= 1;
-        this.updateCombatUnitUi(unit);
-        return "stun";
-      }
-      if (unit.statuses.sleep > 0) {
-        unit.statuses.sleep -= 1;
-        this.updateCombatUnitUi(unit);
-        return "sleep";
-      }
-
-      this.updateCombatUnitUi(unit);
-      return null;
-    } catch (error) {
-      // Log error and skip turn processing (Requirement 26.5)
-      console.error(`[Combat Error] Error processing start turn for ${unit?.name || 'unknown'}:`, error);
-      return "error";
-    }
-  }
-
-  tickTimedStatus(unit, key) {
-    if (!unit?.statuses) return;
-    const current = Number.isFinite(unit.statuses[key]) ? unit.statuses[key] : 0;
-    unit.statuses[key] = current > 0 ? current - 1 : 0;
-    if (key === "tauntTurns" && unit.statuses.tauntTurns <= 0) {
-      unit.statuses.tauntTargetId = null;
-      unit.statuses.tauntTurns = 0;
-    }
-    if (key === "armorBreakTurns" && unit.statuses.armorBreakTurns <= 0) {
-      unit.statuses.armorBreakValue = 0;
-      unit.statuses.armorBreakTurns = 0;
-    }
-    if (key === "reflectTurns" && unit.statuses.reflectTurns <= 0) {
-      unit.statuses.reflectPct = 0;
-      unit.statuses.reflectTurns = 0;
-    }
-    if (key === "atkDebuffTurns" && unit.statuses.atkDebuffTurns <= 0) {
-      unit.statuses.atkDebuffValue = 0;
-      unit.statuses.atkDebuffTurns = 0;
-    }
-    if (key === "immuneTurns" && unit.statuses.immuneTurns <= 0) {
-      unit.statuses.immuneTurns = 0;
-    }
-  }
 
   selectTarget(attacker, options = {}) {
     // Use AISystem for target selection (Requirements 8.1, 8.6)
@@ -4834,7 +4761,7 @@ export class CombatScene extends Phaser.Scene {
 
     // Attacker only gains rage when damage is actually dealt (damageLeft > 0)
     if (attacker && !options.noRage && damageLeft > 0) {
-      const gain = attacker.side === "RIGHT" ? this.getAI().rageGain : 1;
+      const gain = attacker.side === "RIGHT" ? getAISettings(this.aiMode).rageGain : 1;
       // Clamp rage to rageMax (Requirement 26.1)
       attacker.rage = Math.min(attacker.rageMax || 5, (attacker.rage || 0) + gain);
     }

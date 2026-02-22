@@ -27,7 +27,7 @@ import {
  * Arbitrary generator for combat units with unique UIDs
  */
 const combatUnit = (side = 'LEFT') => fc.record({
-  uid: fc.string({ minLength: 8, maxLength: 20 }), // Longer to avoid duplicates
+  uid: fc.uuid(), // Use UUID to ensure uniqueness and avoid object property names
   name: fc.string({ minLength: 3, maxLength: 15 }),
   side: fc.constant(side),
   hp: fc.integer({ min: 50, max: 500 }),
