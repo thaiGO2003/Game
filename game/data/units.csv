@@ -55,7 +55,7 @@ snail_fortress,Ốc Sên Pháo Đài,oc,🐌,TIDE,Thủy,TANKER,Đỡ đòn,2,38
 ox_mountain,Bò Núi,bo,🐂,STONE,Nham,TANKER,Đỡ đòn,2,385,47,33,12,27,1,4,unit_skill_ox_mountain
 walrus_ice,Hải Mã Băng,hai-ma,🦭,TIDE,Thủy,TANKER,Đỡ đòn,3,405,48,38,15,31,1,5,unit_skill_walrus_ice
 golem_stone,Golem Đá,golem,🗿,STONE,Nham,TANKER,Đỡ đòn,3,420,52,42,14,33,1,4,unit_skill_golem_stone
-yak_highland,Bò Tây Tạng,yak,🦬,WIND,Phong,TANKER,Đỡ đòn,4,460,54,40,17,32,1,4,unit_skill_yak_highland
+yak_highland,Bò Tây Tạng,yak,🦙,WIND,Phong,TANKER,Đỡ đòn,4,460,54,40,17,32,1,4,unit_skill_yak_highland
 mammoth_ancient,Voi Ma Mút,voi-long,🦣,STONE,Nham,TANKER,Đỡ đòn,4,470,56,43,16,34,1,4,unit_skill_mammoth_ancient
 kraken_deep,Mực Khổng Lồ,muc,🐙,TIDE,Thủy,TANKER,Đỡ đòn,5,680,58,58,28,48,1,5,unit_skill_kraken_deep
 titan_earth,Titan Đất,titan,⛰️,STONE,Nham,TANKER,Đỡ đòn,5,720,62,62,32,52,1,5,unit_skill_titan_earth

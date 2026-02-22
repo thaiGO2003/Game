@@ -2,8 +2,13 @@ import Phaser from "phaser";
 import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { AUGMENT_LIBRARY, AUGMENT_ROUNDS } from "../data/augments.js";
-import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { CRAFT_RECIPES, ITEM_BY_ID, RECIPE_BY_ID } from "../data/items.js";
+import { BoardSystem } from "../systems/BoardSystem.js";
+import { UpgradeSystem } from "../systems/UpgradeSystem.js";
+import { SynergySystem } from "../systems/SynergySystem.js";
+import { ShopSystem } from "../systems/ShopSystem.js";
+import { generateEnemyTeam, computeEnemyTeamSize, AI_SETTINGS, getAISettings } from "../systems/AISystem.js";
+import GameModeRegistry from "../gameModes/GameModeRegistry.js";
 import { getForestBackgroundKeyByRound } from "../data/forestBackgrounds.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { TooltipController } from "../core/tooltip.js";
@@ -57,57 +62,6 @@ const PHASE = {
   AUGMENT: "AUGMENT",
   COMBAT: "COMBAT",
   GAME_OVER: "GAME_OVER"
-};
-
-const AI_SETTINGS = {
-  EASY: {
-    label: "Dễ",
-    hpMult: 0.84,
-    atkMult: 0.82,
-    matkMult: 0.82,
-    rageGain: 1,
-    randomTargetChance: 0.58,
-    teamSizeBonus: 0,
-    teamGrowthEvery: 5,
-    teamGrowthCap: 1,
-    budgetMult: 0.9,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: -0.05,
-    star3Bonus: -0.02
-  },
-  MEDIUM: {
-    label: "Trung bình",
-    hpMult: 0.95,
-    atkMult: 0.93,
-    matkMult: 0.93,
-    rageGain: 1,
-    randomTargetChance: 0.3,
-    teamSizeBonus: 1,
-    teamGrowthEvery: 4,
-    teamGrowthCap: 2,
-    budgetMult: 1,
-    levelBonus: 0,
-    maxTierBonus: 0,
-    star2Bonus: -0.01,
-    star3Bonus: -0.01
-  },
-  HARD: {
-    label: "Khó",
-    hpMult: 1.05,
-    atkMult: 1.04,
-    matkMult: 1.04,
-    rageGain: 1,
-    randomTargetChance: 0.12,
-    teamSizeBonus: 2,
-    teamGrowthEvery: 3,
-    teamGrowthCap: 3,
-    budgetMult: 1.08,
-    levelBonus: 1,
-    maxTierBonus: 1,
-    star2Bonus: 0,
-    star3Bonus: 0.01
-  }
 };
 
 const CLASS_COLORS = {
@@ -253,6 +207,7 @@ export class PlanningScene extends Phaser.Scene {
     this.layout = null;
     this.runtimeSettings = loadUiSettings();
     this.gameMode = "PVE_JOURNEY";
+    this.gameModeConfig = null;
     this.boardZoom = 1;
     this.boardPanX = 0;
     this.boardPanY = 0;
@@ -439,6 +394,15 @@ export class PlanningScene extends Phaser.Scene {
     this.applyDisplaySettings(this.runtimeSettings, false);
     this.layout = this.computeLayout();
     this.gameMode = this.incomingData?.mode ?? this.gameMode;
+    
+    // Get game mode configuration
+    this.gameModeConfig = GameModeRegistry.get(this.gameMode);
+    if (!this.gameModeConfig) {
+      console.warn(`Game mode "${this.gameMode}" not found, falling back to PVE_JOURNEY`);
+      this.gameMode = "PVE_JOURNEY";
+      this.gameModeConfig = GameModeRegistry.get(this.gameMode);
+    }
+    
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
@@ -829,7 +793,16 @@ export class PlanningScene extends Phaser.Scene {
     this.applyRunState(createDefaultRunState());
     this.player.gameMode = this.gameMode;
     this.player.loseCondition = normalizeLoseCondition(this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
-    this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
+    
+    // Apply game mode config starting values
+    if (this.gameModeConfig) {
+      this.player.gold = this.gameModeConfig.startingGold;
+      this.player.hp = this.gameModeConfig.startingHP;
+    } else {
+      // Fallback to default values
+      this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
+    }
+    
     this.applyRuntimeSettings(this.runtimeSettings);
     this.enterPlanning(false);
     this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
@@ -864,7 +837,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   normalizeBoard(rawBoard) {
-    const board = this.createEmptyBoard();
+    const board = BoardSystem.createEmptyBoard();
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         board[row][col] = this.normalizeOwnedUnit(rawBoard?.[row]?.[col]);
@@ -1040,7 +1013,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   createEmptyBoard() {
-    return Array.from({ length: ROWS }, () => Array.from({ length: PLAYER_COLS }, () => null));
+    return BoardSystem.createEmptyBoard();
   }
 
   seedStarterUnits() {
@@ -1750,20 +1723,26 @@ export class PlanningScene extends Phaser.Scene {
     let curX = x;
     const btnH = 44;
 
-    this.buttons.roll = this.createButton(curX, y1, 130, btnH, "Đổi tướng (2 vàng)", () => this.rollShop());
-    curX += 130 + gap;
+    // Only show shop buttons if shop is enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.shop !== false) {
+      this.buttons.roll = this.createButton(curX, y1, 130, btnH, "Đổi tướng (2 vàng)", () => this.rollShop());
+      curX += 130 + gap;
 
-    this.buttons.xp = this.createButton(curX, y1, 130, btnH, "Mua XP (4 vàng)", () => this.buyXp());
-    curX += 130 + gap;
+      this.buttons.xp = this.createButton(curX, y1, 130, btnH, "Mua XP (4 vàng)", () => this.buyXp());
+      curX += 130 + gap;
 
-    this.buttons.lock = this.createButton(curX, y1, 100, btnH, "Khóa: Tắt", () => this.toggleLock());
-    curX += 100 + gap;
+      this.buttons.lock = this.createButton(curX, y1, 100, btnH, "Khóa: Tắt", () => this.toggleLock());
+      curX += 100 + gap;
+    }
 
     this.buttons.upgradeBench = this.createButton(curX, y1, 160, btnH, "Nâng dự bị (10 vàng)", () => this.upgradeBench());
     curX += 160 + gap;
 
-    this.buttons.upgradeCraft = this.createButton(curX, y1, 160, btnH, "Nâng bàn chế (15 vàng)", () => this.upgradeCraftTable());
-    curX += 160 + gap;
+    // Only show craft button if crafting is enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.crafting !== false) {
+      this.buttons.upgradeCraft = this.createButton(curX, y1, 160, btnH, "Nâng bàn chế (15 vàng)", () => this.upgradeCraftTable());
+      curX += 160 + gap;
+    }
 
     this.buttons.sell = this.createButton(curX, y1, 85, btnH, "Bán (S)", () => this.sellSelectedUnit(), { variant: "ghost" });
     curX += 85 + gap;
@@ -3192,7 +3171,7 @@ export class PlanningScene extends Phaser.Scene {
     }
     if (this.overlaySprites.length) return;
 
-    const occupant = this.player.board[row][col];
+    const occupant = BoardSystem.getUnitAt(this.player.board, row, col);
     const selected = this.selectedBenchIndex != null ? this.player.bench[this.selectedBenchIndex] : null;
     if (this.selectedInventoryItemId) {
       if (!occupant) {
@@ -3204,30 +3183,31 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (selected) {
-      // Check for duplicate unit type on board
-      if (this.checkDuplicateUnit(selected.baseId, row, col)) {
-        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
-        return;
-      }
+      // Use BoardSystem to place bench unit on board
+      const result = BoardSystem.placeBenchUnitOnBoard(
+        this.player.board,
+        this.player.bench,
+        this.selectedBenchIndex,
+        row,
+        col,
+        this.getDeployCap(),
+        true // allowSwap
+      );
 
-      if (!occupant) {
-        if (this.getDeployCount() >= this.getDeployCap()) {
+      if (!result.success) {
+        // Map BoardSystem errors to user-friendly messages
+        if (result.error === 'Deploy limit reached') {
           this.addLog(
             `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
           );
-          return;
+        } else if (result.error === 'Duplicate unit on board') {
+          this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        } else if (result.error) {
+          this.addLog(result.error);
         }
-        this.player.board[row][col] = selected;
-        this.player.bench.splice(this.selectedBenchIndex, 1);
-        this.selectedBenchIndex = null;
-        this.tryAutoMerge();
-        this.refreshPlanningUi();
-        this.persistProgress();
         return;
       }
 
-      this.player.board[row][col] = selected;
-      this.player.bench[this.selectedBenchIndex] = occupant;
       this.selectedBenchIndex = null;
       this.tryAutoMerge();
       this.refreshPlanningUi();
@@ -3236,26 +3216,33 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     if (occupant) {
-      if (this.player.bench.length >= this.getBenchCap()) {
-        this.addLog("Hàng dự bị đã đầy.");
+      // Use BoardSystem to move board unit to bench
+      const result = BoardSystem.moveBoardUnitToBench(
+        this.player.board,
+        this.player.bench,
+        row,
+        col,
+        this.player.bench.length, // Add to end of bench
+        this.getBenchCap(),
+        false // Don't swap, just add to bench
+      );
+
+      if (!result.success) {
+        if (result.error === 'Bench is full') {
+          this.addLog("Hàng dự bị đã đầy.");
+        } else if (result.error) {
+          this.addLog(result.error);
+        }
         return;
       }
-      this.player.board[row][col] = null;
-      this.player.bench.push(occupant);
+
       this.refreshPlanningUi();
       this.persistProgress();
     }
   }
 
   checkDuplicateUnit(baseId, ignoreRow = -1, ignoreCol = -1) {
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < PLAYER_COLS; c++) {
-        if (r === ignoreRow && c === ignoreCol) continue;
-        const u = this.player.board[r][c];
-        if (u && u.baseId === baseId) return true;
-      }
-    }
-    return false;
+    return BoardSystem.checkDuplicateUnit(this.player.board, baseId, ignoreRow, ignoreCol);
   }
 
   onBenchClick(index) {
@@ -3338,89 +3325,54 @@ export class PlanningScene extends Phaser.Scene {
 
     const board = this.player.board;
     const bench = this.player.bench;
-    const validBoardCell = (row, col) =>
-      Number.isInteger(row) &&
-      Number.isInteger(col) &&
-      row >= 0 &&
-      row < ROWS &&
-      col >= 0 &&
-      col < PLAYER_COLS;
-    const validBenchIndex = (index) => Number.isInteger(index) && index >= 0 && index < this.getBenchCap();
-    let moved = false;
+    let result = null;
 
     if (from.region === "BOARD" && to.region === "BOARD") {
-      if (!validBoardCell(from.row, from.col) || !validBoardCell(to.row, to.col)) return false;
-      if (from.row === to.row && from.col === to.col) return false;
-      const moving = board[from.row][from.col];
-      if (!moving) return false;
-      const target = board[to.row][to.col];
-      if (target && !allowSwap) return false;
-      board[to.row][to.col] = moving;
-      board[from.row][from.col] = target ?? null;
-      moved = true;
+      // Board to Board movement
+      result = BoardSystem.moveUnit(board, from.row, from.col, to.row, to.col, allowSwap);
     } else if (from.region === "BENCH" && to.region === "BOARD") {
-      if (!validBenchIndex(from.index) || from.index >= bench.length) return false;
-      if (!validBoardCell(to.row, to.col)) return false;
-      const moving = bench[from.index];
-      if (!moving) return false;
-      if (this.checkDuplicateUnit(moving.baseId, to.row, to.col)) {
-        this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
-        return false;
-      }
-      const target = board[to.row][to.col];
-      if (!target && this.getDeployCount() >= this.getDeployCap()) {
-        this.addLog(
-          `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
-        );
-        return false;
-      }
-      if (target && !allowSwap) return false;
-      board[to.row][to.col] = moving;
-      if (target) {
-        bench[from.index] = target;
-      } else {
-        bench.splice(from.index, 1);
-      }
-      moved = true;
+      // Bench to Board movement
+      result = BoardSystem.placeBenchUnitOnBoard(
+        board,
+        bench,
+        from.index,
+        to.row,
+        to.col,
+        this.getDeployCap(),
+        allowSwap
+      );
     } else if (from.region === "BOARD" && to.region === "BENCH") {
-      if (!validBoardCell(from.row, from.col) || !validBenchIndex(to.index)) return false;
-      const moving = board[from.row][from.col];
-      if (!moving) return false;
-      const target = bench[to.index] ?? null;
-      if (target && !allowSwap) return false;
-      if (!target && bench.length >= this.getBenchCap()) {
-        this.addLog("Hàng dự bị đã đầy.");
-        return false;
-      }
-      if (target) {
-        board[from.row][from.col] = target;
-        bench[to.index] = moving;
-      } else {
-        board[from.row][from.col] = null;
-        if (to.index >= bench.length) bench.push(moving);
-        else if (bench[to.index] == null) bench[to.index] = moving;
-        else bench.splice(to.index, 0, moving);
-      }
-      moved = true;
+      // Board to Bench movement
+      result = BoardSystem.moveBoardUnitToBench(
+        board,
+        bench,
+        from.row,
+        from.col,
+        to.index,
+        this.getBenchCap(),
+        allowSwap
+      );
     } else if (from.region === "BENCH" && to.region === "BENCH") {
-      if (!validBenchIndex(from.index) || from.index >= bench.length || !validBenchIndex(to.index)) return false;
-      if (from.index === to.index) return false;
-      const moving = bench[from.index];
-      if (!moving) return false;
-      const target = bench[to.index] ?? null;
-      if (target) {
-        if (!allowSwap) return false;
-        bench[to.index] = moving;
-        bench[from.index] = target;
-      } else {
-        bench.splice(from.index, 1);
-        const insertIndex = Math.max(0, Math.min(to.index, bench.length));
-        bench.splice(insertIndex, 0, moving);
-      }
-      moved = true;
+      // Bench to Bench movement
+      result = BoardSystem.moveBenchUnit(bench, from.index, to.index, allowSwap);
     }
 
-    if (!moved) return false;
+    if (!result || !result.success) {
+      if (result?.error) {
+        // Map BoardSystem errors to user-friendly messages
+        if (result.error === 'Deploy limit reached') {
+          this.addLog(
+            `Đã đạt giới hạn triển khai (${this.getDeployCount()}/${this.getDeployCap()}). Hãy nâng cấp hoặc đổi chỗ với thú đang trên sân.`
+          );
+        } else if (result.error === 'Duplicate unit on board') {
+          this.addLog("Không thể triển khai 2 thú cùng loại trên sân.");
+        } else if (result.error === 'Bench is full') {
+          this.addLog("Hàng dự bị đã đầy.");
+        }
+      }
+      return false;
+    }
+
     this.selectedBenchIndex = null;
     this.tryAutoMerge();
     this.refreshPlanningUi();
@@ -3435,20 +3387,33 @@ export class PlanningScene extends Phaser.Scene {
 
   sellUnit(uid) {
     if (!uid) return false;
+    
+    // Check board for unit
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player?.board?.[row]?.[col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!unit || unit.uid !== uid) continue;
-        const salePrice = this.getUnitSalePrice(unit);
-        this.player.board[row][col] = null;
-        this.player.gold += salePrice;
-        this.selectedBenchIndex = null;
-        this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
-        this.refreshPlanningUi();
-        this.persistProgress();
-        return true;
+        
+        // Use ShopSystem to sell unit
+        const result = ShopSystem.sellUnit(this.player, unit);
+        
+        if (result.success) {
+          this.player = result.player;
+          // Use BoardSystem to remove unit from board
+          BoardSystem.removeUnit(this.player.board, row, col);
+          this.selectedBenchIndex = null;
+          this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${result.sellValue} vàng.`);
+          this.refreshPlanningUi();
+          this.persistProgress();
+          return true;
+        } else {
+          this.addLog(result.error || "Không thể bán linh thú.");
+          return false;
+        }
       }
     }
+    
+    // Check bench for unit
     const benchIndex = this.player?.bench?.findIndex((unit) => unit?.uid === uid) ?? -1;
     if (benchIndex >= 0) return this.sellBenchIndex(benchIndex);
     return false;
@@ -3457,15 +3422,23 @@ export class PlanningScene extends Phaser.Scene {
   sellBenchIndex(index) {
     const unit = this.player?.bench?.[index];
     if (!unit) return false;
-    const salePrice = this.getUnitSalePrice(unit);
-    this.player.gold += salePrice;
-    this.player.bench.splice(index, 1);
-    if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
-    if (this.selectedBenchIndex != null && this.selectedBenchIndex > index) this.selectedBenchIndex -= 1;
-    this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${salePrice} vàng.`);
-    this.refreshPlanningUi();
-    this.persistProgress();
-    return true;
+    
+    // Use ShopSystem to sell unit
+    const result = ShopSystem.sellUnit(this.player, unit);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.player.bench.splice(index, 1);
+      if (this.selectedBenchIndex === index) this.selectedBenchIndex = null;
+      if (this.selectedBenchIndex != null && this.selectedBenchIndex > index) this.selectedBenchIndex -= 1;
+      this.addLog(`Bán ${unit.base.name} (${unit.star}★) +${result.sellValue} vàng.`);
+      this.refreshPlanningUi();
+      this.persistProgress();
+      return true;
+    } else {
+      this.addLog(result.error || "Không thể bán linh thú.");
+      return false;
+    }
   }
 
   sellSelectedUnit() {
@@ -3483,11 +3456,8 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getEquipmentNameKey(itemId) {
-    const item = ITEM_BY_ID[itemId];
-    if (!item || item.kind !== "equipment") return null;
-    const byName = String(item.name ?? "").trim().toLowerCase();
-    if (byName) return byName;
-    return String(item.id ?? itemId).trim().toLowerCase();
+    // Delegate to UpgradeSystem for equipment name key logic
+    return UpgradeSystem.getEquipmentNameKey(itemId, ITEM_BY_ID);
   }
 
   normalizeEquipIds(equips) {
@@ -3773,27 +3743,25 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getDeployCount() {
-    let count = 0;
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        if (this.player.board[row][col]) count += 1;
-      }
-    }
-    return count;
+    return BoardSystem.getDeployCount(this.player.board);
   }
 
   rollShop() {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const cost = Math.max(1, 2 + this.player.rollCostDelta);
-    if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để đổi cửa hàng.");
-      return;
+    
+    // Use ShopSystem to refresh shop
+    const result = ShopSystem.refreshShop(this.player, cost);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.refreshPlanningUi();
+      this.persistProgress();
+    } else {
+      // Display error message for insufficient gold or other errors
+      this.addLog(result.error || "Không thể đổi cửa hàng.");
     }
-    this.player.gold -= cost;
-    this.refreshShop(true);
-    this.refreshPlanningUi();
-    this.persistProgress();
   }
 
   buyXp() {
@@ -3829,201 +3797,81 @@ export class PlanningScene extends Phaser.Scene {
   toggleLock() {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    this.player.shopLocked = !this.player.shopLocked;
-    this.refreshPlanningUi();
-    this.persistProgress();
+    
+    // Use ShopSystem to lock/unlock shop
+    const result = this.player.shopLocked 
+      ? ShopSystem.unlockShop(this.player)
+      : ShopSystem.lockShop(this.player);
+    
+    if (result.success) {
+      this.player = result.player;
+      this.refreshPlanningUi();
+      this.persistProgress();
+    } else {
+      this.addLog(result.error || "Không thể thay đổi trạng thái khóa shop.");
+    }
   }
 
   refreshShop(forceRoll = false) {
+    // Only generate new offers if shop is not locked (or forceRoll is true)
     if (this.player.shopLocked && !forceRoll) return;
-    const offers = [];
-    for (let i = 0; i < 5; i += 1) {
-      const tier = rollTierForLevel(this.player.level);
-      const pool = UNIT_CATALOG.filter((u) => u.tier === tier);
-      const fallback = UNIT_CATALOG.filter((u) => u.tier <= tier);
-      const base = randomItem(pool.length ? pool : fallback.length ? fallback : UNIT_CATALOG);
-      offers.push({ slot: i, baseId: base.id });
-    }
+    
+    // Use ShopSystem to generate shop offers (no cost, just generation)
+    const offers = ShopSystem.generateShopOffers(this.player.level);
     this.player.shop = offers;
   }
 
   buyFromShop(index) {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    const offer = this.player.shop[index];
-    if (!offer) return;
-    const base = UNIT_BY_ID[offer.baseId];
-    if (!base) {
-      this.player.shop[index] = null;
-      this.addLog("Dữ liệu thú trong shop không hợp lệ, đã bỏ qua.");
+    
+    // Use ShopSystem to buy unit
+    const result = ShopSystem.buyUnit(
+      this.player, 
+      index, 
+      this.createOwnedUnit.bind(this),
+      this.getBenchCap()
+    );
+    
+    if (result.success) {
+      this.player = result.player;
+      this.tryAutoMerge();
       this.refreshPlanningUi();
       this.persistProgress();
-      return;
+    } else {
+      // Display error message for insufficient gold, full bench, or other errors
+      this.addLog(result.error || "Không thể mua linh thú.");
     }
-    const cost = base.tier;
-    if (this.player.gold < cost) {
-      this.addLog("Không đủ vàng để mua linh thú.");
-      return;
-    }
-    if (this.player.bench.length >= this.getBenchCap()) {
-      this.addLog("Hàng dự bị đã đầy.");
-      return;
-    }
-    this.player.gold -= cost;
-    const owned = this.createOwnedUnit(base.id, 1);
-    if (owned) this.player.bench.push(owned);
-    this.player.shop[index] = null;
-    this.tryAutoMerge();
-    this.refreshPlanningUi();
-    this.persistProgress();
-  }
-
-  getMergeSpeciesKey(unit) {
-    const raw = unit?.base?.species ?? unit?.base?.name ?? unit?.baseId ?? "linh-thu";
-    const normalized = String(raw)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    return normalized || String(unit?.baseId ?? "linh-thu");
-  }
-
-  getMergeSpeciesLabel(unit) {
-    const baseName = String(unit?.base?.name ?? unit?.baseId ?? "Linh thú").trim();
-    return baseName.replace(/\s+\d+\s*$/u, "");
   }
 
   tryAutoMerge() {
-    let merged = true;
-    while (merged) {
-      merged = false;
-      const refs = this.collectOwnedUnitRefs();
-      const groups = new Map();
-      refs.forEach((ref) => {
-        const key = `${this.getMergeSpeciesKey(ref.unit)}:${ref.unit.star}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(ref);
-      });
+    // Use UpgradeSystem for auto-merge logic
+    const result = UpgradeSystem.tryAutoMerge(
+      this.player.board,
+      this.player.bench,
+      ITEM_BY_ID,
+      UNIT_BY_ID,
+      this.createOwnedUnit.bind(this)
+    );
 
-      for (const [, group] of groups) {
-        if (group.length < 3) continue;
-        const picked = group.slice(0, 3);
-        const star = picked[0].unit.star;
-        const baseId = picked
-          .map((ref) => ref.unit.baseId)
-          .sort((a, b) => (UNIT_BY_ID[b]?.tier ?? 0) - (UNIT_BY_ID[a]?.tier ?? 0))[0];
-        const mergedEquip = this.collectMergeEquips(picked);
-        this.removeOwnedUnitRefs(picked);
-        const upgraded = this.createOwnedUnit(baseId, Math.min(3, star + 1), mergedEquip.kept);
-        if (!upgraded) continue;
-        this.placeMergedUnit(upgraded, picked[0]);
-        if (mergedEquip.overflow.length) {
-          this.player.itemBag.push(...mergedEquip.overflow);
-          this.addLog(`Nâng sao hoàn trả ${mergedEquip.overflow.length} trang bị dư vào túi đồ.`);
+    // Handle merge results
+    if (result.mergeCount > 0) {
+      // Process each merge log entry
+      result.log.forEach((entry) => {
+        // Get unit label for logging
+        const unit = UNIT_BY_ID[entry.baseId];
+        const label = unit?.name || entry.baseId;
+        
+        // Log the merge
+        this.addLog(`Nâng sao: ${label} -> ${entry.toStar}★`);
+        
+        // Handle overflow equipment by returning to item bag
+        if (entry.overflowItems && entry.overflowItems.length > 0) {
+          this.player.itemBag.push(...entry.overflowItems);
+          this.addLog(`Nâng sao hoàn trả ${entry.overflowItems.length} trang bị dư vào túi đồ.`);
         }
-        this.addLog(`Nâng sao: ${this.getMergeSpeciesLabel(picked[0].unit)} -> ${upgraded.star}★`);
-        merged = true;
-        break;
-      }
-    }
-  }
-
-  collectMergeEquips(refs) {
-    const all = [];
-    refs.forEach((ref) => {
-      const equips = Array.isArray(ref?.unit?.equips) ? ref.unit.equips : [];
-      equips.forEach((itemId) => {
-        if (ITEM_BY_ID[itemId]?.kind === "equipment") all.push(itemId);
       });
-    });
-    const seen = new Set();
-    const kept = [];
-    const overflow = [];
-    all.forEach((itemId) => {
-      const key = this.getEquipmentNameKey(itemId);
-      if (!key) return;
-      if (seen.has(key)) {
-        overflow.push(itemId);
-        return;
-      }
-      seen.add(key);
-      if (kept.length < 3) {
-        kept.push(itemId);
-      } else {
-        overflow.push(itemId);
-      }
-    });
-    return {
-      kept,
-      overflow
-    };
-  }
-
-  collectOwnedUnitRefs() {
-    const refs = [];
-    this.player.bench.forEach((unit, index) => {
-      refs.push({ unit, location: "BENCH", index });
-    });
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
-        if (unit) refs.push({ unit, location: "BOARD", row, col });
-      }
     }
-    return refs;
-  }
-
-  removeOwnedUnitRefs(refs) {
-    if (!Array.isArray(refs) || !refs.length) return;
-
-    const benchUidSet = new Set();
-    const benchIndexFallback = [];
-
-    refs.forEach((ref) => {
-      if (!ref) return;
-      if (ref.location === "BOARD") {
-        this.player.board[ref.row][ref.col] = null;
-        return;
-      }
-      const uid = ref.unit?.uid;
-      if (uid) {
-        benchUidSet.add(uid);
-      } else if (Number.isInteger(ref.index)) {
-        benchIndexFallback.push(ref.index);
-      }
-    });
-
-    if (benchUidSet.size) {
-      this.player.bench = this.player.bench.filter((unit) => !benchUidSet.has(unit?.uid));
-    }
-
-    // Fallback path for legacy units without uid.
-    benchIndexFallback
-      .sort((a, b) => b - a)
-      .forEach((index) => {
-        if (index >= 0 && index < this.player.bench.length) this.player.bench.splice(index, 1);
-      });
-  }
-
-  placeMergedUnit(unit, preferredRef) {
-    if (preferredRef.location === "BOARD") {
-      this.player.board[preferredRef.row][preferredRef.col] = unit;
-      return;
-    }
-    if (this.player.bench.length < this.getBenchCap()) {
-      this.player.bench.push(unit);
-      return;
-    }
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < PLAYER_COLS; col += 1) {
-        if (!this.player.board[row][col] && this.getDeployCount() < this.getDeployCap()) {
-          this.player.board[row][col] = unit;
-          return;
-        }
-      }
-    }
-    this.player.bench.push(unit);
   }
 
   enterPlanning(grantIncome) {
@@ -4043,13 +3891,17 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshShop(false);
     this.refreshPlanningUi();
 
-    if (AUGMENT_ROUNDS.includes(this.player.round) && !this.player.augmentRoundsTaken.includes(this.player.round)) {
-      this.showAugmentChoices();
+    // Only show augment choices if augments are enabled in game mode
+    if (this.gameModeConfig?.enabledSystems?.augments !== false) {
+      if (AUGMENT_ROUNDS.includes(this.player.round) && !this.player.augmentRoundsTaken.includes(this.player.round)) {
+        this.showAugmentChoices();
+      }
     }
   }
 
   grantRoundIncome() {
-    const base = 5;
+    // Use game mode config for base gold, fallback to 5 if not available
+    const base = this.gameModeConfig?.goldScaling?.(this.player.round) ?? 5;
     const interestCap = 5 + this.player.interestCapBonus;
     const interest = Math.min(interestCap, Math.floor(this.player.gold / 10));
     const winStreakBonus = this.player.winStreak >= 2 ? Math.min(3, Math.floor(this.player.winStreak / 2)) : 0;
@@ -4073,110 +3925,12 @@ export class PlanningScene extends Phaser.Scene {
 
   generateEnemyPreviewPlan() {
     const sandbox = this.player.gameMode === "PVE_SANDBOX";
-    const ai = AI_SETTINGS[this.aiMode] ?? AI_SETTINGS.MEDIUM;
+    const ai = getAISettings(this.aiMode);
     const modeFactor = ai.budgetMult ?? 1;
-    const estLevel = clamp(1 + Math.floor(this.player.round / 2) + (ai.levelBonus ?? 0), 1, 15);
-    const teamSize = this.computeEnemyTeamSize(ai, estLevel, sandbox);
     const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
-    const maxTier = clamp(1 + Math.floor(this.player.round / 3) + (ai.maxTierBonus ?? 0), 1, 5);
-    const pool = UNIT_CATALOG.filter((u) => u.tier <= maxTier);
-
-    const picks = [];
-    let coins = budget;
-    let frontCount = 0;
-    const roleCounts = {
-      TANKER: 0,
-      FIGHTER: 0,
-      ASSASSIN: 0,
-      ARCHER: 0,
-      MAGE: 0,
-      SUPPORT: 0
-    };
-    const roleProfile = this.getAiRoleProfile(this.aiMode);
-    let guard = 0;
-    while (picks.length < teamSize && guard < 260) {
-      guard += 1;
-      let candidates = pool.filter((u) => u.tier <= Math.max(1, coins));
-      if (!candidates.length) candidates = pool.filter((u) => u.tier === 1);
-      if (!candidates.length) break;
-
-      let pick = null;
-      const targetClass = this.pickClassByWeights(roleProfile.weights);
-      const byClass = candidates.filter((u) => u.classType === targetClass);
-      if (byClass.length) {
-        const minRoleCount = Math.min(...Object.values(roleCounts));
-        const diversityPool = byClass.filter((u) => roleCounts[u.classType] <= minRoleCount + 1);
-        pick = randomItem(diversityPool.length ? diversityPool : byClass);
-      }
-      if (!pick && frontCount < Math.ceil(teamSize * roleProfile.minFrontRatio)) {
-        const frontPool = candidates.filter((u) => u.classType === "TANKER" || u.classType === "FIGHTER");
-        if (frontPool.length) pick = randomItem(frontPool);
-      }
-      if (!pick && Math.random() < roleProfile.nonFrontBias) {
-        const nonFrontPool = candidates.filter((u) => u.classType !== "TANKER" && u.classType !== "FIGHTER");
-        if (nonFrontPool.length) pick = randomItem(nonFrontPool);
-      }
-      if (!pick) pick = randomItem(candidates);
-
-      let star = 1;
-      const starRoll = Math.random();
-      const twoStarChance = clamp((this.player.round - 6) * 0.045 + (ai.star2Bonus ?? 0), 0, 0.38);
-      const threeStarChance = clamp((this.player.round - 11) * 0.018 + (ai.star3Bonus ?? 0), 0, 0.08);
-      if (starRoll < threeStarChance) star = 3;
-      else if (starRoll < threeStarChance + twoStarChance) star = 2;
-
-      picks.push({ baseId: pick.id, classType: pick.classType, tier: pick.tier, star });
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
-      roleCounts[pick.classType] = (roleCounts[pick.classType] ?? 0) + 1;
-      coins -= Math.max(1, pick.tier - (star - 1));
-      if (coins <= 0 && picks.length >= Math.ceil(teamSize * 0.7)) break;
-    }
-
-    if (!picks.length) {
-      const fallback = randomItem(UNIT_CATALOG.filter((u) => u.tier === 1));
-      picks.push({ baseId: fallback.id, classType: fallback.classType, tier: fallback.tier, star: 1 });
-    }
-
-    const frontSlots = [
-      { row: 2, col: 5 }, { row: 1, col: 5 }, { row: 3, col: 5 }, { row: 2, col: 6 }, { row: 0, col: 5 }, { row: 4, col: 5 },
-      { row: 1, col: 6 }, { row: 3, col: 6 }, { row: 2, col: 7 }, { row: 0, col: 6 }, { row: 4, col: 6 }, { row: 1, col: 7 }
-    ];
-    const backSlots = [
-      { row: 2, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 2, col: 8 }, { row: 0, col: 9 }, { row: 4, col: 9 },
-      { row: 1, col: 8 }, { row: 3, col: 8 }, { row: 0, col: 8 }, { row: 4, col: 8 }, { row: 2, col: 7 }, { row: 1, col: 7 }
-    ];
-    const assassinSlots = [
-      { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 0, col: 8 }, { row: 4, col: 8 }
-    ];
-    const used = new Set();
-    const takeSlot = (list) => {
-      for (let i = 0; i < list.length; i += 1) {
-        const key = `${list[i].row}:${list[i].col}`;
-        if (used.has(key)) continue;
-        used.add(key);
-        return list[i];
-      }
-      return null;
-    };
-
-    const units = [];
-    const ordered = [
-      ...picks.filter((p) => p.classType === "TANKER" || p.classType === "FIGHTER"),
-      ...picks.filter((p) => p.classType === "SUPPORT" || p.classType === "MAGE" || p.classType === "ARCHER"),
-      ...picks.filter((p) => p.classType === "ASSASSIN")
-    ];
-    ordered.forEach((pick) => {
-      let slot = null;
-      if (pick.classType === "TANKER" || pick.classType === "FIGHTER") {
-        slot = takeSlot(frontSlots) ?? takeSlot(backSlots);
-      } else if (pick.classType === "ASSASSIN") {
-        slot = takeSlot(assassinSlots) ?? takeSlot(backSlots) ?? takeSlot(frontSlots);
-      } else {
-        slot = takeSlot(backSlots) ?? takeSlot(frontSlots);
-      }
-      if (!slot) return;
-      units.push({ baseId: pick.baseId, star: pick.star, row: slot.row, col: slot.col });
-    });
+    
+    // Use AISystem to generate enemy team
+    const units = generateEnemyTeam(this.player.round, budget, this.aiMode, sandbox);
 
     return { budget, units };
   }
@@ -4313,7 +4067,7 @@ export class PlanningScene extends Phaser.Scene {
   spawnPlayerCombatUnits() {
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const owned = this.player.board[row][col];
+        const owned = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!owned) continue;
         const unit = this.createCombatUnit(owned, "LEFT", row, col);
         if (unit) this.combatUnits.push(unit);
@@ -4862,7 +4616,7 @@ export class PlanningScene extends Phaser.Scene {
     if (this.player.board) {
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < PLAYER_COLS; c++) {
-          const u = this.player.board[r][c];
+          const u = BoardSystem.getUnitAt(this.player.board, r, c);
           if (u && u.baseId === baseId) count++;
         }
       }
@@ -4904,7 +4658,7 @@ export class PlanningScene extends Phaser.Scene {
     if (hit) {
       const r = hit.row;
       const c = hit.col;
-      const unit = this.player.board[r][c];
+      const unit = BoardSystem.getUnitAt(this.player.board, r, c);
       if (unit) {
         this.showContextMenu(unit, "BOARD", r, c, pointer.x, pointer.y);
         return;
@@ -5106,9 +4860,9 @@ export class PlanningScene extends Phaser.Scene {
     const lock = this.player.shopLocked ? "Bật" : "Tắt";
     const rollCost = Math.max(1, 2 + this.player.rollCostDelta);
 
-    this.buttons.roll.setLabel(`Đổi tướng (${rollCost} vàng)`);
-    this.buttons.xp.setLabel("Mua XP (4 vàng)");
-    this.buttons.lock.setLabel(`Khóa: ${lock}`);
+    this.buttons.roll?.setLabel(`Đổi tướng (${rollCost} vàng)`);
+    this.buttons.xp?.setLabel("Mua XP (4 vàng)");
+    this.buttons.lock?.setLabel(`Khóa: ${lock}`);
     const craftLevel = this.player?.craftTableLevel ?? 0;
     this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10 vàng)`);
     this.buttons.upgradeCraft?.setLabel(craftLevel >= 1 ? "Bàn chế: 3x3" : "Nâng bàn chế (15 vàng)");
@@ -5117,9 +4871,9 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.settings.setLabel("Cài đặt");
     this.buttons.history?.setLabel(`Xem lịch sử (${this.logHistory.length})`);
 
-    this.buttons.roll.setEnabled(planning);
-    this.buttons.xp.setEnabled(planning);
-    this.buttons.lock.setEnabled(planning);
+    this.buttons.roll?.setEnabled(planning);
+    this.buttons.xp?.setEnabled(planning);
+    this.buttons.lock?.setEnabled(planning);
     this.buttons.upgradeCraft?.setEnabled(planning && craftLevel < 1);
     this.buttons.sell.setEnabled(planning && this.selectedBenchIndex != null && !!this.player?.bench?.[this.selectedBenchIndex]);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);
@@ -5430,7 +5184,7 @@ export class PlanningScene extends Phaser.Scene {
     const startingShield = Number.isFinite(this.player?.startingShield) ? this.player.startingShield : 0;
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!unit) continue;
         const point = this.gridToScreen(col, row);
         const roleTheme = this.getRoleTheme(unit.base.classType);
@@ -5518,7 +5272,7 @@ export class PlanningScene extends Phaser.Scene {
     const deployed = [];
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
-        const unit = this.player.board[row][col];
+        const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (unit) deployed.push(unit);
       }
     }
@@ -5741,8 +5495,8 @@ export class PlanningScene extends Phaser.Scene {
     if (!base) return { title: "Không rõ", body: "Không có dữ liệu linh thú." };
     const visual = getUnitVisual(baseId, base.classType);
     const skill = SKILL_LIBRARY[base.skillId];
-    const classDef = CLASS_SYNERGY[base.classType];
-    const tribeDef = TRIBE_SYNERGY[base.tribe];
+    const classDef = SynergySystem.getClassSynergyDef(base.classType);
+    const tribeDef = SynergySystem.getTribeSynergyDef(base.tribe);
     const classMarks = classDef ? classDef.thresholds.join("/") : "-";
     const tribeMarks = tribeDef ? tribeDef.thresholds.join("/") : "-";
     const statScale = star === 1 ? 1 : star === 2 ? 1.6 : 2.5;
@@ -5833,20 +5587,20 @@ export class PlanningScene extends Phaser.Scene {
     Object.entries(summary.classCounts)
       .sort((a, b) => b[1] - a[1])
       .forEach(([key, count]) => {
-        const def = CLASS_SYNERGY[key];
+        const def = SynergySystem.getClassSynergyDef(key);
         if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
+        const tier = SynergySystem.getSynergyTier(count, def.thresholds);
+        const activeBonus = tier >= 0 ? SynergySystem.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
         lines.push(`Nghề ${getClassLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
       });
 
     Object.entries(summary.tribeCounts)
       .sort((a, b) => b[1] - a[1])
       .forEach(([key, count]) => {
-        const def = TRIBE_SYNERGY[key];
+        const def = SynergySystem.getTribeSynergyDef(key);
         if (!def) return;
-        const tier = this.getSynergyTier(count, def.thresholds);
-        const activeBonus = tier >= 0 ? this.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
+        const tier = SynergySystem.getSynergyTier(count, def.thresholds);
+        const activeBonus = tier >= 0 ? SynergySystem.formatBonusSet(def.bonuses[tier]) : "chưa kích hoạt";
         lines.push(`Tộc ${getTribeLabelVi(key)}: ${count} | Mốc ${def.thresholds.join("/")} | ${activeBonus}`);
       });
 
@@ -5869,18 +5623,13 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getSynergyTier(count, thresholds) {
-    let idx = -1;
-    for (let i = 0; i < thresholds.length; i += 1) {
-      if (count >= thresholds[i]) idx = i;
-    }
-    return idx;
+    // Delegate to SynergySystem
+    return SynergySystem.getSynergyTier(count, thresholds);
   }
 
   formatBonusSet(bonus) {
-    if (!bonus) return "chưa có hiệu ứng";
-    return Object.entries(bonus)
-      .map(([k, v]) => `${k}:${typeof v === "number" && v < 1 ? `${Math.round(v * 100)}%` : v}`)
-      .join(", ");
+    // Delegate to SynergySystem
+    return SynergySystem.formatBonusSet(bonus);
   }
 
   inferBasicActionPattern(classType, range) {
@@ -6257,134 +6006,43 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getAI() {
-    return AI_SETTINGS[this.aiMode];
-  }
-
-  computeEnemyTeamSize(ai, estimateLevel, sandbox = false) {
-    const base = getDeployCapByLevel(estimateLevel);
-    const flatBonus = ai?.teamSizeBonus ?? 0;
-    const growthEvery = Math.max(1, ai?.teamGrowthEvery ?? 4);
-    const growthCap = Math.max(0, ai?.teamGrowthCap ?? 2);
-    const roundGrowth = clamp(Math.floor((this.player.round - 1) / growthEvery), 0, growthCap);
-    const sandboxPenalty = sandbox ? 1 : 0;
-    return clamp(base + flatBonus + roundGrowth - sandboxPenalty, 2, 15);
-  }
-
-  getAiRoleProfile(mode) {
-    if (mode === "EASY") {
-      return {
-        minFrontRatio: 0.55,
-        nonFrontBias: 0.18,
-        weights: { TANKER: 0.36, FIGHTER: 0.28, ARCHER: 0.14, SUPPORT: 0.1, MAGE: 0.07, ASSASSIN: 0.05 }
-      };
-    }
-    if (mode === "HARD") {
-      return {
-        minFrontRatio: 0.34,
-        nonFrontBias: 0.45,
-        weights: { TANKER: 0.19, FIGHTER: 0.19, ARCHER: 0.18, SUPPORT: 0.15, MAGE: 0.16, ASSASSIN: 0.13 }
-      };
-    }
-    return {
-      minFrontRatio: 0.42,
-      nonFrontBias: 0.32,
-      weights: { TANKER: 0.24, FIGHTER: 0.24, ARCHER: 0.17, SUPPORT: 0.13, MAGE: 0.13, ASSASSIN: 0.09 }
-    };
-  }
-
-  pickClassByWeights(weights) {
-    const entries = Object.entries(weights ?? {}).filter(([, weight]) => Number.isFinite(weight) && weight > 0);
-    if (!entries.length) return "FIGHTER";
-    const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
-    let needle = Math.random() * total;
-    for (let i = 0; i < entries.length; i += 1) {
-      const [classType, weight] = entries[i];
-      needle -= weight;
-      if (needle <= 0) return classType;
-    }
-    return entries[entries.length - 1][0];
+    return getAISettings(this.aiMode);
   }
 
   computeSynergyCounts(units, side) {
-    const classCounts = {};
-    const tribeCounts = {};
-    const normalizeSynergyKey = (value) => {
-      const key = typeof value === "string" ? value.trim() : value;
-      if (!key || key === "undefined" || key === "null") return null;
-      return key;
-    };
-    units.forEach((unit) => {
-      const classType = normalizeSynergyKey(unit?.classType ?? unit?.base?.classType);
-      const tribe = normalizeSynergyKey(unit?.tribe ?? unit?.base?.tribe);
-      if (classType) classCounts[classType] = (classCounts[classType] ?? 0) + 1;
-      if (tribe) tribeCounts[tribe] = (tribeCounts[tribe] ?? 0) + 1;
-    });
+    // Delegate to SynergySystem
+    const options = {};
     if (side === "LEFT" && units.length > 0) {
-      if (this.player.extraClassCount > 0) {
-        const topClass = Object.keys(classCounts).sort((a, b) => classCounts[b] - classCounts[a])[0];
-        if (topClass) classCounts[topClass] += this.player.extraClassCount;
-      }
-      if (this.player.extraTribeCount > 0) {
-        const topTribe = Object.keys(tribeCounts).sort((a, b) => tribeCounts[b] - tribeCounts[a])[0];
-        if (topTribe) tribeCounts[topTribe] += this.player.extraTribeCount;
-      }
+      options.extraClassCount = this.player.extraClassCount || 0;
+      options.extraTribeCount = this.player.extraTribeCount || 0;
     }
-    return { classCounts, tribeCounts };
+    return SynergySystem.calculateSynergies(units, side, options);
   }
 
   applySynergyBonuses(side) {
+    // Delegate to SynergySystem
     const team = this.getCombatUnits(side);
-    const summary = this.computeSynergyCounts(team, side);
-
+    const options = {};
+    if (side === "LEFT") {
+      options.extraClassCount = this.player.extraClassCount || 0;
+      options.extraTribeCount = this.player.extraTribeCount || 0;
+    }
+    SynergySystem.applySynergyBonusesToTeam(team, side, options);
+    
+    // Update UI for all units
     team.forEach((unit) => {
-      const classDef = CLASS_SYNERGY[unit.classType];
-      if (classDef) {
-        const bonus = this.getSynergyBonus(classDef, summary.classCounts[unit.classType] ?? 0);
-        this.applyBonusToUnit(unit, bonus);
-      }
-
-      const tribeDef = TRIBE_SYNERGY[unit.tribe];
-      if (tribeDef) {
-        const bonus = this.getSynergyBonus(tribeDef, summary.tribeCounts[unit.tribe] ?? 0);
-        this.applyBonusToUnit(unit, bonus);
-      }
-
-      unit.rage = Math.min(unit.rageMax, unit.rage + (unit.mods.startingRage || 0));
-      unit.shield += unit.mods.shieldStart || 0;
       this.updateCombatUnitUi(unit);
     });
   }
 
   getSynergyBonus(def, count) {
-    let bonus = null;
-    for (let i = 0; i < def.thresholds.length; i += 1) {
-      if (count >= def.thresholds[i]) bonus = def.bonuses[i];
-    }
-    return bonus;
+    // Delegate to SynergySystem
+    return SynergySystem.getSynergyBonus(def, count);
   }
 
   applyBonusToUnit(unit, bonus) {
-    if (!bonus) return;
-    const hpPct = bonus.hpPct ?? bonus.teamHpPct ?? 0;
-    const atkPct = bonus.atkPct ?? bonus.teamAtkPct ?? 0;
-    const matkPct = bonus.matkPct ?? bonus.teamMatkPct ?? 0;
-    if (bonus.defFlat) unit.def += bonus.defFlat;
-    if (bonus.mdefFlat) unit.mdef += bonus.mdefFlat;
-    if (hpPct) {
-      const add = Math.round(unit.maxHp * hpPct);
-      unit.maxHp += add;
-      unit.hp += add;
-    }
-    if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
-    if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
-    if (bonus.healPct) unit.mods.healPct += bonus.healPct;
-    if (bonus.lifestealPct) unit.mods.lifestealPct += bonus.lifestealPct;
-    if (bonus.evadePct) unit.mods.evadePct += bonus.evadePct;
-    if (bonus.shieldStart) unit.mods.shieldStart += bonus.shieldStart;
-    if (bonus.startingRage) unit.mods.startingRage += bonus.startingRage;
-    if (bonus.critPct) unit.mods.critPct += bonus.critPct;
-    if (bonus.burnOnHit) unit.mods.burnOnHit += bonus.burnOnHit;
-    if (bonus.poisonOnHit) unit.mods.poisonOnHit += bonus.poisonOnHit;
+    // Delegate to SynergySystem
+    SynergySystem.applyBonusToCombatUnit(unit, bonus);
   }
 
   applyOwnedEquipmentBonuses(unit, owned) {

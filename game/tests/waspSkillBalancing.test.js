@@ -66,7 +66,7 @@ describe("Wasp Skill Balancing", () => {
       const waspSting = UNIT_BY_ID["wasp_sting"];
       
       expect(waspSting).toBeDefined();
-      expect(waspSting.skillId).toBe("wasp_triple_strike");
+      expect(waspSting.skillId).toBe("unit_skill_wasp_sting");
       expect(waspSting.tier).toBe(1);
     });
 
@@ -74,7 +74,7 @@ describe("Wasp Skill Balancing", () => {
       const garuda = UNIT_BY_ID["garuda_divine"];
       
       expect(garuda).toBeDefined();
-      expect(garuda.skillId).toBe("wasp_triple_strike");
+      expect(garuda.skillId).toBe("unit_skill_garuda_divine");
       expect(garuda.tier).toBe(5);
     });
   });
