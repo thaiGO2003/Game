@@ -418,7 +418,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test error handling (insufficient gold, invalid placement)
       - _Requirements: 11.4, 11.5_
     
-    - [-] 5.1.7 Verify and commit PlanningScene refactor
+    - [x] 5.1.7 Verify and commit PlanningScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test planning phase in game
@@ -456,14 +456,14 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles combat events for rendering
       - _Requirements: 8.2, 8.3, 8.4, 8.6_
     
-    - [~] 5.2.5 Write integration tests for CombatScene
+    - [x] 5.2.5 Write integration tests for CombatScene
       - Test full combat flow: initialize → turns → end
       - Test combat through scene with animations
       - Test player victory and enemy victory
       - Test combat log updates
       - _Requirements: 11.4, 11.5_
     
-    - [~] 5.2.6 Verify and commit CombatScene refactor
+    - [-] 5.2.6 Verify and commit CombatScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test combat in game
