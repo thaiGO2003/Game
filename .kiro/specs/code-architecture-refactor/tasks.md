@@ -463,7 +463,7 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Test combat log updates
       - _Requirements: 11.4, 11.5_
     
-    - [-] 5.2.6 Verify and commit CombatScene refactor
+    - [x] 5.2.6 Verify and commit CombatScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test combat in game
@@ -487,13 +487,13 @@ This is a major refactor to reorganize the entire Phaser 3 game codebase to supp
       - Scene handles game start with game mode selection
       - _Requirements: 8.2, 8.3, 8.4_
     
-    - [~] 5.3.3 Write integration tests for MainMenuScene
+    - [x] 5.3.3 Write integration tests for MainMenuScene
       - Test menu navigation
       - Test game start flow
       - Test scene transitions
       - _Requirements: 11.4_
     
-    - [~] 5.3.4 Verify and commit MainMenuScene refactor
+    - [-] 5.3.4 Verify and commit MainMenuScene refactor
       - Run full test suite
       - Verify all tests pass
       - Manual test menu in game
