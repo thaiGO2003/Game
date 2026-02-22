@@ -40,7 +40,20 @@ export class TooltipController {
     this.divider.setVisible(false);
     this.rightText.setVisible(false);
 
-    this.root.add([this.bg, this.titleText, this.bodyText, this.divider, this.rightText]);
+    // 3rd column for equipment
+    this.col3Text = scene.add.text(this.padX, 34, "", {
+      fontFamily: "Consolas",
+      fontSize: "12px",
+      color: "#b8e0c8",
+      lineSpacing: 3,
+      wordWrap: { width: this.width - 24, useAdvancedWrap: true }
+    });
+    this.divider2 = scene.add.rectangle(0, 0, 1, 12, 0x5a86aa, 0.85);
+    this.divider2.setOrigin(0, 0);
+    this.divider2.setVisible(false);
+    this.col3Text.setVisible(false);
+
+    this.root.add([this.bg, this.titleText, this.bodyText, this.divider, this.rightText, this.divider2, this.col3Text]);
   }
 
   measureWrappedWidth(lines, textObj) {
@@ -66,7 +79,7 @@ export class TooltipController {
     target.on("pointerover", (pointer) => {
       const content = getContentFn?.();
       if (!content) return;
-      this.show(pointer, content.title ?? "", content.body ?? "", content.rightBody ?? "");
+      this.show(pointer, content.title ?? "", content.body ?? "", content.rightBody ?? "", content.col3Body ?? "");
     });
     target.on("pointermove", (pointer) => {
       if (!this.root.visible) return;
@@ -114,17 +127,31 @@ export class TooltipController {
     this.show(pointer, title, body, rightBody);
   }
 
-  show(pointer, title, body, rightBody = "") {
+  show(pointer, title, body, rightBody = "", col3Body = "") {
     const hasRightColumn = Boolean(String(rightBody ?? "").trim());
+    const hasCol3 = Boolean(String(col3Body ?? "").trim());
 
     if (hasRightColumn) {
-      const minWidth = 460;
-      const maxWidth = Math.max(minWidth, Math.min(580, Math.floor(this.scene.scale.width * 0.52)));
-      this.width = Phaser.Math.Clamp(Math.floor(this.scene.scale.width * 0.46), minWidth, maxWidth);
+      const numCols = hasCol3 ? 3 : 2;
+      const minWidth = hasCol3 ? 660 : 460;
+      const maxWidth = Math.max(minWidth, Math.min(hasCol3 ? 780 : 580, Math.floor(this.scene.scale.width * (hasCol3 ? 0.62 : 0.52))));
+      this.width = Phaser.Math.Clamp(Math.floor(this.scene.scale.width * (hasCol3 ? 0.56 : 0.46)), minWidth, maxWidth);
       const splitGap = 16;
       const contentW = this.width - this.padX * 2;
-      const leftW = Math.max(210, Math.floor((contentW - splitGap) * 0.46));
-      const rightW = Math.max(220, contentW - splitGap - leftW);
+
+      let leftW, rightW, col3W;
+      if (hasCol3) {
+        // 3 columns: stats (36%) | skill (36%) | equip (28%)
+        const totalGaps = splitGap * 2;
+        const usable = contentW - totalGaps;
+        leftW = Math.max(180, Math.floor(usable * 0.36));
+        rightW = Math.max(180, Math.floor(usable * 0.36));
+        col3W = Math.max(140, usable - leftW - rightW);
+      } else {
+        leftW = Math.max(210, Math.floor((contentW - splitGap) * 0.46));
+        rightW = Math.max(220, contentW - splitGap - leftW);
+        col3W = 0;
+      }
 
       this.titleText.setWordWrapWidth(contentW, true);
       this.bodyText.setWordWrapWidth(leftW, true);
@@ -139,11 +166,28 @@ export class TooltipController {
       this.bodyText.setPosition(this.padX, bodyY);
       this.rightText.setPosition(this.padX + leftW + splitGap, bodyY);
       this.divider.setPosition(this.padX + leftW + Math.floor(splitGap / 2), bodyY - 1);
-      this.divider.setSize(1, Math.max(this.bodyText.height, this.rightText.height) + 2);
 
+      let maxColHeight = Math.max(this.bodyText.height, this.rightText.height);
+
+      if (hasCol3) {
+        const col3X = this.padX + leftW + splitGap + rightW + splitGap;
+        this.col3Text.setWordWrapWidth(col3W, true);
+        this.col3Text.setText(col3Body);
+        this.col3Text.setPosition(col3X, bodyY);
+        this.col3Text.setVisible(true);
+        this.divider2.setPosition(col3X - Math.floor(splitGap / 2), bodyY - 1);
+        this.divider2.setVisible(true);
+        maxColHeight = Math.max(maxColHeight, this.col3Text.height);
+        this.divider2.setSize(1, maxColHeight + 2);
+      } else {
+        this.col3Text.setVisible(false);
+        this.divider2.setVisible(false);
+      }
+
+      this.divider.setSize(1, maxColHeight + 2);
       this.rightText.setVisible(true);
       this.divider.setVisible(true);
-      this.height = Math.max(90, Math.ceil(bodyY + Math.max(this.bodyText.height, this.rightText.height) + this.padY));
+      this.height = Math.max(90, Math.ceil(bodyY + maxColHeight + this.padY));
       this.bg.setSize(this.width, this.height);
       this.move(pointer);
       this.root.setVisible(true);
@@ -152,6 +196,8 @@ export class TooltipController {
 
     this.rightText.setVisible(false);
     this.divider.setVisible(false);
+    this.col3Text.setVisible(false);
+    this.divider2.setVisible(false);
     const maxWidth = Math.max(260, Math.min(460, Math.floor(this.scene.scale.width * 0.34)));
     const minWidth = 240;
     const measureWrap = maxWidth - this.padX * 2;

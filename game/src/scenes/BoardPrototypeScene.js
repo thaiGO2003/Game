@@ -390,8 +390,8 @@ export class BoardPrototypeScene extends Phaser.Scene {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const tile = this.tileLookup.get(gridKey(row, col));
         const zone = this.add.zone(tile.center.x, tile.center.y, TILE_W - 10, TILE_H - 10);
-        zone.setRectangleDropZone(TILE_W - 10, TILE_H - 10);
-        zone.setInteractive({ useHandCursor: true });
+        zone.setInteractive(new Phaser.Geom.Rectangle(0, 0, TILE_W - 10, TILE_H - 10), Phaser.Geom.Rectangle.Contains);
+        zone.input.dropZone = true;
         zone.on("pointerdown", () => this.onPlayerCellClick(row, col));
         zone.setDepth(1500);
         this.playerCellZones.push(zone);

@@ -24,6 +24,37 @@ import {
   saveUiSettings
 } from "../core/uiSettings.js";
 import { getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
+import {
+  describeBasicAttack as _describeBasicAttack,
+  describeSkillLines as _describeSkillLines,
+  describeSkill as _describeSkill,
+  buildSkillStarMilestoneLines as _buildSkillStarMilestoneLines,
+  stripSkillStarNotes as _stripSkillStarNotes,
+  inferBasicActionPattern as _inferBasicActionPattern,
+  translateActionPattern as _translateActionPattern,
+  getStarStatMultiplier as _getStarStatMultiplier,
+  getStarSkillMultiplier as _getStarSkillMultiplier,
+  translateDamageType as _translateDamageType,
+  translateScaleStat as _translateScaleStat,
+  getSkillTargetCountText as _getSkillTargetCountText,
+  getSkillShapeText as _getSkillShapeText,
+  getSkillDamageAndFormulaText as _getSkillDamageAndFormulaText,
+  describeSkillArea as _describeSkillArea,
+  translateSkillEffect as _translateSkillEffect,
+  translateAugmentGroup as _translateAugmentGroup,
+  getAugmentIcon as _getAugmentIcon,
+  formatBonusSet as _formatBonusSet,
+  describeSkillWithElement as _describeSkillWithElement
+} from "../core/unitDescriptionHelper.js";
+import { getElementLabel } from "../data/elementInfo.js";
+import {
+  getGrassTileStyle as _getGrassTileStyle,
+  paintGrassTile as _paintGrassTile,
+  paintRiverTile as _paintRiverTile,
+  drawDiamond as _drawDiamond,
+  getRoleTheme as _getRoleTheme
+} from "../ui/BoardRenderer.js";
+import { createSceneButton } from "../ui/SceneButton.js";
 import { hydrateRunState } from "../core/runState.js";
 import {
   clamp,
@@ -262,11 +293,11 @@ export class CombatScene extends Phaser.Scene {
     this.input.removeAllListeners();
 
     // Get game mode configuration
-    const gameMode = this.runStatePayload?.player?.gameMode ?? "PVE_JOURNEY";
+    const gameMode = this.runStatePayload?.player?.gameMode ?? "EndlessPvEClassic";
     this.gameModeConfig = GameModeRegistry.get(gameMode);
     if (!this.gameModeConfig) {
-      console.warn(`Game mode "${gameMode}" not found, falling back to PVE_JOURNEY`);
-      this.gameModeConfig = GameModeRegistry.get("PVE_JOURNEY");
+      console.warn(`Game mode "${gameMode}" not found, falling back to EndlessPvEClassic`);
+      this.gameModeConfig = GameModeRegistry.get("EndlessPvEClassic");
     }
 
     const uiSettings = loadUiSettings();
@@ -390,7 +421,7 @@ export class CombatScene extends Phaser.Scene {
     });
 
     this.input.on("pointermove", (pointer) => {
-      if (this.settingsVisible || this.historyModalVisible || this.wikiVisible) return;
+      if (this.settingsVisible || this.historyModalVisible || this.libraryModal?.isOpen()) return;
 
       if (this.isBoardDragging && this.lastDragPoint) {
         const dx = pointer.x - this.lastDragPoint.x;
@@ -850,7 +881,7 @@ export class CombatScene extends Phaser.Scene {
       xp: 0,
       level: 1,
       round: 1,
-      gameMode: "PVE_JOURNEY",
+      gameMode: "EndlessPvEClassic",
       audioEnabled: this.audioFx?.enabled !== false,
       winStreak: 0,
       loseStreak: 0,
@@ -1091,71 +1122,24 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
-  getGrassTileStyle(row, col) {
-    const even = (row + col) % 2 === 0;
-    if (even) {
-      return { fill: UI_COLORS.grassA, stroke: UI_COLORS.grassEdgeA };
-    }
-    return { fill: UI_COLORS.grassB, stroke: UI_COLORS.grassEdgeB };
-  }
+  getGrassTileStyle(row, col) { return _getGrassTileStyle(row, col); }
 
   paintGrassTile(graphics, x, y, row, col) {
-    const { fill, stroke } = this.getGrassTileStyle(row, col);
     const { tileW, tileH } = this.getTileSize();
-    graphics.fillStyle(fill, 0.72);
-    graphics.lineStyle(1, stroke, 0.92);
-    this.drawDiamond(graphics, x, y);
-
-    // Add a subtle top highlight for a checkerboard grass-tile look.
-    graphics.lineStyle(1, UI_COLORS.grassHighlight, 0.2);
-    graphics.beginPath();
-    graphics.moveTo(x - tileW / 2 + 4, y);
-    graphics.lineTo(x, y - tileH / 2 + 2);
-    graphics.lineTo(x + tileW / 2 - 4, y);
-    graphics.strokePath();
+    _paintGrassTile(graphics, x, y, row, col, tileW, tileH);
   }
 
   paintRiverTile(graphics, x, y, row) {
     const { tileW, tileH } = this.getTileSize();
-    const w = tileW;
-    const h = tileH;
-    const even = row % 2 === 0;
-    const fill = even ? UI_COLORS.riverA : UI_COLORS.riverB;
-    const edge = even ? UI_COLORS.riverEdgeA : UI_COLORS.riverEdgeB;
-    graphics.fillStyle(fill, 0.94);
-    graphics.lineStyle(1, edge, 0.92);
-    graphics.beginPath();
-    graphics.moveTo(x, y - h / 2);
-    graphics.lineTo(x + w / 2, y);
-    graphics.lineTo(x, y + h / 2);
-    graphics.lineTo(x - w / 2, y);
-    graphics.closePath();
-    graphics.fillPath();
-    graphics.strokePath();
-
-    graphics.lineStyle(1, UI_COLORS.riverHighlight, 0.26);
-    graphics.beginPath();
-    graphics.moveTo(x - w / 2 + 3, y);
-    graphics.lineTo(x, y - h / 2 + 2);
-    graphics.lineTo(x + w / 2 - 3, y);
-    graphics.strokePath();
+    _paintRiverTile(graphics, x, y, row, tileW, tileH);
   }
 
   drawDiamond(graphics, x, y, fill = true) {
     const { tileW, tileH } = this.getTileSize();
-    graphics.beginPath();
-    graphics.moveTo(x, y - tileH / 2);
-    graphics.lineTo(x + tileW / 2, y);
-    graphics.lineTo(x, y + tileH / 2);
-    graphics.lineTo(x - tileW / 2, y);
-    graphics.closePath();
-    if (fill) graphics.fillPath();
-    graphics.strokePath();
+    _drawDiamond(graphics, x, y, tileW, tileH, fill);
   }
 
-  getRoleTheme(classType) {
-    return ROLE_THEME[classType] ?? ROLE_THEME.FIGHTER;
-  }
+  getRoleTheme(classType) { return _getRoleTheme(classType); }
 
   createHud() {
     const l = this.layout;
@@ -1386,8 +1370,8 @@ export class CombatScene extends Phaser.Scene {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const tile = this.tileLookup.get(gridKey(row, col));
         const zone = this.add.zone(tile.center.x, tile.center.y, tileW - 10, tileH - 10);
-        zone.setRectangleDropZone(tileW - 10, tileH - 10);
-        zone.setInteractive({ useHandCursor: true });
+        zone.setInteractive(new Phaser.Geom.Rectangle(0, 0, tileW - 10, tileH - 10), Phaser.Geom.Rectangle.Contains);
+        zone.input.dropZone = true;
         zone.on("pointerdown", () => this.onPlayerCellClick(row, col));
         zone.setDepth(1500);
         this.playerCellZones.push({ row, col, zone });
@@ -1780,7 +1764,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   chooseAugment(augment) {
-    if (this.wikiVisible) return;
+    if (this.libraryModal?.isOpen()) return;
     this.applyAugment(augment);
     this.player.augments.push(augment.id);
     this.player.augmentRoundsTaken.push(this.player.round);
@@ -1989,7 +1973,7 @@ export class CombatScene extends Phaser.Scene {
     } else {
       // Fallback to legacy scaling for backward compatibility
       // Apply Endless mode scaling for AI units when round > 30
-      if (side === "RIGHT" && this.player.gameMode === "PVE_JOURNEY" && this.player.round > 30) {
+      if (side === "RIGHT" && this.player.gameMode === "EndlessPvEClassic" && this.player.round > 30) {
         const scaleFactor = 1 + (this.player.round - 30) * 0.05;
         hpBase = Math.round(hpBase * scaleFactor);
         atkBase = Math.round(atkBase * scaleFactor);
@@ -2801,13 +2785,20 @@ export class CombatScene extends Phaser.Scene {
     const tribeDef = TRIBE_SYNERGY[unit.tribe];
     const rangeTypeLabel = unit.range >= 2 ? "Đánh xa" : "Cận chiến";
 
+    let skillIcon = "✨";
+    if (skill?.damageType === "physical") skillIcon = "🗡️";
+    else if (skill?.damageType === "magic") skillIcon = "🪄";
+    else if (skill?.damageType === "true") skillIcon = "💠";
+
     const rightLines = [
-      "⚔️ Đánh thường",
-      ...this.describeBasicAttack(unit.classType, unit.range).map((line) => `• ${line}`),
-      "",
-      `✨ Chiêu thức: ${skill?.name ?? "Không có"}`,
-      ...this.describeSkillLines(skill, UNIT_BY_ID[unit.baseId]).map((line) => `• ${line}`)
+      `${skillIcon} Chiêu thức: ${skill?.name ?? "Không có"}`,
+      ""
     ];
+
+    // Use element-aware skill description for right column
+    const baseUnit = UNIT_BY_ID[unit.baseId];
+    const skillDescLines = _describeSkillWithElement(skill, unit.tribe, baseUnit);
+    skillDescLines.forEach((line) => rightLines.push(line));
 
     const equippedItems = Array.isArray(unit.equips)
       ? unit.equips.map((id) => ITEM_BY_ID[id]).filter((x) => x?.kind === "equipment")
@@ -2818,7 +2809,7 @@ export class CombatScene extends Phaser.Scene {
       equippedItems.forEach((item) => {
         const recipe = RECIPE_BY_ID[item.fromRecipe];
         const desc = recipe?.description ? ` (${recipe.description})` : "";
-        rightLines.push(`• ${item.icon} ${item.name}${desc}`);
+        rightLines.push(`  ${item.icon} ${item.name}${desc}`);
       });
     }
 
@@ -2829,8 +2820,14 @@ export class CombatScene extends Phaser.Scene {
       evasionText += ` (gốc ${(baseEvasion * 100).toFixed(1)}%)`;
     }
 
+    // Element label
+    const elementLabel = getElementLabel(unit.tribe);
+
+    // Basic attack goes in left body
+    const basicAtkLines = this.describeBasicAttack(unit.classType, unit.range);
+
     const bodyLines = [
-      `🏷️ ${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${rangeTypeLabel}`,
+      `🏷️ ${elementLabel ? elementLabel + " " : ""}${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${rangeTypeLabel}`,
       `❤️ HP ${unit.hp}/${unit.maxHp}${unit.shield ? ` +S${unit.shield}` : ""}`,
       `⚔️ ATK ${this.getEffectiveAtk(unit)} | ✨ MATK ${this.getEffectiveMatk(unit)}`,
       `🛡️ DEF ${this.getEffectiveDef(unit)} | 🔮 MDEF ${this.getEffectiveMdef(unit)}`,
@@ -2858,6 +2855,11 @@ export class CombatScene extends Phaser.Scene {
     if (effects.length > 0) {
       bodyLines.push(`🧪 Hiệu ứng: ${effects.join(", ")}`);
     }
+
+    // Basic attack in left body
+    bodyLines.push("");
+    bodyLines.push("👊 Đánh thường");
+    basicAtkLines.forEach((l) => bodyLines.push(`  • ${l}`));
 
     return {
       title: `${visual.icon} ${visual.nameVi} ${unit.star}★ [${unit.side === "LEFT" ? "Ta" : "Địch"}]`,
@@ -2915,369 +2917,56 @@ export class CombatScene extends Phaser.Scene {
   }
 
 
-  formatBonusSet(bonus) {
-    if (!bonus) return "chưa có hiệu ứng";
-    return Object.entries(bonus)
-      .map(([k, v]) => `${k}:${typeof v === "number" && v < 1 ? `${Math.round(v * 100)}%` : v}`)
-      .join(", ");
-  }
+  formatBonusSet(bonus) { return _formatBonusSet(bonus); }
 
-  inferBasicActionPattern(classType, range) {
-    if (range >= 2) return "RANGED_STATIC";
-    if (classType === "ASSASSIN") return "ASSASSIN_BACK";
-    return "MELEE_FRONT";
-  }
+  inferBasicActionPattern(classType, range) { return _inferBasicActionPattern(classType, range); }
 
   describeBasicAttack(classType, range) {
-    const pattern = this.inferBasicActionPattern(classType, range);
-    const lines = [
-      `Thi triển: ${this.translateActionPattern(pattern)}`,
-      `Tầm đánh: ${range >= 2 ? "Đánh xa" : "Cận chiến"}`,
-      "Loại sát thương: Vật lý"
-    ];
-    if (classType === "ASSASSIN") {
-      lines.push("Ưu tiên mục tiêu cùng hàng, sau đó chọn cột xa nhất.");
-    } else if (classType === "ARCHER" || classType === "MAGE") {
-      lines.push("Ưu tiên mục tiêu cùng hàng, sau đó gần tiền tuyến.");
-    } else {
-      lines.push("Ưu tiên tiền tuyến gần nhất.");
-    }
-    lines.push("Công thức cơ bản: ATK và giáp mục tiêu.");
-    return lines;
+    return _describeBasicAttack(classType, range);
   }
 
-  stripSkillStarNotes(description) {
-    const raw = String(description ?? "").trim();
-    if (!raw) return "";
-    return raw.replace(/\s*Mốc sao:[\s\S]*$/i, "").trim();
-  }
+  stripSkillStarNotes(description) { return _stripSkillStarNotes(description); }
 
-  getStarStatMultiplier(star) {
-    if (star >= 3) return 2.5;
-    if (star === 2) return 1.6;
-    return 1;
-  }
+  getStarStatMultiplier(star) { return _getStarStatMultiplier(star); }
 
-  getStarSkillMultiplier(star) {
-    if (star >= 3) return 1.4;
-    if (star === 2) return 1.2;
-    return 1;
-  }
+  getStarSkillMultiplier(star) { return _getStarSkillMultiplier(star); }
 
   getSkillTargetCountText(skill, star) {
-    if (!skill) return "không rõ";
-    const effect = String(skill.effect ?? "");
-    const targetBonus = starTargetBonus(star);
-    const maxHits = Number.isFinite(skill.maxHits) ? Math.max(1, Math.floor(skill.maxHits)) : null;
-    const maxTargets = Number.isFinite(skill.maxTargets) ? Math.max(1, Math.floor(skill.maxTargets)) : null;
-
-    if (effect === "random_multi") {
-      const baseHits = getWaspMaxTargets({ star }, skill) ?? maxHits ?? 3;
-      const count = skill.id === "wasp_triple_strike" ? baseHits : baseHits + targetBonus;
-      return `${count} mục tiêu`;
-    }
-    if (effect === "row_multi") {
-      return `${maxHits ?? 3} mục tiêu cùng hàng`;
-    }
-    if (effect === "team_rage") {
-      return `${maxTargets ?? 3} đồng minh`;
-    }
-    if (effect === "single_sleep") {
-      const sleepTargets = Math.min(3, Math.max(1, star));
-      return `1 mục tiêu chính + ru ngủ tối đa ${sleepTargets} mục tiêu`;
-    }
-
-    const map = {
-      damage_shield_taunt: "1 mục tiêu",
-      damage_stun: "1 mục tiêu",
-      damage_shield_reflect: "1 mục tiêu",
-      single_burst: "1 mục tiêu",
-      double_hit: "1 mục tiêu",
-      single_burst_lifesteal: "1 mục tiêu",
-      single_delayed_echo: "1 mục tiêu",
-      single_sleep: "1 mục tiêu chính",
-      single_armor_break: "1 mục tiêu",
-      single_bleed: "1 mục tiêu",
-      true_single: "1 mục tiêu",
-      cross_5: "tối đa 5 ô",
-      column_freeze: "tối đa 5 ô",
-      column_bleed: "tối đa 5 ô",
-      row_cleave: "tối đa 5 ô",
-      aoe_circle: "tối đa 9 ô",
-      aoe_poison: "tối đa 9 ô",
-      column_plus_splash: "1 cột chính + 2 cột cạnh",
-      ally_row_def_buff: "tối đa 5 đồng minh",
-      column_bless: "tối đa 5 đồng minh",
-      dual_heal: "2 đồng minh",
-      shield_cleanse: "1 đồng minh",
-      global_tide_evade: "toàn bộ đồng minh",
-      global_knockback: "toàn bộ kẻ địch",
-      global_poison_team: "toàn bộ kẻ địch",
-      global_stun: "toàn bộ kẻ địch",
-      multi_disarm: "3 kẻ địch",
-      random_lightning: "5 lần giáng ngẫu nhiên",
-      metamorphosis: "bản thân",
-      turtle_protection: "bản thân",
-      rhino_counter: "bản thân",
-      pangolin_reflect: "bản thân",
-      self_atk_and_assist: "1 mục tiêu chính (+đánh phụ trợ nếu có)",
-      team_def_buff: "toàn bộ đồng minh"
-    };
-    return map[effect] ?? "theo tình huống";
+    return _getSkillTargetCountText(skill, star);
   }
 
   getSkillShapeText(skill) {
-    if (!skill) return "không rõ";
-    const effect = String(skill.effect ?? "");
-    const map = {
-      damage_shield_taunt: "1 ô điểm tiền tuyến",
-      damage_stun: "1 ô điểm",
-      damage_shield_reflect: "1 ô điểm",
-      single_burst: "1 ô điểm",
-      double_hit: "1 ô điểm (2 nhát)",
-      single_burst_lifesteal: "1 ô điểm",
-      single_delayed_echo: "1 ô điểm + dội lại cùng ô",
-      single_sleep: "1 ô điểm",
-      single_armor_break: "1 ô điểm",
-      single_bleed: "1 ô điểm",
-      true_single: "1 ô điểm",
-      cross_5: "hình chữ thập 5 ô",
-      row_multi: "hàng ngang",
-      row_cleave: "hàng ngang",
-      column_freeze: "cột dọc",
-      column_bleed: "cột dọc",
-      column_plus_splash: "cột dọc + 2 cột kế bên",
-      aoe_circle: "vùng vuông 3x3",
-      aoe_poison: "vùng vuông 3x3",
-      random_multi: "rải ngẫu nhiên trên bàn địch",
-      ally_row_def_buff: "hàng ngang đồng minh",
-      column_bless: "cột dọc đồng minh",
-      dual_heal: "2 ô đồng minh thấp máu",
-      shield_cleanse: "1 ô đồng minh thấp máu",
-      team_rage: "nhóm đồng minh gần bản thân",
-      global_tide_evade: "toàn bộ bàn đồng minh",
-      global_knockback: "toàn bộ bàn địch",
-      global_poison_team: "toàn bộ bàn địch",
-      global_stun: "toàn bộ bàn địch",
-      multi_disarm: "3 mục tiêu địch có công cao nhất",
-      random_lightning: "5 điểm ngẫu nhiên phía địch",
-      metamorphosis: "tự thân",
-      turtle_protection: "tự thân",
-      rhino_counter: "tự thân",
-      pangolin_reflect: "tự thân",
-      self_atk_and_assist: "điểm tiền tuyến + đồng minh cùng hàng hỗ trợ",
-      cone_smash: "quạt 3 ô phía trước",
-      team_def_buff: "toàn bộ bàn đồng minh"
-    };
-    return map[effect] ?? "mẫu kỹ năng đặc thù";
+    return _getSkillShapeText(skill);
   }
 
   getSkillDamageAndFormulaText(skill, baseStats, star) {
-    const starSkillMult = this.getStarSkillMultiplier(star);
-    const damageType = this.translateDamageType(skill?.damageType || "physical");
-    const statFromKey = (key) => Math.round((Number(baseStats?.[key] ?? 0) || 0) * this.getStarStatMultiplier(star));
-
-    if (skill?.hit1 && skill?.hit2) {
-      const statKey = skill.scaleStat || "atk";
-      const statLabel = this.translateScaleStat(statKey);
-      const statValue = statFromKey(statKey);
-      const h1Base = Number(skill.hit1.base ?? 0);
-      const h1Scale = Number(skill.hit1.scale ?? 0);
-      const h2Base = Number(skill.hit2.base ?? 0);
-      const h2Scale = Number(skill.hit2.scale ?? 0);
-      const h1 = Math.round((h1Base + statValue * h1Scale) * starSkillMult);
-      const h2 = Math.round((h2Base + statValue * h2Scale) * starSkillMult);
-      const total = Math.max(0, h1 + h2);
-      const formula = `Công thức: [(${statLabel}(${statValue}) x ${h1Scale} + ${h1Base}) + (${statLabel}(${statValue}) x ${h2Scale} + ${h2Base})] x${starSkillMult.toFixed(2)} = ${total}`;
-      return { damageText: `${total} (${damageType})`, formulaText: formula };
-    }
-
-    const baseVal = Number(skill?.base);
-    const scaleVal = Number(skill?.scale);
-    if (!Number.isFinite(baseVal) || !Number.isFinite(scaleVal)) {
-      return {
-        damageText: "không gây sát thương trực tiếp",
-        formulaText: "Công thức: Không có công thức sát thương trực tiếp."
-      };
-    }
-
-    const statKey = skill.scaleStat || "atk";
-    const statLabel = this.translateScaleStat(statKey);
-    const statValue = statFromKey(statKey);
-    const total = Math.max(0, Math.round((baseVal + statValue * scaleVal) * starSkillMult));
-    const formula = `Công thức: (${statLabel}(${statValue}) x ${scaleVal} + ${baseVal}) x${starSkillMult.toFixed(2)} = ${total}`;
-    return { damageText: `${total} (${damageType})`, formulaText: formula };
+    return _getSkillDamageAndFormulaText(skill, baseStats, star);
   }
 
   buildSkillStarMilestoneLines(skill, baseUnit) {
-    if (!skill) return [];
-    const baseStats = baseUnit?.stats ?? null;
-    const lines = [];
-    for (let star = 1; star <= 3; star += 1) {
-      const targetText = this.getSkillTargetCountText(skill, star);
-      const shapeText = this.getSkillShapeText(skill);
-      const { damageText, formulaText } = this.getSkillDamageAndFormulaText(skill, baseStats, star);
-      lines.push(
-        `${star} sao: Sát thương: ${damageText} | Số mục tiêu: ${targetText} | Hình dạng chiêu thức: ${shapeText} | ${formulaText}`
-      );
-    }
-    return lines;
+    return _buildSkillStarMilestoneLines(skill, baseUnit);
   }
 
   describeSkillLines(skill, baseUnit = null) {
-    if (!skill) return ["Không có kỹ năng chủ động."];
-    const lines = [];
-    const description = this.stripSkillStarNotes(skill.descriptionVi || skill.description);
-    if (description) lines.push(description);
-    lines.push("Mốc sao:");
-    lines.push(...this.buildSkillStarMilestoneLines(skill, baseUnit));
-    return lines;
+    return _describeSkillLines(skill, baseUnit);
   }
-  describeSkill(skill) {
-    return this.describeSkillLines(skill).join(" | ");
-  }
+  describeSkill(skill) { return _describeSkill(skill); }
 
-  describeSkillArea(skill) {
-    if (!skill) return "";
-    const maxHits = Number.isFinite(skill.maxHits) ? Math.max(1, Math.floor(skill.maxHits)) : null;
-    const maxTargets = Number.isFinite(skill.maxTargets) ? Math.max(1, Math.floor(skill.maxTargets)) : null;
-    const map = {
-      damage_shield_taunt: "Đánh đơn mục tiêu, tạo khiên và khiêu khích.",
-      damage_stun: "Đánh đơn mục tiêu, có tỷ lệ gây choáng.",
-      damage_shield_reflect: "Đánh đơn mục tiêu, tạo khiên phản đòn.",
-      ally_row_def_buff: "Cường hóa giáp và kháng phép cho hàng ngang đồng minh.",
-      single_burst: "Tấn công mạnh vào 1 mục tiêu.",
-      double_hit: "Tấn công liên tiếp 2 lần vào 1 mục tiêu.",
-      single_burst_lifesteal: "Tấn công mạnh và hút máu từ mục tiêu.",
-      single_delayed_echo: "Gây sát thương, sau đó nổ thêm lần nữa (vọng âm).",
-      cross_5: "Tấn công 5 ô theo hình chữ thập.",
-      row_multi: `Bắn xuyên thấu ${maxHits ?? 3} mục tiêu trên cùng hàng.`,
-      random_multi: `Bắn ngẫu nhiên ${maxHits ?? 3} mục tiêu.`,
-      single_sleep: "Gây sát thương và ru ngủ mục tiêu.",
-      single_armor_break: "Gây sát thương và phá giáp mục tiêu.",
-      column_freeze: "Triệu hồi cột băng tấn công dọc và gây đóng băng.",
-      aoe_circle: "Nổ năng lượng vùng vuông 3x3 quanh mục tiêu.",
-      column_plus_splash: "Tấn công cột dọc và lan sang 2 bên.",
-      column_bleed: "Xé dọc theo cột mục tiêu, gây chảy máu cho toàn bộ nạn nhân trúng đòn.",
-      aoe_poison: "Phun mưa độc vùng 3x3 (tối đa 9 ô).",
-      dual_heal: "Hồi máu cho 2 đồng minh yếu nhất.",
-      shield_cleanse: "Tạo khiên và xóa hiệu ứng xấu cho đồng minh.",
-      team_rage: `Hồi nộ cho ${maxTargets ?? 3} đồng minh xung quanh.`,
-      column_bless: "Ban phước tấn công và né tránh cho cột dọc đồng minh.",
-      global_tide_evade: "Sóng thần không gây sát thương, hồi đầy máu cho toàn bộ đồng minh.",
-      global_knockback: "Gây sát thương toàn bộ kẻ địch và đẩy lùi hàng tiền tuyến 1 ô.",
-      team_def_buff: "Tăng giáp + kháng phép toàn đội và hồi máu đồng minh thấp máu nhất.",
-      row_cleave: "Quét vũ khí tấn công toàn bộ hàng ngang.",
-      self_atk_and_assist: "Tự tăng công và gọi đồng minh cùng hàng đánh bồi.",
-      cone_smash: "Nện xuống đất gây sát thương vùng quạt 3 ô vuông.",
-      true_single: "Gây sát thương chuẩn (bỏ qua giáp) vào 1 mục tiêu.",
-      global_poison_team: "Rải độc tố gây sát thương theo thời gian lên TẤT CẢ kẻ địch.",
-      lifesteal_disease: "Hút máu mục tiêu và lây bệnh sang kẻ địch lân cận mỗi lượt.",
-      lifesteal_disease_maxhp: "Hút máu mạnh, tăng HP tối đa theo sát thương và phát tán dịch bệnh.",
-      single_poison_stack: "Đánh đơn mục tiêu, độc cộng dồn theo từng lần trúng.",
-      double_hit_gold_reward: "Đánh 2 nhát; nếu kết liễu mục tiêu sẽ thưởng thêm vàng.",
-      assassin_execute_rage_refund: "Đòn kết liễu sát thủ: hồi nộ, thưởng vàng và đánh nối chuỗi.",
-      metamorphosis: "Hóa kén thành Bướm Gió, tăng mạnh MATK và đổi đòn đánh thường thành sát thương phép theo MATK; từ 2★ buff nhanh nhẹn toàn đội."
-    };
-    const text = map[skill.effect];
-    if (text) return text;
+  describeSkillArea(skill) { return _describeSkillArea(skill); }
 
-    if (skill.actionPattern === "SELF") return "Không tấn công trực tiếp; hiệu ứng tự thân/hỗ trợ.";
-    if (String(skill.effect ?? "").includes("single")) return "Tấn công tập trung vào một mục tiêu đơn lẻ.";
-    if (String(skill.effect ?? "").includes("row")) return "Tấn công quét ngang toàn bộ hàng.";
-    if (String(skill.effect ?? "").includes("column")) return "Tấn công xuyên thấu theo cột dọc.";
-    if (String(skill.effect ?? "").includes("aoe")) return "Tấn công diện rộng lên nhiều mục tiêu.";
-    if (String(skill.effect ?? "").includes("cone")) return "Tấn công nhiều ô vùng quạt trước mặt.";
-    return "Tấn công theo mẫu kỹ năng đặc thù.";
-  }
+  translateDamageType(type) { return _translateDamageType(type); }
 
-  translateDamageType(type) {
-    if (type === "physical") return "Vật lý";
-    if (type === "magic") return "Phép";
-    if (type === "true") return "Chuẩn";
-    return type ?? "-";
-  }
-
-  translateScaleStat(stat) {
-    if (stat === "matk") return "MATK";
-    if (stat === "atk") return "ATK";
-    if (stat === "def") return "DEF";
-    if (stat === "mdef") return "MDEF";
-    return String(stat ?? "chỉ số");
-  }
+  translateScaleStat(stat) { return _translateScaleStat(stat); }
 
   translateActionPattern(pattern) {
-    const map = {
-      MELEE_FRONT: "Cận chiến áp sát tiền tuyến",
-      ASSASSIN_BACK: "Lao ra hậu phương rồi quay về",
-      RANGED_STATIC: "Đứng yên và bắn từ xa",
-      SELF: "Tự cường hóa hoặc hỗ trợ"
-    };
-    return map[pattern] ?? pattern;
+    return _translateActionPattern(pattern);
   }
 
-  translateAugmentGroup(group) {
-    const map = {
-      ECONOMY: "Kinh tế",
-      FORMATION: "Đội hình",
-      COMBAT: "Giao tranh",
-      SYNERGY: "Cộng hưởng"
-    };
-    return map[group] ?? group;
-  }
+  translateAugmentGroup(group) { return _translateAugmentGroup(group); }
 
-  getAugmentIcon(augment) {
-    if (augment?.icon) return augment.icon;
-    const map = {
-      ECONOMY: "💰",
-      FORMATION: "🧩",
-      COMBAT: "⚔️",
-      SYNERGY: "✨"
-    };
-    return map[augment?.group] ?? "🌲";
-  }
+  getAugmentIcon(augment) { return _getAugmentIcon(augment); }
 
-  translateSkillEffect(effect) {
-    const map = {
-      damage_shield_taunt: "Gây sát thương + khiên + khiêu khích",
-      damage_stun: "Gây sát thương + choáng",
-      damage_shield_reflect: "Gây sát thương + khiên phản đòn",
-      ally_row_def_buff: "Tăng giáp/kháng phép theo hàng",
-      single_burst: "Dồn sát thương đơn mục tiêu",
-      double_hit: "Đánh hai lần",
-      single_burst_lifesteal: "Dồn sát thương + hút máu",
-      single_delayed_echo: "Sát thương + nổ dội",
-      cross_5: "Sát thương hình chữ thập 5 ô",
-      row_multi: "Bắn xuyên theo hàng",
-      random_multi: "Bắn ngẫu nhiên nhiều mục tiêu",
-      single_sleep: "Sát thương + gây ngủ",
-      single_armor_break: "Sát thương + giảm giáp",
-      column_freeze: "Cột băng + đóng băng",
-      aoe_circle: "Nổ vùng vuông 3x3",
-      column_plus_splash: "Đánh cột + lan cạnh",
-      aoe_poison: "Độc diện rộng",
-      dual_heal: "Hồi máu 2 đồng minh",
-      shield_cleanse: "Tạo khiên + thanh tẩy",
-      team_rage: "Tăng nộ đồng minh",
-      column_bless: "Cường hóa theo cột",
-      global_tide_evade: "Sóng thần hồi đầy máu đồng minh",
-      global_knockback: "Sóng thần toàn bản đồ + đẩy lùi tiền tuyến",
-      team_def_buff: "Tăng giáp/kháng phép toàn đội + hồi máu thấp nhất",
-      column_bleed: "Cào rách theo cột",
-      row_cleave: "Quét hàng",
-      self_atk_and_assist: "Tự cường hóa + đánh phụ trợ",
-      cone_smash: "Nện vùng quạt 3 ô",
-      true_single: "Sát thương chuẩn đơn mục tiêu",
-      global_poison_team: "Đại Dịch Toàn Cầu",
-      lifesteal_disease: "Hút Máu & Lây Bệnh",
-      lifesteal_disease_maxhp: "Hút Máu + Tăng HP Tối Đa",
-      single_poison_stack: "Độc Cộng Dồn",
-      double_hit_gold_reward: "Song Kích Thưởng Vàng",
-      assassin_execute_rage_refund: "Tất Sát Hoàn Nộ",
-      metamorphosis: "Hóa Kén Phong Mộc (MATK + đòn phép)"
-    };
-    return map[effect] ?? effect;
-  }
+  translateSkillEffect(effect) { return _translateSkillEffect(effect); }
 
 
 
