@@ -1,4 +1,5 @@
 import { DEFAULT_LOSE_CONDITION, normalizeLoseCondition } from "./gameRules.js";
+import { setLocale, getLocale, getAvailableLocales } from "../i18n/index.js";
 
 const UI_SETTINGS_KEY = "forest_throne_ui_settings_v1";
 
@@ -18,7 +19,8 @@ export function createDefaultUiSettings() {
     loseCondition: DEFAULT_LOSE_CONDITION,
     volumeLevel: 5,
     resolutionKey: DEFAULT_RESOLUTION_KEY,
-    guiScale: 2
+    guiScale: 2,
+    language: "vi"
   };
 }
 
@@ -51,15 +53,19 @@ export function loadUiSettings() {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return createDefaultUiSettings();
     const defaults = createDefaultUiSettings();
-    return {
+    const settings = {
       ...defaults,
       ...parsed,
       aiMode: ["EASY", "MEDIUM", "HARD"].includes(parsed.aiMode) ? parsed.aiMode : defaults.aiMode,
       loseCondition: normalizeLoseCondition(parsed.loseCondition),
       volumeLevel: Number.isFinite(parsed.volumeLevel) ? Math.min(10, Math.max(1, Math.floor(parsed.volumeLevel))) : defaults.volumeLevel,
       resolutionKey: normalizeResolutionKey(parsed.resolutionKey),
-      guiScale: normalizeGuiScale(parsed.guiScale)
+      guiScale: normalizeGuiScale(parsed.guiScale),
+      language: getAvailableLocales().includes(parsed.language) ? parsed.language : defaults.language
     };
+    // Sync i18n locale with loaded settings
+    setLocale(settings.language);
+    return settings;
   } catch (_err) {
     return createDefaultUiSettings();
   }
@@ -67,14 +73,17 @@ export function loadUiSettings() {
 
 export function saveUiSettings(settings) {
   try {
+    const lang = getAvailableLocales().includes(settings.language) ? settings.language : "vi";
     const payload = {
       audioEnabled: settings.audioEnabled !== false,
       aiMode: ["EASY", "MEDIUM", "HARD"].includes(settings.aiMode) ? settings.aiMode : "MEDIUM",
       loseCondition: normalizeLoseCondition(settings.loseCondition),
       volumeLevel: Number.isFinite(settings.volumeLevel) ? Math.min(10, Math.max(1, Math.floor(settings.volumeLevel))) : 10,
       resolutionKey: normalizeResolutionKey(settings.resolutionKey),
-      guiScale: normalizeGuiScale(settings.guiScale)
+      guiScale: normalizeGuiScale(settings.guiScale),
+      language: lang
     };
+    setLocale(lang);
     localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(payload));
     return true;
   } catch (_err) {

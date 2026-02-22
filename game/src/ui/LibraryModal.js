@@ -2,11 +2,11 @@ import { UNIT_CATALOG, UNIT_BY_ID } from "../data/unitCatalog.js";
 import { SKILL_LIBRARY } from "../data/skills.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
+import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { RecipeDiagram } from "./RecipeDiagram.js";
 import { AttackPreview } from "./AttackPreview.js";
 import { SkillPreview } from "./SkillPreview.js";
-
-const UI_FONT = "Segoe UI";
+import { UI_FONT } from "../core/uiTheme.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -48,6 +48,9 @@ export class LibraryModal {
     this.title = options.title ?? "Thư Viện Linh Thú";
     this.activeTab = "units";
     this.searchQuery = "";
+    this.filterClass = null;
+    this.filterTribe = null;
+    this.filterTier = null;
     this.detailUnitId = null;
     this.scrollY = 0;
     this.maxScroll = 0;
@@ -70,9 +73,9 @@ export class LibraryModal {
     const modalX = width / 2;
     const modalY = height / 2;
     const viewportX = modalX - modalW / 2 + 24;
-    const viewportY = modalY - modalH / 2 + 108;
+    const viewportY = modalY - modalH / 2 + 144;
     const viewportW = modalW - 48;
-    const viewportH = modalH - 140;
+    const viewportH = modalH - 176;
 
     this.layout = {
       modalW,
@@ -127,25 +130,8 @@ export class LibraryModal {
     this.unitTab = this.createTab(modalX - modalW / 2 + 24, modalY - modalH / 2 + 86, 180, "🐾 LINH THÚ", "units");
     this.recipeTab = this.createTab(modalX - modalW / 2 + 214, modalY - modalH / 2 + 86, 180, "⚗️ CÔNG THỨC", "recipes");
 
-    this.searchBg = scene.add.rectangle(modalX - modalW / 2 + 416, modalY - modalH / 2 + 102, 300, 30, 0x112235, 0.9);
-    this.searchBg.setStrokeStyle(1, 0x3a5070, 1);
-    this.searchBg.setDepth(this.depth + 2);
-    this.searchBg.setInteractive({ useHandCursor: true });
-    this.searchBg.on("pointerdown", () => {
-      const query = window.prompt("Nhập tên linh thú, hệ hoặc nghề:", this.searchQuery);
-      if (query === null) return;
-      this.searchQuery = String(query).trim();
-      this.scrollY = 0;
-      this.detailUnitId = null;
-      this.refresh();
-    });
-
-    this.searchText = scene.add.text(this.searchBg.x - this.searchBg.width / 2 + 12, this.searchBg.y, "🔍 Tìm kiếm linh thú...", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: "#6a8fb0"
-    }).setOrigin(0, 0.5);
-    this.searchText.setDepth(this.depth + 3);
+    this.filterContainer = scene.add.container(modalX - modalW / 2 + 24, modalY - modalH / 2 + 128);
+    this.filterContainer.setDepth(this.depth + 2);
 
     this.contentContainer = scene.add.container(viewportX, viewportY);
     this.contentContainer.setDepth(this.depth + 2);
@@ -157,10 +143,8 @@ export class LibraryModal {
     this.contentMaskShape = maskShape;
     this.contentContainer.setMask(maskShape.createGeometryMask());
 
-    this.wheelZone = scene.add.zone(modalX, modalY, modalW, modalH);
-    this.wheelZone.setDepth(this.depth + 5);
-    this.wheelZone.setInteractive();
-    this.wheelZone.on("wheel", (_pointer, _dx, dy) => this.scrollBy(dy));
+    // Register wheel scrolling on the panel itself (no separate blocking zone)
+    this.panel.on("wheel", (_pointer, _dx, dy) => this.scrollBy(dy));
 
     this.overlayParts = [
       this.dimmer,
@@ -173,10 +157,8 @@ export class LibraryModal {
       this.unitTab.text,
       this.recipeTab.bg,
       this.recipeTab.text,
-      this.searchBg,
-      this.searchText,
+      this.filterContainer,
       this.contentContainer,
-      this.wheelZone,
       this.contentMaskShape
     ];
 
@@ -288,14 +270,92 @@ export class LibraryModal {
     setStyle(this.recipeTab, this.activeTab === "recipes");
   }
 
+  createButton(x, y, width, height, label, onClick, bgFill = 0x233850, stroke = 0x5a8ab0, parent = null) {
+    const bg = this.scene.add.rectangle(x, y, width, height, bgFill, 0.9).setOrigin(0.5);
+    bg.setStrokeStyle(1, stroke, 1);
+    bg.setInteractive({ useHandCursor: true });
+    bg.on("pointerover", () => bg.setFillStyle(0x355070, 0.95));
+    bg.on("pointerout", () => bg.setFillStyle(bgFill, 0.9));
+    bg.on("pointerdown", onClick);
+
+    const txt = this.scene.add.text(x, y, label, {
+      fontFamily: UI_FONT,
+      fontSize: "13px",
+      color: "#e9f5ff",
+      fontStyle: "bold"
+    }).setOrigin(0.5);
+
+    if (parent) {
+      parent.add([bg, txt]);
+    }
+    return { bg, label: txt };
+  }
+
   refreshSearchUi() {
-    const showSearch = this.activeTab === "units" && !this.detailUnitId;
-    this.searchBg.setVisible(showSearch);
-    this.searchText.setVisible(showSearch);
-    if (showSearch) {
-      const hasQuery = Boolean(String(this.searchQuery ?? "").trim());
-      this.searchText.setText(hasQuery ? `🔍 ${this.searchQuery}` : "🔍 Tìm kiếm linh thú...");
-      this.searchText.setColor(hasQuery ? "#ffffff" : "#6a8fb0");
+    this.filterContainer.removeAll(true);
+    const showFilter = this.activeTab === "units" && !this.detailUnitId;
+    if (!showFilter) return;
+
+    let filterX = 0;
+    const filterY = 0;
+    const btnH = 30;
+    const spacing = 14;
+
+    // Filter: Class
+    const classW = 140;
+    const classLabel = this.filterClass ? getClassLabelVi(this.filterClass) : "Tất cả Nghề";
+    this.createButton(filterX + classW / 2, filterY, classW, btnH, classLabel, () => {
+      const options = ["ALL", ...Object.keys(CLASS_SYNERGY)];
+      const nextIdx = (options.indexOf(this.filterClass || "ALL") + 1) % options.length;
+      this.filterClass = options[nextIdx] === "ALL" ? null : options[nextIdx];
+      this.refresh();
+    }, 0x233850, 0x5a8ab0, this.filterContainer);
+    filterX += classW + spacing;
+
+    // Filter: Tribe
+    const tribeW = 140;
+    const tribeLabel = this.filterTribe ? getTribeLabelVi(this.filterTribe) : "Tất cả Tộc";
+    this.createButton(filterX + tribeW / 2, filterY, tribeW, btnH, tribeLabel, () => {
+      const options = ["ALL", ...Object.keys(TRIBE_SYNERGY)];
+      const nextIdx = (options.indexOf(this.filterTribe || "ALL") + 1) % options.length;
+      this.filterTribe = options[nextIdx] === "ALL" ? null : options[nextIdx];
+      this.refresh();
+    }, 0x233850, 0x5a8ab0, this.filterContainer);
+    filterX += tribeW + spacing;
+
+    // Filter: Tier
+    const tierW = 120;
+    const tierLabel = this.filterTier ? `Bậc ${this.filterTier}` : "Tất cả Bậc";
+    this.createButton(filterX + tierW / 2, filterY, tierW, btnH, tierLabel, () => {
+      const options = [0, 1, 2, 3, 4, 5];
+      const nextIdx = (options.indexOf(this.filterTier || 0) + 1) % options.length;
+      this.filterTier = options[nextIdx] === 0 ? null : options[nextIdx];
+      this.refresh();
+    }, 0x233850, 0x5a8ab0, this.filterContainer);
+    filterX += tierW + spacing;
+
+    // Search
+    const searchW = 200;
+    const searchLabel = this.searchQuery ? `🔍 "${this.searchQuery}"` : "🔍 Tìm kiếm...";
+    this.createButton(filterX + searchW / 2, filterY, searchW, btnH, searchLabel, () => {
+      const input = window.prompt("Nhập tên linh thú để tìm kiếm:", this.searchQuery);
+      if (input !== null) {
+        this.searchQuery = String(input).trim();
+        this.refresh();
+      }
+    }, 0x112235, 0x3a5070, this.filterContainer).label.setFontSize(13);
+    filterX += searchW + spacing;
+
+    // Reset
+    if (this.filterClass || this.filterTribe || this.filterTier || this.searchQuery) {
+      const resetW = 80;
+      this.createButton(filterX + resetW / 2, filterY, resetW, btnH, "Xóa lọc", () => {
+        this.filterClass = null;
+        this.filterTribe = null;
+        this.filterTier = null;
+        this.searchQuery = "";
+        this.refresh();
+      }, 0x3b2e2e, 0xff5555, this.filterContainer);
     }
   }
 
@@ -305,6 +365,16 @@ export class LibraryModal {
     }
 
     let units = [...UNIT_CATALOG];
+
+    if (this.filterClass) {
+      units = units.filter(u => u.classType === this.filterClass);
+    }
+    if (this.filterTribe) {
+      units = units.filter(u => u.tribe === this.filterTribe);
+    }
+    if (this.filterTier) {
+      units = units.filter(u => u.tier === this.filterTier);
+    }
     const query = String(this.searchQuery ?? "").trim().toLowerCase();
     if (query) {
       units = units.filter((unit) => {
@@ -419,7 +489,7 @@ export class LibraryModal {
     this.contentContainer.add(back);
     y += 28;
 
-    const panelH = 360;
+    const panelH = 400;
     const panel = this.scene.add.rectangle(0, y, this.layout.viewportW - 14, panelH, 0x0f1e30, 0.95).setOrigin(0, 0);
     panel.setStrokeStyle(1, 0x5a8ab0, 0.8);
     this.contentContainer.add(panel);
@@ -437,36 +507,36 @@ export class LibraryModal {
     }).setOrigin(1, 0);
 
     const desc = [
-      `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
-      `HP: ${hp}   ATK: ${atk}   DEF: ${def}`,
-      `SPD: ${matk}   MDEF: ${mdef}`,
-      `Chính xác: ${accuracy}%   Né tránh: ${evasion}%`,
-      `Tầm đánh: ${range} ô (${range >= 2 ? "Đánh xa" : "Cận chiến"})   Nộ: ${rageMax}`
+      `🏷️ Tộc: ${getTribeLabelVi(unit.tribe)}    ⚔️ Nghề: ${getClassLabelVi(unit.classType)}`,
+      `❤️ HP: ${hp}    🗡️ ATK: ${atk}    🛡️ DEF: ${def}`,
+      `✨ MATK: ${matk}    🔰 MDEF: ${mdef}`,
+      `🎯 Chính xác: ${accuracy}%    💨 Né tránh: ${evasion}%`,
+      `📏 Tầm đánh: ${range} ô (${range >= 2 ? "Đánh xa" : "Cận chiến"})    🔥 Nộ: ${rageMax}`
     ].join("\n");
     const meta = this.scene.add.text(16, y + 52, desc, {
       fontFamily: UI_FONT,
       fontSize: "14px",
       color: "#c0ddf5",
-      lineSpacing: 6
+      lineSpacing: 10
     });
 
-    const skillTitle = this.scene.add.text(16, y + 160, "⚡ KỸ NĂNG:", {
+    const skillTitle = this.scene.add.text(16, y + 180, "⚡ KỸ NĂNG:", {
       fontFamily: UI_FONT,
       fontSize: "15px",
       color: "#ffd580",
       fontStyle: "bold"
     });
-    const skillName = this.scene.add.text(16, y + 184, skill?.name ?? unit.skillId, {
+    const skillName = this.scene.add.text(16, y + 206, skill?.name ?? unit.skillId, {
       fontFamily: UI_FONT,
       fontSize: "18px",
       color: "#8df2ff",
       fontStyle: "bold"
     });
-    const skillDesc = this.scene.add.text(16, y + 212, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
+    const skillDesc = this.scene.add.text(16, y + 236, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
       fontFamily: UI_FONT,
       fontSize: "13px",
       color: "#d0eaff",
-      lineSpacing: 5,
+      lineSpacing: 6,
       wordWrap: { width: this.layout.viewportW - 48 }
     });
 

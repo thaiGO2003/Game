@@ -20,6 +20,7 @@ import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
 import GameModeRegistry from "../gameModes/GameModeRegistry.js";
+import { getAvailableLocales, getLocaleLabel } from "../i18n/index.js";
 
 const AI_LABELS = {
   EASY: "Dễ",
@@ -42,16 +43,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.difficultyRadioGroup = null;
     this.continueButton = null;
     this.savedRun = null;
-    this.wikiPanel = null;
-    this.wikiContent = null;
-    this.wikiScrollY = 0;
-    this.wikiScrollMax = 0;
-    this.wikiContentBaseY = 0;
-    this.wikiViewport = null;
-    this.wikiWheelArea = null;
-    this.wikiScrollHint = null;
-    this._wikiTab = "units";
-    this._wikiDetailUnit = null;
     this._craftRecipes = null;
     this.updatePanel = null;
     this.updateContent = null;
@@ -80,7 +71,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createMainButtons();
     this.createSettingsPanel();
     this.createStartPanel();
-    this.createWikiPanel();
+    this.libraryModal = new LibraryModal(this, { title: "Thư Viện Linh Thú" });
     this.createUpdatePanel();
     const w = this.scale.width;
     const h = this.scale.height;
@@ -110,16 +101,16 @@ export class MainMenuScene extends Phaser.Scene {
         this.scrollUpdateBy(deltaY);
         return;
       }
-      if (!this.wikiPanel?.visible || !this.wikiWheelArea) return;
-      if (!Phaser.Geom.Rectangle.Contains(this.wikiWheelArea, pointer.x, pointer.y)) return;
-      this.scrollWikiBy(deltaY);
+      if (this.libraryModal?.isOpen()) {
+        this.libraryModal.scrollBy(deltaY);
+      }
     });
     this.input.keyboard?.on("keydown-ESC", () => {
       if (this.updatePanel?.visible) {
         this.updatePanel.setVisible(false);
         return;
       }
-      if (this.wikiPanel?.visible) this.wikiPanel.setVisible(false);
+      if (this.libraryModal?.isOpen()) this.libraryModal.hide();
     });
   }
 
@@ -176,7 +167,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.createButton(w * 0.5, startY + 206, 320, 50, "Thư Viện", () => {
       this.updatePanel?.setVisible(false);
-      this.toggleWikiPanel();
+      this.startPanel?.setVisible(false);
+      this.settingsPanel?.setVisible(false);
+      this.libraryModal.toggle();
     }, 0x2e5f7d, 0x9ed8ff);
 
     this.createButton(w * 0.5, startY + 272, 320, 50, "Thông tin cập nhật", () => {
@@ -261,7 +254,7 @@ export class MainMenuScene extends Phaser.Scene {
       label: mode.name,
       disabled: false
     }));
-    
+
     // Add placeholder for future modes if no modes registered
     if (modeOptions.length === 0) {
       modeOptions.push(
@@ -330,52 +323,59 @@ export class MainMenuScene extends Phaser.Scene {
     const panel = this.add.container(w * 0.5, h * 0.72);
     panel.setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, 560, 380, 0x101a2a, 0.96);
+    const bg = this.add.rectangle(0, 0, 560, 440, 0x101a2a, 0.96);
     bg.setStrokeStyle(2, 0x7fb8ff, 1);
     panel.add(bg);
 
-    const title = this.add.text(-258, -150, "Cài đặt", {
+    const title = this.add.text(-258, -180, "Cài đặt", {
       fontFamily: "Consolas",
       fontSize: "24px",
       color: "#ffeab0"
     });
     panel.add(title);
 
-    this.audioText = this.add.text(-248, -96, "", {
+    this.audioText = this.add.text(-248, -126, "", {
       fontFamily: "Consolas",
       fontSize: "19px",
       color: "#e7f3ff"
     });
     panel.add(this.audioText);
 
-    this.aiText = this.add.text(-248, -42, "", {
+    this.aiText = this.add.text(-248, -72, "", {
       fontFamily: "Consolas",
       fontSize: "19px",
       color: "#e7f3ff"
     });
     panel.add(this.aiText);
 
-    this.volumeText = this.add.text(-248, 12, "", {
+    this.volumeText = this.add.text(-248, -18, "", {
       fontFamily: "Consolas",
       fontSize: "19px",
       color: "#e7f3ff"
     });
     panel.add(this.volumeText);
 
-    this.resolutionText = this.add.text(-248, 66, "", {
+    this.resolutionText = this.add.text(-248, 36, "", {
       fontFamily: "Consolas",
       fontSize: "19px",
       color: "#e7f3ff"
     });
     panel.add(this.resolutionText);
 
-    const audioBtn = this.createButton(170, -86, 160, 40, "Đổi", () => {
+    this.languageText = this.add.text(-248, 90, "", {
+      fontFamily: "Consolas",
+      fontSize: "19px",
+      color: "#e7f3ff"
+    });
+    panel.add(this.languageText);
+
+    const audioBtn = this.createButton(170, -116, 160, 40, "Đổi", () => {
       this.settings.audioEnabled = !this.settings.audioEnabled;
       saveUiSettings(this.settings);
       this.refreshSettingsPanel();
     }, 0x284b78, 0x9cd0ff, panel);
 
-    const aiBtn = this.createButton(170, -32, 160, 40, "Đổi", () => {
+    const aiBtn = this.createButton(170, -62, 160, 40, "Đổi", () => {
       const order = ["EASY", "MEDIUM", "HARD"];
       const idx = order.indexOf(this.settings.aiMode);
       this.settings.aiMode = order[(idx + 1) % order.length];
@@ -383,7 +383,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.refreshSettingsPanel();
     }, 0x284b78, 0x9cd0ff, panel);
 
-    const volumeBtn = this.createButton(170, 22, 160, 40, "Tăng", () => {
+    const volumeBtn = this.createButton(170, -8, 160, 40, "Tăng", () => {
       const current = Number.isFinite(this.settings.volumeLevel) ? this.settings.volumeLevel : 10;
       const next = Math.min(10, current + 1);
       if (next === current) return;
@@ -392,7 +392,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.refreshSettingsPanel();
     }, 0x284b78, 0x9cd0ff, panel);
 
-    this.createButton(52, 22, 56, 40, "-", () => {
+    this.createButton(52, -8, 56, 40, "-", () => {
       const current = Number.isFinite(this.settings.volumeLevel) ? this.settings.volumeLevel : 10;
       const next = Math.max(1, current - 1);
       if (next === current) return;
@@ -400,7 +400,7 @@ export class MainMenuScene extends Phaser.Scene {
       saveUiSettings(this.settings);
       this.refreshSettingsPanel();
     }, 0x284b78, 0x9cd0ff, panel);
-    const resolutionBtn = this.createButton(170, 76, 160, 40, "Đổi", () => {
+    const resolutionBtn = this.createButton(170, 46, 160, 40, "Đổi", () => {
       const currentKey = normalizeResolutionKey(this.settings.resolutionKey);
       const idx = RESOLUTION_PRESETS.findIndex((preset) => preset.key === currentKey);
       const next = RESOLUTION_PRESETS[(idx + 1) % RESOLUTION_PRESETS.length];
@@ -410,99 +410,19 @@ export class MainMenuScene extends Phaser.Scene {
       this.applyDisplaySettings(this.settings);
       this.scene.restart();
     }, 0x284b78, 0x9cd0ff, panel);
-    this.createButton(0, 174, 170, 42, "Đóng", () => {
+    this.createButton(170, 100, 160, 40, "Đổi", () => {
+      const locales = getAvailableLocales();
+      const idx = locales.indexOf(this.settings.language ?? "vi");
+      this.settings.language = locales[(idx + 1) % locales.length];
+      saveUiSettings(this.settings);
+      this.scene.restart();
+    }, 0x284b78, 0x9cd0ff, panel);
+    this.createButton(0, 184, 170, 42, "Đóng", () => {
       panel.setVisible(false);
     }, 0x3b4e66, 0xb6d3ff, panel);
 
     this.settingsPanel = panel;
     this.refreshSettingsPanel();
-  }
-
-  createWikiPanel() { this.createWikiPanelV2(); } createWikiPanelOld() {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const panelWidth = Math.min(Math.floor(w * 0.9), 1060);
-    const panelHeight = Math.min(Math.floor(h * 0.86), 760);
-    const panelX = w * 0.5;
-    const panelY = h * 0.5;
-    const panel = this.add.container(panelX, panelY);
-    panel.setVisible(false);
-
-    const dim = this.add.rectangle(0, 0, w, h, 0x060d18, 0.7);
-    dim.setInteractive({ useHandCursor: true });
-    dim.on("pointerdown", () => {
-      panel.setVisible(false);
-    });
-    panel.add(dim);
-
-    const bg = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x0e1a2d, 0.97);
-    bg.setStrokeStyle(2, 0x86c8ff, 1);
-    bg.setInteractive(
-      new Phaser.Geom.Rectangle(-panelWidth * 0.5, -panelHeight * 0.5, panelWidth, panelHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    bg.on("pointerdown", (_pointer, _lx, _ly, event) => {
-      event?.stopPropagation?.();
-    });
-    panel.add(bg);
-
-    const title = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 22, "Thư viện", {
-      fontFamily: "Consolas",
-      fontSize: "29px",
-      color: "#ffeab0"
-    });
-    panel.add(title);
-
-    const subtitle = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 60, "Dữ liệu tự động từ unitCatalog + skills. Sửa thú trong code là Thư Viện cập nhật theo.", {
-      fontFamily: "Consolas",
-      fontSize: "16px",
-      color: "#cde8ff",
-      wordWrap: { width: panelWidth - 220 }
-    });
-    panel.add(subtitle);
-
-    const viewport = {
-      x: -panelWidth * 0.5 + 24,
-      y: -panelHeight * 0.5 + 98,
-      width: panelWidth - 48,
-      height: panelHeight - 172
-    };
-    this.wikiViewport = viewport;
-    this.wikiWheelArea = new Phaser.Geom.Rectangle(
-      panelX + viewport.x,
-      panelY + viewport.y,
-      viewport.width,
-      viewport.height
-    );
-
-    const contentMaskGfx = this.add.graphics();
-    contentMaskGfx.fillStyle(0xffffff, 1);
-    contentMaskGfx.fillRect(
-      panelX + viewport.x,
-      panelY + viewport.y,
-      viewport.width,
-      viewport.height
-    );
-    contentMaskGfx.setVisible(false);
-
-    this.wikiContentBaseY = viewport.y + 6;
-    this.wikiContent = this.add.container(viewport.x + 6, this.wikiContentBaseY);
-    this.wikiContent.setMask(contentMaskGfx.createGeometryMask());
-    panel.add(this.wikiContent);
-
-    this.wikiScrollHint = this.add.text(-panelWidth * 0.5 + 28, panelHeight * 0.5 - 42, "Lăn chuột để cuộn • ESC hoặc Đóng để thoát", {
-      fontFamily: "Consolas",
-      fontSize: "15px",
-      color: "#9ec4e8"
-    });
-    panel.add(this.wikiScrollHint);
-
-    this.createButton(panelWidth * 0.5 - 116, panelHeight * 0.5 - 38, 180, 42, "Đóng", () => {
-      panel.setVisible(false);
-    }, 0x3b4e66, 0xb6d3ff, panel);
-
-    this.wikiPanel = panel;
-    this.refreshWikiPanel();
   }
 
   createUpdatePanel() {
@@ -607,7 +527,7 @@ export class MainMenuScene extends Phaser.Scene {
     if (nextVisible) {
       this.settingsPanel?.setVisible(false);
       this.startPanel?.setVisible(false);
-      this.wikiPanel?.setVisible(false);
+      this.libraryModal?.hide();
       this.refreshUpdatePanel();
     }
   }
@@ -870,7 +790,7 @@ export class MainMenuScene extends Phaser.Scene {
       const metaText = this.add.text(16, tabY + 50, [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
         `HP: ${unit.stats?.hp ?? "?"}   ATK: ${unit.stats?.atk ?? "?"}   DEF: ${unit.stats?.def ?? "?"}   SPD: ${unit.stats?.matk ?? "?"}`,
-        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({"TANKER":5,"FIGHTER":10,"ASSASSIN":25,"ARCHER":15,"MAGE":5,"SUPPORT":10}[unit.classType] ?? 10)}%`
+        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({ "TANKER": 5, "FIGHTER": 10, "ASSASSIN": 25, "ARCHER": 15, "MAGE": 5, "SUPPORT": 10 }[unit.classType] ?? 10)}%`
       ].join("\n"), {
         fontFamily: "Consolas", fontSize: "15px", color: "#c0ddf5", lineSpacing: 6
       });
@@ -1143,6 +1063,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.volumeText?.setText(`Âm lượng: ${this.settings.volumeLevel ?? 10}/10`);
     const resolution = resolveResolution(this.settings.resolutionKey);
     this.resolutionText?.setText(`Độ phân giải: ${resolution.label ?? `${resolution.width}x${resolution.height}`}`);
+    this.languageText?.setText(`Ngôn ngữ: ${getLocaleLabel(this.settings.language ?? "vi")}`);
     this.audioFx?.setEnabled(this.settings.audioEnabled !== false);
     this.audioFx?.setVolumeLevel(this.settings.volumeLevel ?? 10);
   }
@@ -1158,7 +1079,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   refreshStartPanel() {
     if (!this.startInfoText) return;
-    
+
     // Get mode config from registry
     const modeConfig = GameModeRegistry.get(this.selectedMode);
     const modeLabel = modeConfig ? modeConfig.name : (this.selectedMode === "PVE_JOURNEY" ? "PvE Vô tận" : "PvE Sandbox");
@@ -1167,7 +1088,7 @@ export class MainMenuScene extends Phaser.Scene {
         ? "Thua khi quân ta chết hết. Mỗi vòng xuất hiện đội hình địch đã xếp sẵn, bạn sắp quân để khắc chế."
         : "Tập dượt đội hình nhanh, tập trung thử đội và kỹ năng."
     );
-    
+
     this.startInfoText.setText(
       [
         `Chế độ: ${modeLabel}`,
@@ -1237,9 +1158,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     const viewport = {
       x: -panelWidth * 0.5 + 24,
-      y: -panelHeight * 0.5 + 150,
+      y: -panelHeight * 0.5 + 175,
       width: panelWidth - 48,
-      height: panelHeight - 224
+      height: panelHeight - 250
     };
     this.wikiViewport = viewport;
     this.wikiWheelArea = new Phaser.Geom.Rectangle(
@@ -1335,43 +1256,48 @@ export class MainMenuScene extends Phaser.Scene {
       let filterX = 0;
       const filterY = 40;
       const btnH = 30;
+      const spacing = 14;
 
       // Filter: Class
+      const classW = 140;
       const classLabel = this._wikiFilterClass ? getClassLabelVi(this._wikiFilterClass) : "Tất cả Nghề";
-      const classBtn = this.createButton(filterX, filterY + btnH / 2, 140, btnH, classLabel, () => {
+      const classBtn = this.createButton(filterX + classW / 2, filterY + btnH / 2, classW, btnH, classLabel, () => {
         const options = ["ALL", ...Object.keys(CLASS_SYNERGY)];
         const nextIdx = (options.indexOf(this._wikiFilterClass || "ALL") + 1) % options.length;
         this._wikiFilterClass = options[nextIdx] === "ALL" ? null : options[nextIdx];
         this.refreshWikiPanelV2();
       }, 0x233850, 0x5a8ab0, controls);
       classBtn.label.setFontSize(13);
-      filterX += 150;
+      filterX += classW + spacing;
 
       // Filter: Tribe
+      const tribeW = 140;
       const tribeLabel = this._wikiFilterTribe ? getTribeLabelVi(this._wikiFilterTribe) : "Tất cả Tộc";
-      const tribeBtn = this.createButton(filterX, filterY + btnH / 2, 140, btnH, tribeLabel, () => {
+      const tribeBtn = this.createButton(filterX + tribeW / 2, filterY + btnH / 2, tribeW, btnH, tribeLabel, () => {
         const options = ["ALL", ...Object.keys(TRIBE_SYNERGY)];
         const nextIdx = (options.indexOf(this._wikiFilterTribe || "ALL") + 1) % options.length;
         this._wikiFilterTribe = options[nextIdx] === "ALL" ? null : options[nextIdx];
         this.refreshWikiPanelV2();
       }, 0x233850, 0x5a8ab0, controls);
       tribeBtn.label.setFontSize(13);
-      filterX += 150;
+      filterX += tribeW + spacing;
 
       // Filter: Tier
+      const tierW = 120;
       const tierLabel = this._wikiFilterTier ? `Bậc ${this._wikiFilterTier}` : "Tất cả Bậc";
-      const tierBtn = this.createButton(filterX, filterY + btnH / 2, 120, btnH, tierLabel, () => {
+      const tierBtn = this.createButton(filterX + tierW / 2, filterY + btnH / 2, tierW, btnH, tierLabel, () => {
         const options = [0, 1, 2, 3, 4, 5]; // 0 = All
         const nextIdx = (options.indexOf(this._wikiFilterTier || 0) + 1) % options.length;
         this._wikiFilterTier = options[nextIdx] === 0 ? null : options[nextIdx];
         this.refreshWikiPanelV2();
       }, 0x233850, 0x5a8ab0, controls);
       tierBtn.label.setFontSize(13);
-      filterX += 130;
+      filterX += tierW + spacing;
 
       // Filter: Search
+      const searchW = 180;
       const searchLabel = this._wikiSearchQuery ? `🔍 "${this._wikiSearchQuery}"` : "🔍 Tìm kiếm...";
-      const searchBtn = this.createButton(filterX, filterY + btnH / 2, 180, btnH, searchLabel, () => {
+      const searchBtn = this.createButton(filterX + searchW / 2, filterY + btnH / 2, searchW, btnH, searchLabel, () => {
         const input = window.prompt("Nhập tên linh thú để tìm kiếm:", this._wikiSearchQuery);
         if (input !== null) {
           this._wikiSearchQuery = input.trim();
@@ -1379,11 +1305,12 @@ export class MainMenuScene extends Phaser.Scene {
         }
       }, 0x16273f, 0x7ab8f5, controls);
       searchBtn.label.setFontSize(13);
-      filterX += 190;
+      filterX += searchW + spacing;
 
       // Reset
       if (this._wikiFilterClass || this._wikiFilterTribe || this._wikiFilterTier || this._wikiSearchQuery) {
-        const resetBtn = this.createButton(filterX, filterY + btnH / 2, 80, btnH, "Xóa lọc", () => {
+        const resetW = 80;
+        const resetBtn = this.createButton(filterX + resetW / 2, filterY + btnH / 2, resetW, btnH, "Xóa lọc", () => {
           this._wikiFilterClass = null;
           this._wikiFilterTribe = null;
           this._wikiFilterTier = null;
@@ -1427,7 +1354,7 @@ export class MainMenuScene extends Phaser.Scene {
       const metaText = this.add.text(16, tabY + 50, [
         `Tộc: ${getTribeLabelVi(unit.tribe)}   Nghề: ${getClassLabelVi(unit.classType)}`,
         `HP: ${unit.stats?.hp ?? "?"}   ATK: ${unit.stats?.atk ?? "?"}   DEF: ${unit.stats?.def ?? "?"}   SPD: ${unit.stats?.matk ?? "?"}`,
-        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({"TANKER":5,"FIGHTER":10,"ASSASSIN":25,"ARCHER":15,"MAGE":5,"SUPPORT":10}[unit.classType] ?? 10)}%`
+        `Tầm đánh: ${rangeTypeLabel}   Né tránh: ${({ "TANKER": 5, "FIGHTER": 10, "ASSASSIN": 25, "ARCHER": 15, "MAGE": 5, "SUPPORT": 10 }[unit.classType] ?? 10)}%`
       ].join("\n"), {
         fontFamily: "Consolas", fontSize: "15px", color: "#c0ddf5", lineSpacing: 6
       });
@@ -1593,4 +1520,3 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 }
-

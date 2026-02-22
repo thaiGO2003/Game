@@ -46,47 +46,18 @@ import {
   starTargetBonus,
   starAreaBonus
 } from "../core/gameUtils.js";
+import {
+  UI_FONT, UI_SPACING, UI_COLORS, CLASS_COLORS,
+  ROLE_THEME, LEVEL_LABEL, HISTORY_FILTERS
+} from "../core/uiTheme.js";
+import {
+  PHASE, TILE_W, TILE_H, ROWS, COLS, PLAYER_COLS,
+  RIGHT_COL_START, RIGHT_COL_END, BOARD_GAP_COLS,
+  BOARD_FILES, RIVER_LAYER_DEPTH
+} from "../core/boardConstants.js";
 
-
-const TILE_W = 98;
-const TILE_H = 50;
-const ROWS = 5;
-const COLS = 10;
-const PLAYER_COLS = 5;
-const RIGHT_COL_START = 5;
-const RIGHT_COL_END = 9;
-const BOARD_GAP_COLS = 1;
-const BOARD_FILES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const RIVER_LAYER_DEPTH = 1;
 const COMBAT_SLOW_MULTIPLIER = 3;
-const MAX_COMBAT_SPEED_MULTIPLIER = 2.5;
-
-const PHASE = {
-  PLANNING: "PLANNING",
-  AUGMENT: "AUGMENT",
-  COMBAT: "COMBAT",
-  GAME_OVER: "GAME_OVER"
-};
-
-const CLASS_COLORS = {
-  TANKER: 0x5f86d9,
-  ASSASSIN: 0x7b59b5,
-  ARCHER: 0x5ca65b,
-  MAGE: 0xd160b2,
-  SUPPORT: 0xd2b35e,
-  FIGHTER: 0xb86a44
-};
-
-const ROLE_THEME = {
-  TANKER: { fill: 0x5f86d9, glow: 0x9ec6ff, stroke: 0xc2ddff, card: 0x1a2d4c, cardHover: 0x24406a, bench: 0x213655 },
-  ASSASSIN: { fill: 0x7b59b5, glow: 0xbf9af5, stroke: 0xdcc9ff, card: 0x2a2146, cardHover: 0x3a2d60, bench: 0x352a54 },
-  ARCHER: { fill: 0x5ca65b, glow: 0x9fe3a0, stroke: 0xc9f0c6, card: 0x1f3a2a, cardHover: 0x295039, bench: 0x2a4533 },
-  MAGE: { fill: 0xd160b2, glow: 0xf3a9de, stroke: 0xffd3f2, card: 0x4f2144, cardHover: 0x6f2f60, bench: 0x5c2850 },
-  SUPPORT: { fill: 0xd2b35e, glow: 0xf0dc9a, stroke: 0xfff0bd, card: 0x4a3b21, cardHover: 0x654f2d, bench: 0x5a4928 },
-  FIGHTER: { fill: 0xb86a44, glow: 0xe4a07b, stroke: 0xffcaad, card: 0x44281d, cardHover: 0x61382a, bench: 0x553427 }
-};
-
-const LEVEL_LABEL = { EASY: "Dễ", MEDIUM: "TB", HARD: "Khó" };
+const MAX_COMBAT_SPEED_MULTIPLIER = 9;
 
 function getEquipmentNameKey(itemId) {
   const item = ITEM_BY_ID[itemId];
@@ -108,51 +79,6 @@ function normalizeEquipIds(equips) {
   });
   return out.slice(0, 3);
 }
-
-const UI_FONT = "Segoe UI";
-
-const UI_SPACING = {
-  XS: 8,
-  SM: 16,
-  LG: 24
-};
-
-const UI_COLORS = {
-  screenOverlay: 0x060d17,
-  panel: 0x0e1828,
-  panelSoft: 0x111f32,
-  panelEdge: 0x5aa8c8,
-  panelEdgeSoft: 0x39576f,
-  accent: 0x8de8ff,
-  cta: 0xbdcf47,
-  ctaHover: 0xd4e665,
-  ctaEdge: 0xf2ff9a,
-  textPrimary: "#e9f5ff",
-  textSecondary: "#a6bed3",
-  textMuted: "#7f94a7",
-  boardLeft: 0x133627,
-  boardLeftEdge: 0x4cc99b,
-  boardRight: 0x3d2523,
-  boardRightEdge: 0xd08a7f,
-  grassA: 0x6eaf4d,
-  grassB: 0x5a973f,
-  grassEdgeA: 0xa2d56f,
-  grassEdgeB: 0x84be5a,
-  grassHighlight: 0xd9f2b4,
-  riverA: 0x1f8fe0,
-  riverB: 0x176eb7,
-  riverEdgeA: 0x8fddff,
-  riverEdgeB: 0x6ec7f1,
-  riverHighlight: 0xd9f6ff
-};
-
-const HISTORY_FILTERS = [
-  { key: "ALL", label: "Tất cả" },
-  { key: "COMBAT", label: "Giao tranh" },
-  { key: "SHOP", label: "Mua sắm" },
-  { key: "CRAFT", label: "Ghép đồ" },
-  { key: "EVENT", label: "Sự kiện" }
-];
 
 export class CombatScene extends Phaser.Scene {
   constructor() {
@@ -214,10 +140,9 @@ export class CombatScene extends Phaser.Scene {
     this.boardPointerDown = null;
     this.boardDragConsumed = false;
 
-    this.wikiVisible = false;
-    this.wikiOverlay = [];
-    this.wikiSelectedUnitId = null;
-    this.wikiSearchQuery = "";
+    if (this.libraryModal) {
+      this.libraryModal.hide();
+    }
 
     // Track active damage numbers for position offsetting
     this.activeDamageNumbers = [];
@@ -227,22 +152,32 @@ export class CombatScene extends Phaser.Scene {
   }
 
   /**
-   * Calculate combat speed multiplier based on unit count
-   * Requirements: 11.1, 11.2, 11.5
+   * Calculate combat speed multiplier based on player (LEFT) unit count
    * 
-   * @returns {number} Speed multiplier (1 + n * 0.1), capped at MAX_COMBAT_SPEED_MULTIPLIER
+   * ≤10 units: 100% speed (multiplier 1.0)
+   * 11-20 units: 150% speed (multiplier ~0.67)
+   * 21-30 units: 200% speed (multiplier 0.5)
+   * 31+ units: 250% speed (multiplier 0.4)
+   * Max: 300% speed (multiplier ~0.33)
+   * 
+   * @returns {number} Duration multiplier (lower = faster)
    */
   calculateCombatSpeedMultiplier() {
     const leftTeam = this.getCombatUnits("LEFT");
-    const rightTeam = this.getCombatUnits("RIGHT");
-    const maxUnits = Math.max(leftTeam.length, rightTeam.length);
+    const unitCount = leftTeam.length;
 
-    // 10% speed increase per unit
-    const speedIncrease = maxUnits * 0.10;
-    const multiplier = 1 + speedIncrease;
+    // Tiers: ≤10 = 100%, 11+ = 150%, 21+ = 200%, 31+ = 250%, cap 300%
+    let speedPercent = 100;
+    if (unitCount >= 11) speedPercent += 50;
+    if (unitCount >= 21) speedPercent += 50;
+    if (unitCount >= 31) speedPercent += 50;
+    speedPercent = Math.min(speedPercent, 300);
 
-    // Cap at maximum to prevent excessive acceleration
-    return Math.min(multiplier, MAX_COMBAT_SPEED_MULTIPLIER);
+    // Default combat speed is 1/3 of the previous default (multiplier = 3.0 instead of 1.0)
+    const baseMultiplier = 3.0;
+
+    // Convert speed% to duration multiplier: higher speed = shorter duration
+    return baseMultiplier / (speedPercent / 100);
   }
 
   scaleCombatDuration(ms) {
@@ -325,7 +260,7 @@ export class CombatScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#10141b");
     this.input.keyboard?.removeAllListeners();
     this.input.removeAllListeners();
-    
+
     // Get game mode configuration
     const gameMode = this.runStatePayload?.player?.gameMode ?? "PVE_JOURNEY";
     this.gameModeConfig = GameModeRegistry.get(gameMode);
@@ -333,7 +268,7 @@ export class CombatScene extends Phaser.Scene {
       console.warn(`Game mode "${gameMode}" not found, falling back to PVE_JOURNEY`);
       this.gameModeConfig = GameModeRegistry.get("PVE_JOURNEY");
     }
-    
+
     const uiSettings = loadUiSettings();
     this.applyDisplaySettings(uiSettings);
     this.layout = this.computeLayout();
@@ -348,11 +283,9 @@ export class CombatScene extends Phaser.Scene {
     this.libraryModal = new LibraryModal(this, {
       title: "Thư Viện Linh Thú",
       onClose: () => {
-        this.wikiVisible = false;
         this.clearAttackPreview();
       }
     });
-    this.wikiOverlay = this.libraryModal.getOverlayParts();
     this.buttons.settings = this.createButton(
       this.layout.rightPanelX + this.layout.sidePanelW - 124,
       this.layout.topPanelY + 8,
@@ -379,7 +312,11 @@ export class CombatScene extends Phaser.Scene {
       104,
       34,
       "Thư Viện",
-      () => this.toggleWikiModal(true),
+      () => {
+        this.toggleSettingsOverlay(false);
+        this.toggleHistoryModal(false);
+        this.libraryModal.toggle();
+      },
       { variant: "ghost" }
     );
     this.setupInput();
@@ -409,8 +346,8 @@ export class CombatScene extends Phaser.Scene {
       if (!this.settingsVisible && this.phase === PHASE.COMBAT) this.stepCombat();
     });
     this.input.keyboard.on("keydown-ESC", () => {
-      if (this.wikiVisible) {
-        this.toggleWikiModal(false);
+      if (this.libraryModal?.isOpen()) {
+        this.libraryModal.hide();
         return;
       }
       if (this.historyModalVisible) {
@@ -425,8 +362,8 @@ export class CombatScene extends Phaser.Scene {
         this.onHistoryWheel(dy);
         return;
       }
-      if (this.wikiVisible) {
-        this.onWikiWheel(dy);
+      if (this.libraryModal?.isOpen()) {
+        this.libraryModal.scrollBy(dy);
         return;
       }
       if (this.settingsVisible) return;
@@ -438,7 +375,7 @@ export class CombatScene extends Phaser.Scene {
     });
 
     this.input.on("pointerdown", (pointer) => {
-      if (this.settingsVisible || this.historyModalVisible || this.wikiVisible) return;
+      if (this.settingsVisible || this.historyModalVisible || this.libraryModal?.isOpen()) return;
       if (!this.pointInBoardPanel(pointer.x, pointer.y)) return;
       if (this.isPanPointer(pointer)) {
         this.boardPointerDown = { x: pointer.x, y: pointer.y };
@@ -578,25 +515,25 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
     this.runStatePayload = hydrated;
-    
+
     // Use game mode config for AI difficulty, fallback to saved aiMode or MEDIUM
     if (this.gameModeConfig?.aiDifficulty) {
       this.aiMode = this.gameModeConfig.aiDifficulty;
     } else {
       this.aiMode = hydrated.aiMode ?? "MEDIUM";
     }
-    
+
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
     this.audioFx.startBgm("bgm_warrior", 0.2);
     this.player = hydrated.player;
-    
+
     // Use game mode config for lose condition, fallback to player's loseCondition
     if (this.gameModeConfig?.loseCondition) {
       this.loseCondition = normalizeLoseCondition(this.gameModeConfig.loseCondition);
     } else {
       this.loseCondition = normalizeLoseCondition(this.player?.loseCondition);
     }
-    
+
     this.phase = PHASE.PLANNING;
     this.logs = [];
     this.logHistory = [];
@@ -765,54 +702,12 @@ export class CombatScene extends Phaser.Scene {
     ];
   }
 
-  createWikiModal() {
-    if (!this.libraryModal) {
-      this.libraryModal = new LibraryModal(this, {
-        title: "Thư Viện Linh Thú",
-        onClose: () => {
-          this.wikiVisible = false;
-          this.clearAttackPreview();
-        }
-      });
-    }
-    this.wikiOverlay = this.libraryModal.getOverlayParts();
-  }
-
   toggleHistoryModal(force = null) {
     const next = typeof force === "boolean" ? force : !this.historyModalVisible;
     if (next) this.toggleSettingsOverlay(false);
     this.historyModalVisible = next;
     this.historyModalParts?.forEach((part) => part.setVisible(next));
     if (next) this.refreshHistoryModal();
-  }
-
-  toggleWikiModal(force = null) {
-    if (!this.libraryModal) {
-      this.createWikiModal();
-    }
-
-    const next = typeof force === "boolean" ? force : !this.wikiVisible;
-    if (next) {
-      this.toggleSettingsOverlay(false);
-      this.toggleHistoryModal(false);
-      this.libraryModal.show();
-    } else {
-      this.libraryModal.hide();
-      this.clearAttackPreview();
-    }
-    this.wikiVisible = this.libraryModal.isOpen();
-  }
-
-  onWikiWheel(deltaY) {
-    if (this.libraryModal) {
-      this.libraryModal.scrollBy(deltaY);
-    }
-  }
-
-  refreshWikiList() {
-    if (this.libraryModal) {
-      this.libraryModal.refresh();
-    }
   }
 
   setHistoryFilter(filterKey) {
@@ -1540,7 +1435,7 @@ export class CombatScene extends Phaser.Scene {
   onPlayerCellClick(row, col) {
     if (this.phase !== PHASE.PLANNING) return;
     if (this.overlaySprites.length) return;
-    if (this.wikiVisible) return;
+    if (this.libraryModal?.isOpen()) return;
 
     const occupant = this.player.board[row][col];
     const selected = this.selectedBenchIndex != null ? this.player.bench[this.selectedBenchIndex] : null;
@@ -1581,7 +1476,7 @@ export class CombatScene extends Phaser.Scene {
   onBenchClick(index) {
     if (this.phase !== PHASE.PLANNING) return;
     if (index >= this.getBenchCap()) return;
-    if (this.wikiVisible) return;
+    if (this.libraryModal?.isOpen()) return;
     if (index >= this.player.bench.length) {
       this.selectedBenchIndex = null;
       this.refreshBenchUi();
@@ -1671,7 +1566,7 @@ export class CombatScene extends Phaser.Scene {
 
   buyFromShop(index) {
     if (this.phase !== PHASE.PLANNING) return;
-    if (this.wikiVisible) return;
+    if (this.libraryModal?.isOpen()) return;
     const offer = this.player.shop[index];
     if (!offer) return;
     const base = UNIT_BY_ID[offer.baseId];
@@ -1993,28 +1888,28 @@ export class CombatScene extends Phaser.Scene {
     // Apply synergy bonuses using SynergySystem
     const leftTeam = this.getCombatUnits("LEFT");
     const rightTeam = this.getCombatUnits("RIGHT");
-    
+
     const leftOptions = {
       extraClassCount: this.player.extraClassCount || 0,
       extraTribeCount: this.player.extraTribeCount || 0
     };
     SynergySystem.applySynergyBonusesToTeam(leftTeam, "LEFT", leftOptions);
     leftTeam.forEach((unit) => this.updateCombatUnitUi(unit));
-    
+
     SynergySystem.applySynergyBonusesToTeam(rightTeam, "RIGHT", {});
     rightTeam.forEach((unit) => this.updateCombatUnitUi(unit));
-    
+
     // COMBAT LOGIC DELEGATION: Use CombatSystem to initialize combat state
     // CombatSystem handles: turn order calculation, combat state management
     // Requirements: 8.1, 8.3, 8.4, 8.6
     const playerUnits = this.combatUnits.filter(u => u.side === "LEFT");
     const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT");
     this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
-    
+
     // Use turn order from CombatSystem (combat logic is delegated)
     this.turnQueue = this.combatState.turnOrder;
     this.turnIndex = 0;
-    
+
     // UI updates - CombatScene responsibility
     this.combatRound = this.turnQueue.length ? 1 : 0;
     this.refreshHeader();
@@ -2057,7 +1952,7 @@ export class CombatScene extends Phaser.Scene {
       const base = UNIT_BY_ID[ref.baseId];
       if (!base) return;
       const owned = this.createOwnedUnit(base.id, ref.star ?? 1);
-      
+
       // Apply equipment for HARD difficulty
       const ai = getAISettings(this.aiMode);
       if (ai.difficulty === "HARD" && EQUIPMENT_ITEMS.length > 0) {
@@ -2067,7 +1962,7 @@ export class CombatScene extends Phaser.Scene {
           owned.equips = eq?.id ? [eq.id] : [];
         }
       }
-      
+
       const unit = this.createCombatUnit(owned, "RIGHT", ref.row, ref.col);
       if (unit) this.combatUnits.push(unit);
     });
@@ -3394,11 +3289,20 @@ export class CombatScene extends Phaser.Scene {
     const equips = normalizeEquipIds(owned?.equips);
     const seen = new Set();
     const equipItems = [];
+    const unitStar = unit.star ?? 1;
 
     equips.forEach((itemId) => {
       const item = ITEM_BY_ID[itemId];
       const key = getEquipmentNameKey(itemId);
       if (!item || item.kind !== "equipment" || !key || seen.has(key)) return;
+
+      // Star-based equipment tier restriction (Requirements 2.11, 2.12, 2.13)
+      // 1-star: tier 1 only, 2-star: tier 1-2, 3-star: tier 1-3
+      const recipeId = typeof itemId === "string" && itemId.startsWith("eq_") ? itemId.slice(3) : null;
+      const recipe = recipeId ? RECIPE_BY_ID[recipeId] : null;
+      const equipTier = recipe?.tier ?? 1;
+      if (equipTier > unitStar) return;
+
       seen.add(key);
       equipItems.push(item);
     });
@@ -3406,13 +3310,25 @@ export class CombatScene extends Phaser.Scene {
     if (owned?.equipment?.kind === "equipment" && owned.equipment.id) {
       const legacyKey = getEquipmentNameKey(owned.equipment.id);
       if (legacyKey && !seen.has(legacyKey)) {
-        seen.add(legacyKey);
-        equipItems.push(owned.equipment);
+        // Apply star restriction to legacy equipment too
+        const legacyRecipeId = typeof owned.equipment.id === "string" && owned.equipment.id.startsWith("eq_") ? owned.equipment.id.slice(3) : null;
+        const legacyRecipe = legacyRecipeId ? RECIPE_BY_ID[legacyRecipeId] : null;
+        const legacyTier = legacyRecipe?.tier ?? 1;
+        if (legacyTier <= unitStar) {
+          seen.add(legacyKey);
+          equipItems.push(owned.equipment);
+        }
       }
     }
 
     unit.equips = equipItems.map((item) => item.id).filter((id) => typeof id === "string");
     equipItems.forEach((item) => SynergySystem.applyBonusToCombatUnit(unit, item.bonus));
+
+    if (unit.mods?.startingRage) {
+      const capped = Math.min(4, unit.mods.startingRage);
+      unit.rage = Math.min(unit.rageMax || 100, (unit.rage || 0) + capped);
+      unit.mods.startingRage = 0; // Prevent applying multiple times
+    }
   }
 
   buildTurnQueue() {
@@ -3575,7 +3491,7 @@ export class CombatScene extends Phaser.Scene {
           this.resolveCombat("DRAW");
           return;
         }
-        
+
         // COMBAT LOGIC DELEGATION: Rebuild turn queue using CombatSystem
         // CombatSystem handles: turn order calculation based on speed
         const playerUnits = this.combatUnits.filter(u => u.side === "LEFT" && u.alive);
@@ -3583,7 +3499,7 @@ export class CombatScene extends Phaser.Scene {
         this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
         this.turnQueue = this.combatState.turnOrder;
         this.turnIndex = 0;
-        
+
         this.combatRound = Math.max(1, this.combatRound + 1);
         if (!this.turnQueue.length) {
           this.resolveCombat("RIGHT");
@@ -3611,7 +3527,7 @@ export class CombatScene extends Phaser.Scene {
         // COMBAT LOGIC DELEGATION: Tick status effects using CombatSystem
         // CombatSystem handles: DoT damage calculation, control effect processing, status duration
         const statusResult = CombatSystem.tickStatusEffects(actor, this.combatState);
-        
+
         // Rendering: Apply damage from DoT effects (visual feedback only)
         if (statusResult.success && statusResult.triggeredEffects) {
           for (const effect of statusResult.triggeredEffects) {
@@ -3619,7 +3535,7 @@ export class CombatScene extends Phaser.Scene {
               // CombatSystem already applied the damage, we just render it
               const damageResult = CombatSystem.applyDamage(actor, effect.damage, this.combatState);
               this.resolveDamage(null, actor, effect.damage, "true", effect.type.toUpperCase(), { noRage: true, noReflect: true });
-              
+
               // Handle disease spreading (game-specific mechanic)
               if (effect.spreads && effect.type === 'disease') {
                 const neighbors = [
@@ -3641,7 +3557,7 @@ export class CombatScene extends Phaser.Scene {
             }
           }
         }
-        
+
         // Check if unit died from DoT
         if (!actor.alive) {
           this.addLog(`${actor.name} bỏ lượt (dot).`);
@@ -3658,7 +3574,7 @@ export class CombatScene extends Phaser.Scene {
             // COMBAT LOGIC DELEGATION: Determine action type using CombatSystem
             // CombatSystem handles: rage check, silence check, disarm check, action type determination
             const actionResult = CombatSystem.executeAction(this.combatState, actor);
-            
+
             if (actionResult.success) {
               if (actionResult.actionType === 'SKILL') {
                 // Reset rage if needed (determined by CombatSystem)
@@ -4791,7 +4707,10 @@ export class CombatScene extends Phaser.Scene {
     }
 
     // Attacker only gains rage when damage is actually dealt (damageLeft > 0)
-    if (attacker && !options.noRage && damageLeft > 0) {
+    // Non-Mage classes DO NOT gain rage from skill hits. Mages DO gain rage from skill hits.
+    const canGainRage = !options.noRage && (!options.isSkill || attacker?.classType === "MAGE");
+
+    if (attacker && canGainRage && damageLeft > 0) {
       const gain = attacker.side === "RIGHT" ? getAISettings(this.aiMode).rageGain : 1;
       // Clamp rage to rageMax (Requirement 26.1)
       attacker.rage = Math.min(attacker.rageMax || 5, (attacker.rage || 0) + gain);
@@ -5171,7 +5090,7 @@ export class CombatScene extends Phaser.Scene {
       y: adjustedY - (isCrit ? 44 : 34),
       alpha: 0,
       scale: isCrit ? 1.12 : 1.0,
-      duration: this.scaleCombatDuration(isCrit ? 1500 : 1200),
+      duration: isCrit ? 1500 : 1200,  // Fixed slow duration (không scale theo game speed)
       ease: "Cubic.easeOut",
       onComplete: () => {
         if (label && label.destroy) label.destroy();
@@ -5195,7 +5114,7 @@ export class CombatScene extends Phaser.Scene {
       targets: label,
       y: y - 26,
       alpha: 0,
-      duration: this.scaleCombatDuration(540),
+      duration: 540,  // Fixed slow duration (không scale theo game speed)
       ease: "Cubic.easeOut",
       onComplete: () => {
         if (label && label.destroy) label.destroy();

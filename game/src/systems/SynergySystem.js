@@ -275,7 +275,9 @@ export function applySynergyBonusesToTeam(units, side = "LEFT", options = {}) {
     // Apply starting rage and shield from mods
     if (unit.mods) {
       if (unit.mods.startingRage) {
-        unit.rage = Math.min(unit.rageMax || 100, unit.rage + unit.mods.startingRage);
+        // Cap startingRage bonus at 4 maximum (Requirement 2.2)
+        const cappedStartingRage = Math.min(4, unit.mods.startingRage);
+        unit.rage = Math.min(unit.rageMax || 100, unit.rage + cappedStartingRage);
       }
       if (unit.mods.shieldStart) {
         unit.shield = (unit.shield || 0) + unit.mods.shieldStart;

@@ -45,126 +45,16 @@ import {
   starTargetBonus,
   starAreaBonus
 } from "../core/gameUtils.js";
-
-const TILE_W = 98;
-const TILE_H = 50;
-const ROWS = 5;
-const COLS = 10;
-const PLAYER_COLS = 5;
-const RIGHT_COL_START = 5;
-const RIGHT_COL_END = 9;
-const BOARD_GAP_COLS = 1;
-const BOARD_FILES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const RIVER_LAYER_DEPTH = 1;
-
-const PHASE = {
-  PLANNING: "PLANNING",
-  AUGMENT: "AUGMENT",
-  COMBAT: "COMBAT",
-  GAME_OVER: "GAME_OVER"
-};
-
-const CLASS_COLORS = {
-  TANKER: 0x5f86d9,
-  ASSASSIN: 0x7b59b5,
-  ARCHER: 0x5ca65b,
-  MAGE: 0xd160b2,
-  SUPPORT: 0xd2b35e,
-  FIGHTER: 0xb86a44
-};
-
-const ROLE_THEME = {
-  TANKER: { fill: 0x5f86d9, glow: 0x9ec6ff, stroke: 0xc2ddff, card: 0x1a2d4c, cardHover: 0x24406a, bench: 0x213655 },
-  ASSASSIN: { fill: 0x7b59b5, glow: 0xbf9af5, stroke: 0xdcc9ff, card: 0x2a2146, cardHover: 0x3a2d60, bench: 0x352a54 },
-  ARCHER: { fill: 0x5ca65b, glow: 0x9fe3a0, stroke: 0xc9f0c6, card: 0x1f3a2a, cardHover: 0x295039, bench: 0x2a4533 },
-  MAGE: { fill: 0xd160b2, glow: 0xf3a9de, stroke: 0xffd3f2, card: 0x4f2144, cardHover: 0x6f2f60, bench: 0x5c2850 },
-  SUPPORT: { fill: 0xd2b35e, glow: 0xf0dc9a, stroke: 0xfff0bd, card: 0x4a3b21, cardHover: 0x654f2d, bench: 0x5a4928 },
-  FIGHTER: { fill: 0xb86a44, glow: 0xe4a07b, stroke: 0xffcaad, card: 0x44281d, cardHover: 0x61382a, bench: 0x553427 }
-};
-
-const LEVEL_LABEL = { EASY: "Dễ", MEDIUM: "TB", HARD: "Khó" };
-
-const CLASS_SKILL_VARIANTS = {
-  TANKER: [
-    { name: "Giáp Dày", bonus: { defFlat: 6, hpPct: 0.04 } },
-    { name: "Phản Chấn", bonus: { shieldStart: 18 } },
-    { name: "Thành Lũy", bonus: { mdefFlat: 6, hpPct: 0.03 } }
-  ],
-  ASSASSIN: [
-    { name: "Sát Ý", bonus: { atkPct: 0.09 } },
-    { name: "Đoạt Mệnh", bonus: { critPct: 0.1 } },
-    { name: "Lướt Ảnh", bonus: { startingRage: 1 } }
-  ],
-  ARCHER: [
-    { name: "Xuyên Tâm", bonus: { atkPct: 0.07 } },
-    { name: "Liên Xạ", bonus: { startingRage: 1 } },
-    { name: "Ưng Nhãn", bonus: { critPct: 0.08 } }
-  ],
-  MAGE: [
-    { name: "Cường Chú", bonus: { matkPct: 0.1 } },
-    { name: "Tụ Lực", bonus: { startingRage: 1 } },
-    { name: "Khuếch Tán", bonus: { matkPct: 0.06, mdefFlat: 5 } }
-  ],
-  SUPPORT: [
-    { name: "Thần Hộ", bonus: { shieldStart: 16 } },
-    { name: "Trị Liệu", bonus: { healPct: 0.08 } },
-    { name: "Cổ Vũ", bonus: { startingRage: 1 } }
-  ],
-  FIGHTER: [
-    { name: "Cuồng Nộ", bonus: { atkPct: 0.08 } },
-    { name: "Bền Bỉ", bonus: { hpPct: 0.05 } },
-    { name: "Chiến Ý", bonus: { critPct: 0.06, atkPct: 0.04 } }
-  ]
-};
-
-const UI_FONT = "Segoe UI";
-
-const UI_SPACING = {
-  XS: 8,
-  SM: 16,
-  LG: 24
-};
-
-const UI_COLORS = {
-  screenOverlay: 0x060d17,
-  panel: 0x0e1828,
-  panelSoft: 0x111f32,
-  panelEdge: 0x5aa8c8,
-  panelEdgeSoft: 0x39576f,
-  accent: 0x8de8ff,
-  accentSoft: 0x50bfd8,
-  cta: 0xbdcf47,
-  ctaHover: 0xd4e665,
-  ctaEdge: 0xf2ff9a,
-  textPrimary: "#e9f5ff",
-  textSecondary: "#a6bed3",
-  textMuted: "#7f94a7",
-  badgeTier: 0x1c3c58,
-  badgeRole: 0x1f4a3a,
-  badgeCost: 0x4b3a1f,
-  boardLeft: 0x133627,
-  boardLeftEdge: 0x4cc99b,
-  boardRight: 0x3d2523,
-  boardRightEdge: 0xd08a7f,
-  grassA: 0x6eaf4d,
-  grassB: 0x5a973f,
-  grassEdgeA: 0xa2d56f,
-  grassEdgeB: 0x84be5a,
-  grassHighlight: 0xd9f2b4,
-  riverA: 0x1f8fe0,
-  riverB: 0x176eb7,
-  riverEdgeA: 0x8fddff,
-  riverEdgeB: 0x6ec7f1,
-  riverHighlight: 0xd9f6ff
-};
-
-const HISTORY_FILTERS = [
-  { key: "ALL", label: "Tất cả" },
-  { key: "COMBAT", label: "Giao tranh" },
-  { key: "SHOP", label: "Mua sắm" },
-  { key: "CRAFT", label: "Ghép đồ" },
-  { key: "EVENT", label: "Sự kiện" }
-];
+import {
+  UI_FONT, UI_SPACING, UI_COLORS, CLASS_COLORS,
+  ROLE_THEME, LEVEL_LABEL, HISTORY_FILTERS
+} from "../core/uiTheme.js";
+import {
+  PHASE, TILE_W, TILE_H, ROWS, COLS, PLAYER_COLS,
+  RIGHT_COL_START, RIGHT_COL_END, BOARD_GAP_COLS,
+  BOARD_FILES, RIVER_LAYER_DEPTH
+} from "../core/boardConstants.js";
+import { CLASS_SKILL_VARIANTS } from "../data/classSkillVariants.js";
 
 const MATCH_WIKI_ENABLED = true;
 
@@ -264,7 +154,7 @@ export class PlanningScene extends Phaser.Scene {
     this.gamepadButtonLatch = {};
     this.gamepadHintText = null;
     this.gamepadCursorLayer = null;
-    
+
     // Track active damage numbers for position offsetting
     this.activeDamageNumbers = [];
   }
@@ -354,17 +244,9 @@ export class PlanningScene extends Phaser.Scene {
     this.settingsVisible = false;
     this.settingsOverlay = [];
     this.modalButtons = {};
-    this.wikiVisible = false;
-    this.wikiOverlay = [];
-    this.wikiSelectedUnitId = null;
-    this.wikiSearchQuery = "";
-    this.wikiScrollY = 0;
-    this.wikiMaxScroll = 0;
-    this._wikiTab = "units";
-    this._wikiDetailUnit = null;
-    this._wikiRecipeViewMode = "card"; // "card" or "diagram"
-    this._wikiCraftRecipes = null;
-    this._recipeDiagram = null;
+    if (this.libraryModal) {
+      this.libraryModal.hide();
+    }
   }
 
   resetBoardViewTransform(refresh = false) {
@@ -394,7 +276,7 @@ export class PlanningScene extends Phaser.Scene {
     this.applyDisplaySettings(this.runtimeSettings, false);
     this.layout = this.computeLayout();
     this.gameMode = this.incomingData?.mode ?? this.gameMode;
-    
+
     // Get game mode configuration
     this.gameModeConfig = GameModeRegistry.get(this.gameMode);
     if (!this.gameModeConfig) {
@@ -402,7 +284,7 @@ export class PlanningScene extends Phaser.Scene {
       this.gameMode = "PVE_JOURNEY";
       this.gameModeConfig = GameModeRegistry.get(this.gameMode);
     }
-    
+
     this.tooltip = new TooltipController(this);
     this.audioFx = new AudioFx(this);
     this.audioFx.setEnabled(this.runtimeSettings.audioEnabled !== false);
@@ -417,11 +299,9 @@ export class PlanningScene extends Phaser.Scene {
     this.libraryModal = new LibraryModal(this, {
       title: "Thư Viện Linh Thú",
       onClose: () => {
-        this.wikiVisible = false;
         this.clearAttackPreview();
       }
     });
-    this.wikiOverlay = this.libraryModal.getOverlayParts();
     this.createPlayerCellZones();
     this.createBenchSlots();
     this.setupBoardViewInput();
@@ -492,15 +372,15 @@ export class PlanningScene extends Phaser.Scene {
 
   setupInput() {
     this.input.keyboard.on("keydown-SPACE", () => {
-      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.beginCombat();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.libraryModal?.isOpen() && this.phase === PHASE.PLANNING) this.beginCombat();
     });
     this.input.keyboard.on("keydown-R", () => this.startNewRun());
 
     this.input.keyboard.on("keydown-S", () => {
-      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.libraryModal?.isOpen() && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
     });
     this.input.keyboard.on("keydown-DELETE", () => {
-      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.wikiVisible && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
+      if (!this.settingsVisible && !this.versionInfoVisible && !this.historyModalVisible && !this.libraryModal?.isOpen() && this.phase === PHASE.PLANNING) this.sellSelectedUnit();
     });
     this.input.keyboard.on("keydown-ESC", () => {
       if (this.versionInfoVisible) {
@@ -608,7 +488,7 @@ export class PlanningScene extends Phaser.Scene {
 
     if (this.consumePadButton(pad, 0)) this.handleGamepadConfirm();
     if (this.consumePadButton(pad, 1)) this.handleGamepadCancel();
-    if (this.wikiVisible || this.versionInfoVisible) return;
+    if (this.libraryModal?.isOpen() || this.versionInfoVisible) return;
     if (this.consumePadButton(pad, 2)) this.gamepadFocus = "SHOP";
     if (this.consumePadButton(pad, 3)) this.gamepadFocus = "BOARD";
     if (this.consumePadButton(pad, 4)) this.gamepadFocus = "BENCH";
@@ -620,7 +500,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   handleGamepadMove(dx, dy) {
-    if (this.settingsVisible || this.historyModalVisible || this.wikiVisible || this.versionInfoVisible) return;
+    if (this.settingsVisible || this.historyModalVisible || this.libraryModal?.isOpen() || this.versionInfoVisible) return;
     if (this.gamepadFocus === "SHOP") {
       this.gamepadCursor.shopIndex = clamp(this.gamepadCursor.shopIndex + dx, 0, 4);
       if (dy < 0) this.gamepadFocus = "BOARD";
@@ -652,8 +532,8 @@ export class PlanningScene extends Phaser.Scene {
       this.toggleVersionInfoModal(false);
       return;
     }
-    if (this.wikiVisible) {
-      this.toggleWikiModal(false);
+    if (this.libraryModal?.isOpen()) {
+      this.libraryModal.hide();
       return;
     }
     if (this.historyModalVisible) {
@@ -683,8 +563,8 @@ export class PlanningScene extends Phaser.Scene {
       this.toggleVersionInfoModal(false);
       return;
     }
-    if (this.wikiVisible) {
-      this.toggleWikiModal(false);
+    if (this.libraryModal?.isOpen()) {
+      this.libraryModal.hide();
       return;
     }
     if (this.historyModalVisible) {
@@ -793,7 +673,7 @@ export class PlanningScene extends Phaser.Scene {
     this.applyRunState(createDefaultRunState());
     this.player.gameMode = this.gameMode;
     this.player.loseCondition = normalizeLoseCondition(this.runtimeSettings?.loseCondition ?? DEFAULT_LOSE_CONDITION);
-    
+
     // Apply game mode config starting values
     if (this.gameModeConfig) {
       this.player.gold = this.gameModeConfig.startingGold;
@@ -802,7 +682,7 @@ export class PlanningScene extends Phaser.Scene {
       // Fallback to default values
       this.player.hp = this.player.loseCondition === "NO_HEARTS" ? 3 : 1;
     }
-    
+
     this.applyRuntimeSettings(this.runtimeSettings);
     this.enterPlanning(false);
     this.addLog("Khởi tạo ván mới: Bá Chủ Khu Rừng.");
@@ -1683,7 +1563,7 @@ export class PlanningScene extends Phaser.Scene {
         body: `${recipe?.description ?? "Trang bị chế tạo"}\n\nNhấn để chế tạo và đưa vào kho đồ.`
       };
     });
-    this.craftHintText = this.add.text(craftX, craftY + craftGridH + 8, "Nhấn vật phẩm trong kho để đưa vào ô chế tạo.", {
+    this.craftHintText = this.add.text(craftX, gridY0 + craftGridH + 12, "Nhấn vật phẩm trong kho để đưa vào ô chế tạo.", {
       fontFamily: UI_FONT,
       fontSize: "10px",
       color: UI_COLORS.textMuted
@@ -1788,8 +1668,13 @@ export class PlanningScene extends Phaser.Scene {
       y1 + 8,
       96,
       34,
-      "📚 Thư Viện",
-      () => this.toggleWikiModal(true),
+      "Thư Viện",
+      () => {
+        this.toggleSettingsOverlay(false);
+        this.toggleHistoryModal(false);
+        this.toggleVersionInfoModal(false);
+        this.libraryModal.toggle();
+      },
       { variant: "ghost", fontSize: 13 }
     );
 
@@ -2071,7 +1956,7 @@ export class PlanningScene extends Phaser.Scene {
     if (next) {
       this.toggleSettingsOverlay(false);
       this.toggleVersionInfoModal(false);
-      this.toggleWikiModal(false);
+      this.libraryModal?.hide();
     }
     this.historyModalVisible = next;
     this.historyModalParts?.forEach((part) => part.setVisible(next));
@@ -2154,295 +2039,10 @@ export class PlanningScene extends Phaser.Scene {
     if (next) {
       this.toggleSettingsOverlay(false);
       this.toggleHistoryModal(false);
-      this.toggleWikiModal(false);
+      this.libraryModal?.hide();
     }
     this.versionInfoVisible = next;
     this.versionInfoOverlay?.forEach((part) => part?.setVisible(next));
-  }
-
-  createWikiModal() {
-    if (!this.libraryModal) {
-      this.libraryModal = new LibraryModal(this, {
-        title: "Thư Viện Linh Thú",
-        onClose: () => {
-          this.wikiVisible = false;
-          this.clearAttackPreview();
-        }
-      });
-    }
-    this.wikiOverlay = this.libraryModal.getOverlayParts();
-  }
-
-  refreshWikiList() {
-    if (this.libraryModal) {
-      this.libraryModal.refresh();
-    }
-  }
-
-  renderWikiBattlePreview(y, width, unit) {
-    const panelX = 0;
-    const panelH = 318;
-    const panel = this.add.rectangle(panelX, y, width, panelH, 0x0f1e30, 0.95).setOrigin(0, 0);
-    panel.setStrokeStyle(1, 0x5a8ab0, 0.8);
-
-    const title = this.add.text(panelX + 16, y + 10, "Sân đấu preview đòn đánh / kỹ năng", {
-      fontFamily: UI_FONT,
-      fontSize: "15px",
-      color: "#ffeab0",
-      fontStyle: "bold"
-    });
-
-    const subTitle = this.add.text(panelX + 16, y + 30, "Phe địch: toàn bộ là hình nộm. Phe ta: 1 linh thú ở trung tâm.", {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#9ec4e8"
-    });
-
-    const buttonY = y + 52;
-    const buttonH = 24;
-    const buttonW = 124;
-    const buttonGap = 10;
-    const boardX = panelX + 16;
-    const boardY = y + 84;
-    const boardW = width - 32;
-    const boardH = 176;
-    const cellW = Math.max(20, Math.floor(boardW / COLS));
-    const cellH = Math.max(24, Math.floor(boardH / ROWS));
-    const gridW = cellW * COLS;
-    const gridH = cellH * ROWS;
-    const gridX = boardX + Math.floor((boardW - gridW) * 0.5);
-    const gridY = boardY + Math.floor((boardH - gridH) * 0.5);
-
-    const baseGrid = this.add.graphics();
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < COLS; col += 1) {
-        const x0 = gridX + col * cellW;
-        const y0 = gridY + row * cellH;
-        const isEnemy = col >= RIGHT_COL_START;
-        const fill = isEnemy ? 0x35201f : 0x193229;
-        baseGrid.fillStyle(fill, 0.55);
-        baseGrid.fillRoundedRect(x0 + 1, y0 + 1, cellW - 2, cellH - 2, 3);
-        baseGrid.lineStyle(1, 0x2f4d63, 0.85);
-        baseGrid.strokeRoundedRect(x0 + 0.5, y0 + 0.5, cellW - 1, cellH - 1, 3);
-      }
-    }
-    baseGrid.lineStyle(2, 0x6cb7f0, 0.7);
-    baseGrid.beginPath();
-    baseGrid.moveTo(gridX + RIGHT_COL_START * cellW, gridY);
-    baseGrid.lineTo(gridX + RIGHT_COL_START * cellW, gridY + gridH);
-    baseGrid.strokePath();
-
-    const allyLabel = this.add.text(gridX + cellW * 2.5, gridY - 18, "PHE TA", {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#8fe8bd",
-      fontStyle: "bold"
-    }).setOrigin(0.5);
-    const enemyLabel = this.add.text(gridX + cellW * 7.5, gridY - 18, "PHE ĐỊCH", {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#ffb0a6",
-      fontStyle: "bold"
-    }).setOrigin(0.5);
-
-    const dummyFontSize = `${Math.max(12, Math.min(20, Math.floor(cellH * 0.65)))}px`;
-    const dummyIcons = [];
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-        const cx = gridX + col * cellW + cellW * 0.5;
-        const cy = gridY + row * cellH + cellH * 0.5;
-        const icon = this.add.text(cx, cy, "🪵", {
-          fontFamily: "Segoe UI Emoji",
-          fontSize: dummyFontSize
-        }).setOrigin(0.5);
-        dummyIcons.push(icon);
-      }
-    }
-
-    const attackerRow = Math.floor(ROWS / 2);
-    const attackerCol = Math.floor((PLAYER_COLS - 1) / 2);
-    const attackerVisual = getUnitVisual(unit.id, unit.classType);
-    const attackerX = gridX + attackerCol * cellW + cellW * 0.5;
-    const attackerY = gridY + attackerRow * cellH + cellH * 0.5;
-    const attackerIcon = this.add.text(attackerX, attackerY, attackerVisual.icon, {
-      fontFamily: "Segoe UI Emoji",
-      fontSize: `${Math.max(14, Math.min(24, Math.floor(cellH * 0.75)))}px`
-    }).setOrigin(0.5);
-    const attackerRing = this.add.circle(attackerX, attackerY, Math.max(10, Math.floor(Math.min(cellW, cellH) * 0.38)), 0x8de8ff, 0.14);
-    attackerRing.setStrokeStyle(1.2, 0x8de8ff, 0.9);
-
-    const highlight = this.add.graphics();
-    const beam = this.add.graphics();
-    const infoText = this.add.text(panelX + 16, y + panelH - 28, "Nhấn nút để xem phạm vi tác động.", {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#d0eaff"
-    });
-
-    const getCellCenter = (row, col) => ({
-      x: gridX + col * cellW + cellW * 0.5,
-      y: gridY + row * cellH + cellH * 0.5
-    });
-
-    const runPreview = (mode) => {
-      const range = Number.isFinite(unit?.stats?.range) ? unit.stats.range : 1;
-      const attacker = this.buildPlanningPreviewActor("LEFT", attackerRow, attackerCol, unit.classType, 1, unit.skillId, range);
-      attacker.atk = Number.isFinite(unit?.stats?.atk) ? unit.stats.atk : 100;
-      attacker.matk = Number.isFinite(unit?.stats?.matk) ? unit.stats.matk : 100;
-      const allies = [attacker];
-      const enemies = [];
-      for (let row = 0; row < ROWS; row += 1) {
-        for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-          const dummy = this.buildPlanningPreviewActor("RIGHT", row, col, "TANKER", 1, null, 1);
-          dummy.atk = 90;
-          enemies.push(dummy);
-        }
-      }
-      const target = [...enemies].sort((a, b) => this.compareTargets(attacker, a, b))[0];
-      if (!target) return;
-
-      const skill = SKILL_LIBRARY[unit.skillId];
-      const rawCells =
-        mode === "skill"
-          ? this.collectSkillPreviewCells(attacker, target, skill, allies, enemies)
-          : [{ row: target.row, col: target.col }];
-      const cells = this.dedupePreviewCells(rawCells);
-      const primary = cells.find((cell) => cell.row === target.row && cell.col === target.col) ?? cells[0] ?? target;
-
-      highlight.clear();
-      cells.forEach((cell) => {
-        const x0 = gridX + cell.col * cellW;
-        const y0 = gridY + cell.row * cellH;
-        const isPrimary = cell.row === primary.row && cell.col === primary.col;
-        const fill = isPrimary ? 0xffcc6a : 0x6fd6ff;
-        const alpha = isPrimary ? 0.34 : 0.2;
-        const edge = isPrimary ? 0xffefb5 : 0xb8ebff;
-        highlight.fillStyle(fill, alpha);
-        highlight.fillRoundedRect(x0 + 1, y0 + 1, cellW - 2, cellH - 2, 3);
-        highlight.lineStyle(isPrimary ? 2 : 1.4, edge, 0.95);
-        highlight.strokeRoundedRect(x0 + 0.5, y0 + 0.5, cellW - 1, cellH - 1, 3);
-      });
-
-      const from = getCellCenter(attacker.row, attacker.col);
-      const to = getCellCenter(primary.row, primary.col);
-      beam.clear();
-      beam.lineStyle(2, mode === "skill" ? 0x93d8ff : 0xffdba0, 0.9);
-      beam.beginPath();
-      beam.moveTo(from.x, from.y);
-      beam.lineTo(to.x, to.y);
-      beam.strokePath();
-
-      const projectile = this.add.circle(from.x, from.y, Math.max(3, Math.floor(Math.min(cellW, cellH) * 0.13)), mode === "skill" ? 0x8fdfff : 0xffd783, 0.95);
-      this.wikiListContainer.add(projectile);
-      this.tweens.add({
-        targets: projectile,
-        x: to.x,
-        y: to.y,
-        duration: 220,
-        ease: "Sine.Out",
-        onComplete: () => projectile.destroy()
-      });
-
-      infoText.setText(
-        mode === "skill"
-          ? `Kỹ năng: ${skill?.name ?? unit.skillId} • ${cells.length} ô tác động`
-          : `Đánh thường: mục tiêu chính tại ${this.toChessCoord(primary.row, primary.col)}`
-      );
-    };
-
-    const createActionButton = (x, label, onClick) => {
-      const bg = this.add.rectangle(x, buttonY, buttonW, buttonH, 0x1e3852, 0.95).setOrigin(0, 0);
-      bg.setStrokeStyle(1, 0x6aaad8, 0.88);
-      bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", onClick);
-      bg.on("pointerover", () => bg.setFillStyle(0x2c5070, 0.98));
-      bg.on("pointerout", () => bg.setFillStyle(0x1e3852, 0.95));
-      const text = this.add.text(x + buttonW * 0.5, buttonY + buttonH * 0.5, label, {
-        fontFamily: UI_FONT,
-        fontSize: "12px",
-        color: "#e9f5ff",
-        fontStyle: "bold"
-      }).setOrigin(0.5);
-      return [bg, text];
-    };
-
-    const basicButton = createActionButton(panelX + 16, "Preview đánh thường", () => runPreview("basic"));
-    const skillButton = createActionButton(panelX + 16 + buttonW + buttonGap, "Preview kỹ năng", () => runPreview("skill"));
-
-    this.wikiListContainer.add([
-      panel,
-      title,
-      subTitle,
-      ...basicButton,
-      ...skillButton,
-      baseGrid,
-      allyLabel,
-      enemyLabel,
-      ...dummyIcons,
-      attackerRing,
-      attackerIcon,
-      highlight,
-      beam,
-      infoText
-    ]);
-
-    runPreview("basic");
-    return panelH;
-  }
-
-  toggleWikiModal(force = null) {
-    if (this.libraryModal) {
-      const next = typeof force === "boolean" ? force : !this.wikiVisible;
-      if (next) {
-        this.toggleSettingsOverlay(false);
-        this.toggleHistoryModal(false);
-        this.toggleVersionInfoModal(false);
-        this.libraryModal.show();
-      } else {
-        this.libraryModal.hide();
-        this.clearAttackPreview();
-      }
-      this.wikiVisible = this.libraryModal.isOpen();
-      return;
-    }
-
-    if (!MATCH_WIKI_ENABLED) {
-      const shouldOpen = force == null ? !this.wikiVisible : !!force;
-      if (shouldOpen) {
-        this.addLog("Thư Viện trong trận đang tạm tắt để sửa lỗi.");
-      } else if (this.wikiVisible) {
-        this.wikiVisible = false;
-        this.wikiOverlay.forEach((o) => o?.setVisible(false));
-        this.clearAttackPreview();
-      }
-      return;
-    }
-
-    const next = typeof force === "boolean" ? force : !this.wikiVisible;
-    if (next) {
-      this.toggleSettingsOverlay(false);
-      this.toggleHistoryModal(false);
-      this.toggleVersionInfoModal(false);
-      if (!this.wikiOverlay.length) this.createWikiModal();
-    } else {
-      this.clearAttackPreview();
-    }
-    this.wikiVisible = next;
-    this.wikiOverlay.forEach((o) => o?.setVisible(next));
-    if (next) {
-      this.wikiScrollY = 0;
-      this.refreshWikiList();
-    }
-  }
-
-  onWikiWheel(dy) {
-    if (this.libraryModal) {
-      this.libraryModal.scrollBy(dy);
-      return;
-    }
-    if (!this.wikiVisible) return;
-    this.wikiScrollY = clamp(this.wikiScrollY + dy * 0.5, 0, this.wikiMaxScroll);
-    this.wikiListContainer.setY(this.wikiListBaseY - this.wikiScrollY);
   }
 
   setHistoryFilter(filterKey) {
@@ -3387,16 +2987,16 @@ export class PlanningScene extends Phaser.Scene {
 
   sellUnit(uid) {
     if (!uid) return false;
-    
+
     // Check board for unit
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const unit = BoardSystem.getUnitAt(this.player.board, row, col);
         if (!unit || unit.uid !== uid) continue;
-        
+
         // Use ShopSystem to sell unit
         const result = ShopSystem.sellUnit(this.player, unit);
-        
+
         if (result.success) {
           this.player = result.player;
           // Use BoardSystem to remove unit from board
@@ -3412,7 +3012,7 @@ export class PlanningScene extends Phaser.Scene {
         }
       }
     }
-    
+
     // Check bench for unit
     const benchIndex = this.player?.bench?.findIndex((unit) => unit?.uid === uid) ?? -1;
     if (benchIndex >= 0) return this.sellBenchIndex(benchIndex);
@@ -3422,10 +3022,10 @@ export class PlanningScene extends Phaser.Scene {
   sellBenchIndex(index) {
     const unit = this.player?.bench?.[index];
     if (!unit) return false;
-    
+
     // Use ShopSystem to sell unit
     const result = ShopSystem.sellUnit(this.player, unit);
-    
+
     if (result.success) {
       this.player = result.player;
       this.player.bench.splice(index, 1);
@@ -3750,10 +3350,10 @@ export class PlanningScene extends Phaser.Scene {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
     const cost = Math.max(1, 2 + this.player.rollCostDelta);
-    
+
     // Use ShopSystem to refresh shop
     const result = ShopSystem.refreshShop(this.player, cost);
-    
+
     if (result.success) {
       this.player = result.player;
       this.refreshPlanningUi();
@@ -3797,12 +3397,12 @@ export class PlanningScene extends Phaser.Scene {
   toggleLock() {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    
+
     // Use ShopSystem to lock/unlock shop
-    const result = this.player.shopLocked 
+    const result = this.player.shopLocked
       ? ShopSystem.unlockShop(this.player)
       : ShopSystem.lockShop(this.player);
-    
+
     if (result.success) {
       this.player = result.player;
       this.refreshPlanningUi();
@@ -3815,7 +3415,7 @@ export class PlanningScene extends Phaser.Scene {
   refreshShop(forceRoll = false) {
     // Only generate new offers if shop is not locked (or forceRoll is true)
     if (this.player.shopLocked && !forceRoll) return;
-    
+
     // Use ShopSystem to generate shop offers (no cost, just generation)
     const offers = ShopSystem.generateShopOffers(this.player.level);
     this.player.shop = offers;
@@ -3824,15 +3424,15 @@ export class PlanningScene extends Phaser.Scene {
   buyFromShop(index) {
     if (this.settingsVisible) return;
     if (this.phase !== PHASE.PLANNING) return;
-    
+
     // Use ShopSystem to buy unit
     const result = ShopSystem.buyUnit(
-      this.player, 
-      index, 
+      this.player,
+      index,
       this.createOwnedUnit.bind(this),
       this.getBenchCap()
     );
-    
+
     if (result.success) {
       this.player = result.player;
       this.tryAutoMerge();
@@ -3861,10 +3461,10 @@ export class PlanningScene extends Phaser.Scene {
         // Get unit label for logging
         const unit = UNIT_BY_ID[entry.baseId];
         const label = unit?.name || entry.baseId;
-        
+
         // Log the merge
         this.addLog(`Nâng sao: ${label} -> ${entry.toStar}★`);
-        
+
         // Handle overflow equipment by returning to item bag
         if (entry.overflowItems && entry.overflowItems.length > 0) {
           this.player.itemBag.push(...entry.overflowItems);
@@ -3928,7 +3528,7 @@ export class PlanningScene extends Phaser.Scene {
     const ai = getAISettings(this.aiMode);
     const modeFactor = ai.budgetMult ?? 1;
     const budget = Math.round((8 + this.player.round * (sandbox ? 2.1 : 2.6)) * modeFactor);
-    
+
     // Use AISystem to generate enemy team
     const units = generateEnemyTeam(this.player.round, budget, this.aiMode, sandbox);
 
@@ -5536,11 +5136,11 @@ export class PlanningScene extends Phaser.Scene {
     const equipmentLine = equippedItems.length
       ? `Trang bị: ${equippedItems.map((item) => `${item.icon} ${item.name}`).join(", ")}`
       : "Trang bị: Chưa có";
-    
+
     // Calculate evasion stat
     const baseEvasion = getBaseEvasion(base.classType);
     let evasionText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}%`;
-    
+
     // If ownedUnit is provided, check for modified evasion
     if (ownedUnit) {
       const effectiveEvasion = getEffectiveEvasion(ownedUnit);
@@ -5548,7 +5148,7 @@ export class PlanningScene extends Phaser.Scene {
         evasionText = `💨 Né tránh: ${(baseEvasion * 100).toFixed(1)}% → ${(effectiveEvasion * 100).toFixed(1)}%`;
       }
     }
-    
+
     return {
       title: `${visual.icon} ${visual.nameVi} (${star}★)`,
       body: [
@@ -6028,7 +5628,7 @@ export class PlanningScene extends Phaser.Scene {
       options.extraTribeCount = this.player.extraTribeCount || 0;
     }
     SynergySystem.applySynergyBonusesToTeam(team, side, options);
-    
+
     // Update UI for all units
     team.forEach((unit) => {
       this.updateCombatUnitUi(unit);
@@ -6052,6 +5652,13 @@ export class PlanningScene extends Phaser.Scene {
       if (!item || item.kind !== "equipment" || !item.bonus) return;
       this.applyBonusToUnit(unit, item.bonus);
     });
+
+    // Apply startingRage to actual rage (Requirement 2.2 max +4 per unit from all sources cap)
+    if (unit.mods?.startingRage) {
+      const capped = Math.min(4, unit.mods.startingRage);
+      unit.rage = Math.min(unit.rageMax || 100, (unit.rage || 0) + capped);
+      unit.mods.startingRage = 0; // Prevent applying multiple times
+    }
   }
 
   hashUnitSeed(unit) {
@@ -7469,33 +7076,33 @@ export class PlanningScene extends Phaser.Scene {
     const color = damageType === "magic" ? "#d9a6ff" : damageType === "true" ? "#f2f7ff" : "#ff9b9b";
     const stroke = damageType === "magic" ? "#34164b" : "#20101a";
     const fontSize = isCrit ? 24 : 17;
-    
+
     // Clean up expired damage numbers (older than 200ms)
     const now = Date.now();
     this.activeDamageNumbers = this.activeDamageNumbers.filter(dn => now - dn.timestamp < 200);
-    
+
     // Check for overlapping damage numbers within 30 pixels
     const OVERLAP_THRESHOLD = 30;
     const OFFSET_AMOUNT = 20;
     let adjustedY = y;
-    
+
     for (const activeDN of this.activeDamageNumbers) {
       const dx = Math.abs(activeDN.x - x);
       const dy = Math.abs(activeDN.y - adjustedY);
-      
+
       // If within overlap threshold, offset the y-position
       if (dx < OVERLAP_THRESHOLD && dy < OVERLAP_THRESHOLD) {
         adjustedY -= OFFSET_AMOUNT;
       }
     }
-    
+
     // Track this damage number
     this.activeDamageNumbers.push({
       x,
       y: adjustedY,
       timestamp: now
     });
-    
+
     const label = this.add.text(x, adjustedY, `-${value}${isCrit ? "!" : ""}`, {
       fontFamily: UI_FONT,
       fontSize: `${fontSize}px`,

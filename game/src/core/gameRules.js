@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export const LOSE_CONDITION = {
   NO_UNITS: "NO_UNITS",
   NO_HEARTS: "NO_HEARTS"
@@ -12,6 +14,6 @@ export function normalizeLoseCondition(value) {
 
 export function getLoseConditionLabel(value) {
   const normalized = normalizeLoseCondition(value);
-  if (normalized === LOSE_CONDITION.NO_HEARTS) return "Thua khi hết tim";
-  return "Thua khi hết quân";
+  if (normalized === LOSE_CONDITION.NO_HEARTS) return t("lose.noHearts");
+  return t("lose.noUnits");
 }

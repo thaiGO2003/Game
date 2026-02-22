@@ -3,8 +3,7 @@
  */
 
 import { getUnitVisual } from "../data/unitVisuals.js";
-
-const UI_FONT = "Segoe UI";
+import { UI_FONT } from "../core/uiTheme.js";
 
 export class AttackPreview {
   constructor(scene, x, y, width, height, unit) {
@@ -96,12 +95,12 @@ export class AttackPreview {
     if (range <= 1) {
       // Cận chiến: Ưu tiên cột gần nhất
       if (this.unit.classType === "ASSASSIN") {
-        // Sát thủ: Cột xa nhất (col 3)
+        // Sát thủ: Cùng hàng xa nhất (col 3)
         targetRow = 1;
         targetCol = 3;
       } else {
-        // Tank/Fighter: Cột gần nhất (col 2)
-        targetRow = 2;
+        // Tank/Fighter: Cột gần nhất, ưu tiên hàng trên (row 0)
+        targetRow = 0;
         targetCol = 2;
       }
     } else {

@@ -20,6 +20,8 @@ import {
   scaledBaseStats
 } from "../core/gameUtils.js";
 
+import { PHASE } from "../core/boardConstants.js";
+
 const TILE_W = 110;
 const TILE_H = 56;
 const ROWS = 5;
@@ -27,13 +29,6 @@ const COLS = 10;
 const PLAYER_COLS = 5;
 const RIGHT_COL_START = 5;
 const RIGHT_COL_END = 9;
-
-const PHASE = {
-  PLANNING: "PLANNING",
-  AUGMENT: "AUGMENT",
-  COMBAT: "COMBAT",
-  GAME_OVER: "GAME_OVER"
-};
 
 const AI_SETTINGS = {
   EASY: {
@@ -1249,7 +1244,7 @@ export class BoardPrototypeScene extends Phaser.Scene {
       options.extraTribeCount = this.player.extraTribeCount || 0;
     }
     SynergySystem.applySynergyBonusesToTeam(team, side, options);
-    
+
     // Update UI for all units
     team.forEach((unit) => {
       this.updateCombatUnitUi(unit);
@@ -1460,17 +1455,17 @@ export class BoardPrototypeScene extends Phaser.Scene {
     const myCol = attacker.col;
     const targetRow = target.row;
     const targetCol = target.col;
-    
+
     // Khoảng cách cột và hàng
     const colDist = Math.abs(targetCol - myCol);
     const rowDist = Math.abs(targetRow - myRow);
     const sameRow = targetRow === myRow ? 0 : 1;
     const totalDist = colDist + rowDist;
-    
+
     // HP tiebreaker
     const hpRatio = Math.round((target.hp / target.maxHp) * 1000);
     const hpRaw = target.hp;
-    
+
     // === THUẬT TOÁN 1: CẬN CHIẾN (Ưu tiên CỘT) ===
     if (attacker.range <= 1) {
       if (attacker.classType === "ASSASSIN") {
@@ -1482,7 +1477,7 @@ export class BoardPrototypeScene extends Phaser.Scene {
         return [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw];
       }
     }
-    
+
     // === THUẬT TOÁN 2: TẦM XA (Ưu tiên HÀNG) ===
     // Archer/Mage/Support: Cùng hàng → Lên/xuống → Gần nhất trong hàng
     return [sameRow, rowDist, colDist, totalDist, hpRatio, hpRaw];
@@ -1512,7 +1507,7 @@ export class BoardPrototypeScene extends Phaser.Scene {
     if (!skill) {
       // Log error for missing skill (Requirement 18.3)
       console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
-      
+
       // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;

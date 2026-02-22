@@ -45,8 +45,8 @@ const CRAFT_RECIPES_RAW = [
     name: "Thương Shojin",
     icon: "🔱",
     pattern: ["claw", "tear", "tear", null],
-    bonus: { atkPct: 0.05, startingRage: 15 },
-    description: "Người mang +5% ATK, +15 Nộ khởi đầu"
+    bonus: { atkPct: 0.05, startingRage: 1 },
+    description: "Người mang +5% ATK, +1 Nộ khởi đầu"
   },
   {
     id: "sterak_gage",
@@ -85,8 +85,8 @@ const CRAFT_RECIPES_RAW = [
     name: "Tim Băng",
     icon: "❄️",
     pattern: ["bark", "tear", "bark", null],
-    bonus: { hpPct: 0.05, startingRage: 10, defFlat: 10 },
-    description: "Người mang +5% HP, +10 Nộ, +10 DEF"
+    bonus: { hpPct: 0.05, startingRage: 1, defFlat: 10 },
+    description: "Người mang +5% HP, +1 Nộ, +10 DEF"
   },
   {
     id: "sunfire_cape",
@@ -117,8 +117,8 @@ const CRAFT_RECIPES_RAW = [
     name: "Quyền Trượng",
     icon: "⚕️",
     pattern: ["crystal", "tear", "crystal", null],
-    bonus: { matkPct: 0.1, startingRage: 15 },
-    description: "Người mang +10% MATK, +15 Nộ"
+    bonus: { matkPct: 0.1, startingRage: 1 },
+    description: "Người mang +10% MATK, +1 Nộ"
   },
   {
     id: "morellonomicon",
@@ -141,8 +141,8 @@ const CRAFT_RECIPES_RAW = [
     name: "Dao Điện",
     icon: "⚡",
     pattern: ["feather", "tear", "feather", null],
-    bonus: { critPct: 0.1, startingRage: 10, matkPct: 0.05 },
-    description: "Người mang +10% Crit, +10 Nộ, +5% MATK"
+    bonus: { critPct: 0.1, startingRage: 1, matkPct: 0.05 },
+    description: "Người mang +10% Crit, +1 Nộ, +5% MATK"
   },
   {
     id: "zzrot_portal",
@@ -157,16 +157,16 @@ const CRAFT_RECIPES_RAW = [
     name: "Bùa Xanh",
     icon: "🟦",
     pattern: ["tear", "tear", "tear", "tear"],
-    bonus: { startingRage: 30 },
-    description: "Người mang +30 Nộ khởi đầu"
+    bonus: { startingRage: 2 },
+    description: "Người mang +2 Nộ khởi đầu"
   },
   {
     id: "redemption",
     name: "Dây Chuyền",
     icon: "✝️",
     pattern: ["tear", "belt", null, null],
-    bonus: { hpPct: 0.1, startingRage: 10, healPct: 0.1 },
-    description: "Người mang +10% HP, +10 Nộ, +10% hồi máu"
+    bonus: { hpPct: 0.1, startingRage: 1, healPct: 0.1 },
+    description: "Người mang +10% HP, +1 Nộ, +10% hồi máu"
   },
   {
     id: "warmog_armor",
@@ -181,9 +181,10 @@ const CRAFT_RECIPES_RAW = [
     id: "dragon_heart",
     name: "Trái Tim Rồng",
     icon: "🐉",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "claw", "crystal", "claw",
+      "eq_dawn_edge", "crystal", "claw",
       "belt", "tear", "belt",
       "bark", "feather", "bark"
     ],
@@ -194,22 +195,24 @@ const CRAFT_RECIPES_RAW = [
     id: "storm_crown",
     name: "Vương Miện Bão Tố",
     icon: "👑",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "crystal", "feather", "crystal",
+      "eq_mindforge_spear", "feather", "crystal",
       "tear", "crystal", "tear",
-      null, "feather", null
+      "feather", "feather", "crystal"
     ],
-    bonus: { matkPct: 0.28, startingRage: 25, mdefFlat: 20 },
-    description: "Người mang +28% MATK, +25 Nộ, +20 MDEF"
+    bonus: { matkPct: 0.28, startingRage: 3, mdefFlat: 20 },
+    description: "Người mang +28% MATK, +3 Nộ, +20 MDEF"
   },
   {
     id: "titan_shell",
     name: "Mai Titan",
     icon: "🐢",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "bark", "bark", "bark",
+      "eq_aegis_oath", "bark", "bark",
       "bark", "belt", "bark",
       "tear", "bark", "tear"
     ],
@@ -220,11 +223,12 @@ const CRAFT_RECIPES_RAW = [
     id: "bloodfang_reaper",
     name: "Huyết Nha",
     icon: "🩸",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "claw", null, "claw",
+      "eq_sanguine_codex", "feather", "claw",
       "belt", "claw", "belt",
-      null, "tear", null
+      "tear", "tear", "feather"
     ],
     bonus: { atkPct: 0.2, lifestealPct: 0.22, critPct: 0.1 },
     description: "Người mang +20% ATK, +22% hút máu, +10% Crit"
@@ -233,35 +237,38 @@ const CRAFT_RECIPES_RAW = [
     id: "phoenix_plume",
     name: "Lông Phượng",
     icon: "🐦‍🔥",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "feather", "feather", "feather",
-      null, "crystal", null,
+      "eq_moonwell_pendant", "feather", "feather",
+      "crystal", "crystal", "crystal",
       "tear", "belt", "tear"
     ],
-    bonus: { matkPct: 0.2, healPct: 0.18, startingRage: 20 },
-    description: "Người mang +20% MATK, +18% hồi máu, +20 Nộ"
+    bonus: { matkPct: 0.2, healPct: 0.18, startingRage: 2 },
+    description: "Người mang +20% MATK, +18% hồi máu, +2 Nộ"
   },
   {
     id: "void_engine",
     name: "Lõi Hư Không",
     icon: "🌌",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "crystal", "tear", "crystal",
+      "eq_skyhunter_scope", "tear", "crystal",
       "claw", "crystal", "claw",
       "feather", "tear", "feather"
     ],
-    bonus: { atkPct: 0.12, matkPct: 0.12, critPct: 0.15, startingRage: 10 },
-    description: "Người mang +12% ATK/MATK, +15% Crit, +10 Nộ"
+    bonus: { atkPct: 0.12, matkPct: 0.12, critPct: 0.15, startingRage: 1 },
+    description: "Người mang +12% ATK/MATK, +15% Crit, +1 Nộ"
   },
   {
     id: "gaia_oath",
     name: "Thệ Ước Đại Địa",
     icon: "🌿",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "belt", "bark", "belt",
+      "eq_wild_talon_cloak", "bark", "belt",
       "tear", "crystal", "tear",
       "belt", "bark", "belt"
     ],
@@ -272,14 +279,15 @@ const CRAFT_RECIPES_RAW = [
     id: "thunder_pike",
     name: "Thương Lôi",
     icon: "⚡",
+    tier: 3,
     gridSize: 3,
     pattern: [
-      "feather", "claw", "feather",
-      null, "tear", null,
+      "eq_stormbreaker_ballista", "claw", "feather",
+      "tear", "tear", "tear",
       "claw", "crystal", "claw"
     ],
-    bonus: { atkPct: 0.18, critPct: 0.2, startingRage: 15 },
-    description: "Người mang +18% ATK, +20% Crit, +15 Nộ"
+    bonus: { atkPct: 0.18, critPct: 0.2, startingRage: 2 },
+    description: "Người mang +18% ATK, +20% Crit, +2 Nộ"
   },
 
   {
@@ -289,8 +297,8 @@ const CRAFT_RECIPES_RAW = [
     tier: 2,
     gridSize: 2,
     pattern: ["eq_death_blade", "claw", "tear", null],
-    bonus: { atkPct: 0.22, critPct: 0.12, startingRage: 8 },
-    description: "Cấp 2: Người mang +22% ATK, +12% Crit, +8 Nộ"
+    bonus: { atkPct: 0.22, critPct: 0.12, startingRage: 1 },
+    description: "Cấp 2: Người mang +22% ATK, +12% Crit, +1 Nộ"
   },
   {
     id: "aegis_oath",
@@ -329,8 +337,8 @@ const CRAFT_RECIPES_RAW = [
     tier: 2,
     gridSize: 2,
     pattern: ["eq_spear_shojin", "tear", "crystal", null],
-    bonus: { atkPct: 0.1, matkPct: 0.14, startingRage: 18 },
-    description: "Cấp 2: Người mang +10% ATK, +14% MATK, +18 Nộ"
+    bonus: { atkPct: 0.1, matkPct: 0.14, startingRage: 2 },
+    description: "Cấp 2: Người mang +10% ATK, +14% MATK, +2 Nộ"
   },
   {
     id: "wild_talon_cloak",
@@ -359,8 +367,8 @@ const CRAFT_RECIPES_RAW = [
     tier: 2,
     gridSize: 2,
     pattern: ["eq_quicksilver", "feather", "tear", null],
-    bonus: { evadePct: 0.12, mdefFlat: 12, startingRage: 10 },
-    description: "Cấp 2: Người mang +12% né tránh, +12 MDEF, +10 Nộ"
+    bonus: { evadePct: 0.12, mdefFlat: 12, startingRage: 1 },
+    description: "Cấp 2: Người mang +12% né tránh, +12 MDEF, +1 Nộ"
   },
   {
     id: "ember_grimoire",
@@ -379,8 +387,8 @@ const CRAFT_RECIPES_RAW = [
     tier: 2,
     gridSize: 2,
     pattern: ["eq_statikk_shiv", "feather", "claw", null],
-    bonus: { atkPct: 0.15, critPct: 0.15, startingRage: 12 },
-    description: "Cấp 2: Người mang +15% ATK, +15% Crit, +12 Nộ"
+    bonus: { atkPct: 0.15, critPct: 0.15, startingRage: 1 },
+    description: "Cấp 2: Người mang +15% ATK, +15% Crit, +1 Nộ"
   },
   {
     id: "moonwell_pendant",
@@ -414,8 +422,8 @@ const CRAFT_RECIPES_RAW = [
       null, "eq_storm_crown", null,
       "crystal", null, null
     ],
-    bonus: { atkPct: 0.24, matkPct: 0.26, critPct: 0.18, startingRage: 25 },
-    description: "Cấp 4: Người mang +24% ATK, +26% MATK, +18% Crit, +25 Nộ"
+    bonus: { atkPct: 0.24, matkPct: 0.26, critPct: 0.18, startingRage: 4 },
+    description: "Cấp 4: Người mang +24% ATK, +26% MATK, +18% Crit, +4 Nộ"
   },
   {
     id: "leviathan_bastion",
@@ -442,8 +450,8 @@ const CRAFT_RECIPES_RAW = [
       null, "tear", null,
       "crystal", null, null
     ],
-    bonus: { matkPct: 0.32, healPct: 0.22, burnOnHit: 6, startingRage: 20 },
-    description: "Cấp 4: Người mang +32% MATK, +22% hồi máu, thiêu đốt mạnh, +20 Nộ"
+    bonus: { matkPct: 0.32, healPct: 0.22, burnOnHit: 6, startingRage: 3 },
+    description: "Cấp 4: Người mang +32% MATK, +22% hồi máu, thiêu đốt mạnh, +3 Nộ"
   },
   {
     id: "shadow_harbinger",
@@ -470,8 +478,8 @@ const CRAFT_RECIPES_RAW = [
       null, "belt", null,
       "tear", null, null
     ],
-    bonus: { hpPct: 0.36, healPct: 0.22, shieldStart: 180, startingRage: 15 },
-    description: "Cấp 4: Người mang +36% HP, +22% hồi máu, +180 khiên, +15 Nộ"
+    bonus: { hpPct: 0.36, healPct: 0.22, shieldStart: 180, startingRage: 2 },
+    description: "Cấp 4: Người mang +36% HP, +22% hồi máu, +180 khiên, +2 Nộ"
   },
   {
     id: "thunder_apex",
@@ -484,8 +492,8 @@ const CRAFT_RECIPES_RAW = [
       null, "feather", null,
       "crystal", null, null
     ],
-    bonus: { atkPct: 0.3, critPct: 0.26, startingRage: 20, matkPct: 0.12 },
-    description: "Cấp 4: Người mang +30% ATK, +26% Crit, +20 Nộ, +12% MATK"
+    bonus: { atkPct: 0.3, critPct: 0.26, startingRage: 3, matkPct: 0.12 },
+    description: "Cấp 4: Người mang +30% ATK, +26% Crit, +3 Nộ, +12% MATK"
   }
 ];
 
@@ -562,6 +570,15 @@ function validateCraftRecipeRules() {
       }
       if (!requires.some((id) => ingredientIsEquipment(id))) {
         console.warn(`[Items] Recipe ${recipe.id} (tier 2) must include at least 1 crafted ingredient.`);
+      }
+    }
+
+    if (recipe.tier === 3) {
+      if (requires.length < 6) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 3) must require at least 6 ingredients, has ${requires.length}.`);
+      }
+      if (!requires.some((id) => ingredientIsEquipment(id) && ingredientTier(id) >= 2)) {
+        console.warn(`[Items] Recipe ${recipe.id} (tier 3) must include at least 1 tier-2 crafted ingredient.`);
       }
     }
 

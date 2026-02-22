@@ -104,37 +104,37 @@ const AI_ROLE_PROFILES = {
   EASY: {
     minFrontRatio: 0.55,
     nonFrontBias: 0.18,
-    weights: { 
-      TANKER: 0.36, 
-      FIGHTER: 0.28, 
-      ARCHER: 0.14, 
-      SUPPORT: 0.1, 
-      MAGE: 0.07, 
-      ASSASSIN: 0.05 
+    weights: {
+      TANKER: 0.36,
+      FIGHTER: 0.28,
+      ARCHER: 0.14,
+      SUPPORT: 0.1,
+      MAGE: 0.07,
+      ASSASSIN: 0.05
     }
   },
   MEDIUM: {
     minFrontRatio: 0.42,
     nonFrontBias: 0.32,
-    weights: { 
-      TANKER: 0.24, 
-      FIGHTER: 0.24, 
-      ARCHER: 0.17, 
-      SUPPORT: 0.13, 
-      MAGE: 0.13, 
-      ASSASSIN: 0.09 
+    weights: {
+      TANKER: 0.24,
+      FIGHTER: 0.24,
+      ARCHER: 0.17,
+      SUPPORT: 0.13,
+      MAGE: 0.13,
+      ASSASSIN: 0.09
     }
   },
   HARD: {
     minFrontRatio: 0.34,
     nonFrontBias: 0.45,
-    weights: { 
-      TANKER: 0.19, 
-      FIGHTER: 0.19, 
-      ARCHER: 0.18, 
-      SUPPORT: 0.15, 
-      MAGE: 0.16, 
-      ASSASSIN: 0.13 
+    weights: {
+      TANKER: 0.19,
+      FIGHTER: 0.19,
+      ARCHER: 0.18,
+      SUPPORT: 0.15,
+      MAGE: 0.16,
+      ASSASSIN: 0.13
     }
   }
 };
@@ -220,10 +220,10 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
     MAGE: 0,
     SUPPORT: 0
   };
-  
+
   const roleProfile = AI_ROLE_PROFILES[difficulty] ?? AI_ROLE_PROFILES.MEDIUM;
   let guard = 0;
-  
+
   // Generate unit picks based on budget and role composition
   while (picks.length < teamSize && guard < 260) {
     guard += 1;
@@ -232,7 +232,7 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
     if (!candidates.length) break;
 
     let pick = null;
-    
+
     // Try to pick by weighted class selection
     const targetClass = pickClassByWeights(roleProfile.weights);
     const byClass = candidates.filter((u) => u.classType === targetClass);
@@ -241,19 +241,19 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
       const diversityPool = byClass.filter((u) => roleCounts[u.classType] <= minRoleCount + 1);
       pick = randomItem(diversityPool.length ? diversityPool : byClass);
     }
-    
+
     // Ensure minimum front line ratio
     if (!pick && frontCount < Math.ceil(teamSize * roleProfile.minFrontRatio)) {
       const frontPool = candidates.filter((u) => u.classType === "TANKER" || u.classType === "FIGHTER");
       if (frontPool.length) pick = randomItem(frontPool);
     }
-    
+
     // Apply non-front bias
     if (!pick && Math.random() < roleProfile.nonFrontBias) {
       const nonFrontPool = candidates.filter((u) => u.classType !== "TANKER" && u.classType !== "FIGHTER");
       if (nonFrontPool.length) pick = randomItem(nonFrontPool);
     }
-    
+
     // Fallback to random candidate
     if (!pick) pick = randomItem(candidates);
 
@@ -269,7 +269,7 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
     if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
     roleCounts[pick.classType] = (roleCounts[pick.classType] ?? 0) + 1;
     coins -= Math.max(1, pick.tier - (star - 1));
-    
+
     // Stop if budget exhausted and minimum team size reached
     if (coins <= 0 && picks.length >= Math.ceil(teamSize * 0.7)) break;
   }
@@ -381,9 +381,9 @@ export function makeAIDecision(state, aiUnit, difficulty = 'MEDIUM') {
   }
 
   // Decide between skill and basic attack
-  const shouldUseSkill = aiUnit.rage >= (aiUnit.rageMax || 100) && 
-                         (aiUnit.statuses?.silence || 0) <= 0 &&
-                         aiUnit.skillId;
+  const shouldUseSkill = aiUnit.rage >= (aiUnit.rageMax || 100) &&
+    (aiUnit.statuses?.silence || 0) <= 0 &&
+    aiUnit.skillId;
 
   if (shouldUseSkill) {
     return { action: 'SKILL', target, reason: 'rage_full' };
@@ -428,7 +428,7 @@ export function makeAIDecision(state, aiUnit, difficulty = 'MEDIUM') {
 export function selectTarget(attacker, state, difficulty = 'MEDIUM', options = {}) {
   const enemySide = attacker.side === 'LEFT' ? 'RIGHT' : 'LEFT';
   const enemies = (state.units || []).filter(u => u.side === enemySide && u.alive);
-  
+
   if (!enemies.length) return null;
 
   // Check for taunt (forced target)
@@ -491,25 +491,25 @@ export function selectTarget(attacker, state, difficulty = 'MEDIUM', options = {
 function findTargetMeleeFrontline(attacker, enemies) {
   const myRow = attacker.row;
   const myCol = attacker.col;
-  
+
   // Find closest enemy by column distance
   let best = null;
   let bestScore = Infinity;
-  
+
   enemies.forEach(enemy => {
     const colDist = Math.abs(enemy.col - myCol);
     const rowDist = Math.abs(enemy.row - myRow);
     const sameRow = enemy.row === myRow ? 0 : 1;
-    
+
     // Score: [colDist, sameRow, rowDist]
     const score = colDist * 1000 + sameRow * 100 + rowDist;
-    
+
     if (score < bestScore) {
       bestScore = score;
       best = enemy;
     }
   });
-  
+
   return best;
 }
 
@@ -530,25 +530,40 @@ function findTargetMeleeFrontline(attacker, enemies) {
  */
 function findTargetAssassin(attacker, enemies) {
   const myRow = attacker.row;
-  
+
   // Find farthest enemy (backline)
   let best = null;
   let bestScore = -Infinity;
-  
+
+  // Class priority for tie-breaking (prefer squishy targets)
+  const classPriority = { 'MAGE': 0, 'ARCHER': 1, 'SUPPORT': 2, 'FIGHTER': 3, 'TANKER': 4 };
+
   enemies.forEach(enemy => {
-    const farthestCol = attacker.side === 'LEFT' ? -enemy.col : enemy.col;
+    // For LEFT side: higher col = farther (want to maximize enemy.col)
+    // For RIGHT side: lower col = farther (want to minimize enemy.col, so negate it)
+    const farthestCol = attacker.side === 'LEFT' ? enemy.col : -enemy.col;
+
+    // Tie-breaking: same row → top row → bottom row
+    // Priority: same row (0) > different row (1)
     const sameRow = enemy.row === myRow ? 0 : 1;
-    const rowDist = Math.abs(enemy.row - myRow);
-    
-    // Score: [-farthestCol, sameRow, rowDist] (negative for max)
-    const score = farthestCol * 1000 - sameRow * 100 - rowDist;
-    
+
+    // When not same row, prefer top rows (lower row numbers)
+    // Row 1 (top) > Row 2 (middle) > Row 3 (bottom)
+    const rowPriority = enemy.row;
+
+    // Final tie-breaker: prefer squishy targets (MAGE > ARCHER > others)
+    const classScore = classPriority[enemy.classType] !== undefined ? classPriority[enemy.classType] : 5;
+
+    // Score: minimize sameRow penalty (paramount), maximize farthest column, minimize row number, minimize class score
+    // User wants: "ưu tiên cùng hàng mà xa nhất" (prioritize same row, then farthest)
+    const score = -sameRow * 1000000 + farthestCol * 10000 - rowPriority * 100 - classScore;
+
     if (score > bestScore) {
       bestScore = score;
       best = enemy;
     }
   });
-  
+
   return best;
 }
 
@@ -569,25 +584,25 @@ function findTargetAssassin(attacker, enemies) {
 function findTargetRanged(attacker, enemies) {
   const myRow = attacker.row;
   const myCol = attacker.col;
-  
+
   // Find target prioritizing same row
   let best = null;
   let bestScore = Infinity;
-  
+
   enemies.forEach(enemy => {
     const sameRow = enemy.row === myRow ? 0 : 1;
     const rowDist = Math.abs(enemy.row - myRow);
     const colDist = Math.abs(enemy.col - myCol);
-    
+
     // Score: [sameRow, rowDist, colDist]
     const score = sameRow * 1000 + rowDist * 100 + colDist;
-    
+
     if (score < bestScore) {
       bestScore = score;
       best = enemy;
     }
   });
-  
+
   return best;
 }
 
@@ -605,11 +620,11 @@ function findTargetRanged(attacker, enemies) {
 function compareTargets(attacker, a, b) {
   const sa = scoreTarget(attacker, a);
   const sb = scoreTarget(attacker, b);
-  
+
   for (let i = 0; i < sa.length; i += 1) {
     if (sa[i] !== sb[i]) return sa[i] - sb[i];
   }
-  
+
   return 0;
 }
 
@@ -645,9 +660,9 @@ function scoreTarget(attacker, target) {
   // Melee units (Tank/Fighter)
   if (attacker.range <= 1) {
     if (attacker.classType === 'ASSASSIN') {
-      // Assassin: Farthest column → Same row → Row distance
+      // Assassin: Same row → Farthest column → Row distance
       const farthestCol = attacker.side === 'LEFT' ? -targetCol : targetCol;
-      return [farthestCol, sameRow, rowDist, totalDist, hpRatio, hpRaw];
+      return [sameRow, farthestCol, rowDist, totalDist, hpRatio, hpRaw];
     } else {
       // Tank/Fighter: Closest column → Same row → Row distance
       return [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw];
@@ -717,20 +732,20 @@ function pickClassByWeights(weights) {
 function assignPositions(picks) {
   // Define position slots for different roles
   const frontSlots = [
-    { row: 2, col: 5 }, { row: 1, col: 5 }, { row: 3, col: 5 }, { row: 2, col: 6 }, 
-    { row: 0, col: 5 }, { row: 4, col: 5 }, { row: 1, col: 6 }, { row: 3, col: 6 }, 
+    { row: 2, col: 5 }, { row: 1, col: 5 }, { row: 3, col: 5 }, { row: 2, col: 6 },
+    { row: 0, col: 5 }, { row: 4, col: 5 }, { row: 1, col: 6 }, { row: 3, col: 6 },
     { row: 2, col: 7 }, { row: 0, col: 6 }, { row: 4, col: 6 }, { row: 1, col: 7 }
   ];
   const backSlots = [
-    { row: 2, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 2, col: 8 }, 
-    { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 8 }, { row: 3, col: 8 }, 
+    { row: 2, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, { row: 2, col: 8 },
+    { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 8 }, { row: 3, col: 8 },
     { row: 0, col: 8 }, { row: 4, col: 8 }, { row: 2, col: 7 }, { row: 1, col: 7 }
   ];
   const assassinSlots = [
-    { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 }, 
+    { row: 0, col: 9 }, { row: 4, col: 9 }, { row: 1, col: 9 }, { row: 3, col: 9 },
     { row: 0, col: 8 }, { row: 4, col: 8 }
   ];
-  
+
   const used = new Set();
   const takeSlot = (list) => {
     for (let i = 0; i < list.length; i += 1) {
@@ -743,14 +758,14 @@ function assignPositions(picks) {
   };
 
   const units = [];
-  
+
   // Order units by role priority: front line first, then back line, then assassins
   const ordered = [
     ...picks.filter((p) => p.classType === "TANKER" || p.classType === "FIGHTER"),
     ...picks.filter((p) => p.classType === "SUPPORT" || p.classType === "MAGE" || p.classType === "ARCHER"),
     ...picks.filter((p) => p.classType === "ASSASSIN")
   ];
-  
+
   ordered.forEach((pick) => {
     let slot = null;
     if (pick.classType === "TANKER" || pick.classType === "FIGHTER") {
@@ -774,11 +789,11 @@ export const AISystem = {
   // AI settings
   getAISettings,
   getAIDifficultyMultiplier,
-  
+
   // Enemy team generation
   generateEnemyTeam,
   computeEnemyTeamSize,
-  
+
   // AI decision making
   makeAIDecision,
   selectTarget

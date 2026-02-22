@@ -3,8 +3,7 @@
  */
 
 import { getUnitVisual } from "../data/unitVisuals.js";
-
-const UI_FONT = "Segoe UI";
+import { UI_FONT } from "../core/uiTheme.js";
 
 export class SkillPreview {
   constructor(scene, x, y, width, height, unit, skill) {
@@ -118,7 +117,8 @@ export class SkillPreview {
           targetRow = 1;
           targetCol = 3;
         } else {
-          targetRow = 2;
+          // Tank/Fighter: ưu tiên hàng trên (row 0)
+          targetRow = 0;
           targetCol = 2;
         }
       } else {
