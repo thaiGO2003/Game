@@ -833,6 +833,8 @@ export class MainMenuScene extends Phaser.Scene {
     if (resolution) {
       this.scale.resize(resolution.width, resolution.height);
     }
+    // Force Scale.FIT to recalculate viewport↔game coordinate transform
+    this.scale.refresh();
     const zoom = guiScaleToZoom(settings?.guiScale);
     this.cameras.main.setZoom(zoom);
   }

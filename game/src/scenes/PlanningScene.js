@@ -248,6 +248,7 @@ export class PlanningScene extends Phaser.Scene {
     this.attackPreviewIcons = [];
     this.previewHoverUnit = null;
     this.headerStatChips = {};
+    this.inventoryPage = 0;
     this.headerMetaText = null;
     this.enemyInfoExpanded = false;
     this.inventoryCells = [];
@@ -395,6 +396,9 @@ export class PlanningScene extends Phaser.Scene {
     if (resolution) {
       this.scale.resize(resolution.width, resolution.height);
     }
+    // Force Scale.FIT to recalculate viewport↔game coordinate transform
+    // Without this, pointer coords are stale after F5 reload
+    this.scale.refresh();
     const zoom = guiScaleToZoom(settings?.guiScale);
     this.cameras.main.setZoom(zoom);
     if (refresh) {
@@ -1442,14 +1446,17 @@ export class PlanningScene extends Phaser.Scene {
 
     // Inventory - Above Bench (left)
     const invGap = UI_SPACING.XS;
-    // If upgraded, show 16 slots (2 rows of 8)
     const isUpgraded = (this.player?.inventoryUpgradeLevel ?? 0) > 0;
     const invCols = 8;
-    const invRows = isUpgraded ? 2 : 1;
+    // Always 1 row to prevent overlapping the bench slots
+    const invRows = 1;
     // Move inventory closer to bench/craft
     const invX = (l.benchSlotsRegionX ?? l.benchRegionX);
     const invCell = l.invCellSize;
     const invY = l.invY;
+
+    this.invPageMax = isUpgraded ? 1 : 0;
+    if (this.inventoryPage > this.invPageMax) this.inventoryPage = this.invPageMax;
 
     this.storageTitleText = this.add.text(invX, invY - 20, "◆ KHO ĐỒ", {
       fontFamily: UI_FONT,
@@ -1463,6 +1470,24 @@ export class PlanningScene extends Phaser.Scene {
       fontSize: "11px",
       color: UI_COLORS.textPrimary
     }).setDepth(2000);
+
+    if (this.invPrevBtn) this.invPrevBtn.destroy();
+    if (this.invNextBtn) this.invNextBtn.destroy();
+
+    if (isUpgraded) {
+      const pageNavX = invX + invCols * (invCell + invGap) + 12;
+      this.invPrevBtn = this.add.text(pageNavX, invY + 14, "◀", {
+        fontFamily: "Segoe UI Emoji",
+        fontSize: "12px",
+        color: UI_COLORS.textSecondary
+      }).setDepth(2000).setInteractive({ useHandCursor: true }).on("pointerdown", () => this.changeInvPage(-1));
+
+      this.invNextBtn = this.add.text(pageNavX + 26, invY + 14, "▶", {
+        fontFamily: "Segoe UI Emoji",
+        fontSize: "12px",
+        color: UI_COLORS.textSecondary
+      }).setDepth(2000).setInteractive({ useHandCursor: true }).on("pointerdown", () => this.changeInvPage(1));
+    }
 
     this.inventoryCells = [];
     for (let row = 0; row < invRows; row += 1) {
@@ -1484,10 +1509,10 @@ export class PlanningScene extends Phaser.Scene {
           color: UI_COLORS.textSecondary
         }).setOrigin(1, 1).setDepth(2001);
 
-        const cell = { bg, icon, count, itemId: null, amount: 0 };
+        const cell = { bg, icon, count, itemId: null, amount: 0, index: row * invCols + col };
         bg.on("pointerdown", () => this.onInventoryCellClick(cell));
         this.tooltip.attach(bg, () => {
-          if (!cell.itemId) return { title: "├ö vật phẩm", body: "Trống." };
+          if (!cell.itemId) return { title: "Ô vật phẩm", body: "Trống." };
           const item = ITEM_BY_ID[cell.itemId];
           const itemType = item?.kind === "equipment" ? "Trang bị" : "Nguyên liệu";
           let extra = "";
@@ -2452,7 +2477,27 @@ export class PlanningScene extends Phaser.Scene {
       // Check left click for Unit Drag
       if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.libraryModal?.isOpen() && !this.historyModalVisible && !this.settingsVisible && !this.versionInfoVisible) {
         const pos = this.getPointerWorldPosition(pointer);
+        const canvas = this.sys.game.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const slot0 = this.benchSlots?.[0];
+        const evt = pointer.event;
+        console.log('[DIAG] === CLICK DIAGNOSTIC ===');
+        console.log('[DIAG] DOM event: clientX=', evt?.clientX, 'clientY=', evt?.clientY);
+        console.log('[DIAG] Canvas rect: left=', Math.round(rect.left), 'top=', Math.round(rect.top), 'width=', Math.round(rect.width), 'height=', Math.round(rect.height));
+        console.log('[DIAG] Canvas actual: width=', canvas.width, 'height=', canvas.height);
+        console.log('[DIAG] Canvas CSS: width=', canvas.clientWidth, 'height=', canvas.clientHeight);
+        console.log('[DIAG] Scale game: width=', this.scale.width, 'height=', this.scale.height);
+        console.log('[DIAG] Scale display:', JSON.stringify({ w: Math.round(this.scale.displaySize?.width ?? 0), h: Math.round(this.scale.displaySize?.height ?? 0) }));
+        console.log('[DIAG] Pointer: x=', Math.round(pointer.x), 'y=', Math.round(pointer.y), 'worldX=', Math.round(pointer.worldX), 'worldY=', Math.round(pointer.worldY));
+        console.log('[DIAG] pos (getPointerWorldPosition):', Math.round(pos.x), Math.round(pos.y));
+        console.log('[DIAG] Bench0:', slot0 ? `x=${Math.round(slot0.x)} y=${Math.round(slot0.y)} w=${Math.round(slot0.slotW)} h=${Math.round(slot0.slotH)}` : 'none');
+        // Manual calculation: what SHOULD the game coords be?
+        const expectedX = ((evt?.clientX ?? 0) - rect.left) / rect.width * this.scale.width;
+        const expectedY = ((evt?.clientY ?? 0) - rect.top) / rect.height * this.scale.height;
+        console.log('[DIAG] Expected game coords (manual calc):', Math.round(expectedX), Math.round(expectedY));
+        console.log('[DIAG] Mismatch:', Math.round(pos.x - expectedX), Math.round(pos.y - expectedY));
         const unit = this.getUnitAt(pos.x, pos.y);
+        console.log('[DIAG] Unit found:', unit ? `${unit.region} ${unit.unit?.baseId}` : 'null');
         if (unit) {
           this.startUnitDrag(unit, pointer, pos);
           return;
@@ -3950,8 +3995,8 @@ export class PlanningScene extends Phaser.Scene {
         poisonOnHit: 0,
         shieldStart: 0,
         startingRage: 0,
-        basicAttackType: "physical",
-        basicAttackScaleStat: "atk"
+        basicAttackType: (owned.base.classType === "MAGE" || owned.base.classType === "SUPPORT") ? "magic" : "physical",
+        basicAttackScaleStat: (owned.base.classType === "MAGE" || owned.base.classType === "SUPPORT") ? "matk" : "atk"
       },
       statuses: {
         freeze: 0,
@@ -5043,6 +5088,12 @@ export class PlanningScene extends Phaser.Scene {
     this.refreshRightPanelScrollMetrics();
   }
 
+  changeInvPage(delta) {
+    if (!this.invPageMax) return;
+    this.inventoryPage = clamp((this.inventoryPage || 0) + delta, 0, this.invPageMax);
+    if (this.audioFx) this.audioFx.play("click");
+    this.refreshStorageUi();
+  }
 
   refreshStorageUi() {
     if (!this.storageSummaryText) return;
@@ -5073,15 +5124,25 @@ export class PlanningScene extends Phaser.Scene {
     const tableSize = this.getCraftGridSize();
     const activeCraftSlots = new Set(this.getCraftActiveIndices());
 
-    this.storageSummaryText.setText(`Kho thú ${this.player.bench.length}/${this.getBenchCap()} | Kho đồ ${this.player.itemBag.length}`);
+    const maxPage = this.invPageMax || 0;
+    this.storageSummaryText.setText(`Kho thú ${this.player.bench.length}/${this.getBenchCap()} | Kho đồ ${this.player.itemBag.length}${maxPage > 0 ? ` (Trang ${(this.inventoryPage || 0) + 1}/${maxPage + 1})` : ""}`);
+
+    if (this.invPrevBtn) {
+      this.invPrevBtn.setColor((this.inventoryPage || 0) > 0 ? "#ffffff" : UI_COLORS.textSecondary);
+    }
+    if (this.invNextBtn) {
+      this.invNextBtn.setColor((this.inventoryPage || 0) < maxPage ? "#ffffff" : UI_COLORS.textSecondary);
+    }
+
     this.storageCraftText?.setText(
       `• Đồ ghép gần đây: ${craftedText || "Chưa có"}${selectedItem ? ` • Đang chọn: ${selectedItem.icon} ${selectedItem.name}` : ""}`
     );
     this.craftTitleText?.setText(`⚒ Bàn chế tạo ${tableSize}x${tableSize}`);
 
     const bagEntries = Object.entries(bagCounts).sort((a, b) => b[1] - a[1]);
+    const pageOffset = (this.inventoryPage || 0) * this.inventoryCells.length;
     this.inventoryCells.forEach((cell, idx) => {
-      const pair = bagEntries[idx];
+      const pair = bagEntries[pageOffset + idx];
       if (!pair) {
         cell.itemId = null;
         cell.amount = 0;
@@ -6498,8 +6559,8 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "double_hit_gold_reward": {
-        const hit1 = this.calcSkillRaw(attacker, { base: 26, scaleStat: "atk", scale: 1.45 });
-        const hit2 = this.calcSkillRaw(attacker, { base: 22, scaleStat: "atk", scale: 1.25 });
+        const hit1 = this.calcSkillRaw(attacker, skill.hit1 || { base: 26, scaleStat: "atk", scale: 1.45 });
+        const hit2 = this.calcSkillRaw(attacker, skill.hit2 || { base: 22, scaleStat: "atk", scale: 1.25 });
         this.resolveDamage(attacker, target, hit1, "physical", "HỎA ẤN 1", skillOpts);
         await this.wait(120);
         const targetAliveAfterHit1 = target.alive;
@@ -6559,7 +6620,11 @@ export class PlanningScene extends Phaser.Scene {
     const sourceStat =
       statName === "atk" ? this.getEffectiveAtk(attacker) : statName === "matk" ? this.getEffectiveMatk(attacker) : attacker[statName] ?? 0;
     const starSkillMult = attacker?.star >= 3 ? 1.4 : attacker?.star === 2 ? 1.2 : 1;
-    return (skill.base + sourceStat * skill.scale) * starSkillMult;
+    const raw = ((skill.base || 0) + sourceStat * (skill.scale || 0)) * starSkillMult;
+    if (!Number.isFinite(raw) || (skill.base == null && skill.scale == null)) {
+      console.warn(`[calcSkillRaw] Missing base/scale for skill ${skill.id || skill.name || "?"}: base=${skill.base}, scale=${skill.scale}, result=${raw}`);
+    }
+    return raw;
   }
 
   getUnitStatFallback(unit, statKey, defaultValue = 0) {

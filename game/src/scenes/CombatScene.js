@@ -368,6 +368,8 @@ export class CombatScene extends Phaser.Scene {
     if (resolution) {
       this.scale.resize(resolution.width, resolution.height);
     }
+    // Force Scale.FIT to recalculate viewport↔game coordinate transform
+    this.scale.refresh();
     const zoom = guiScaleToZoom(settings?.guiScale);
     this.cameras.main.setZoom(zoom);
   }
@@ -4039,8 +4041,8 @@ export class CombatScene extends Phaser.Scene {
         }
         case "double_hit_gold_reward": {
           // Calculate damage for both hits
-          const hit1 = this.calcSkillRaw(attacker, { base: 26, scaleStat: "atk", scale: 1.45 });
-          const hit2 = this.calcSkillRaw(attacker, { base: 22, scaleStat: "atk", scale: 1.25 });
+          const hit1 = this.calcSkillRaw(attacker, skill.hit1 || { base: 26, scaleStat: "atk", scale: 1.45 });
+          const hit2 = this.calcSkillRaw(attacker, skill.hit2 || { base: 22, scaleStat: "atk", scale: 1.25 });
 
           // Execute first hit
           const dealt1 = this.resolveDamage(attacker, target, hit1, "physical", "HỎA ẤN 1", skillOpts);
@@ -4163,7 +4165,10 @@ export class CombatScene extends Phaser.Scene {
     const sourceStat =
       statName === "atk" ? this.getEffectiveAtk(attacker) : statName === "matk" ? this.getEffectiveMatk(attacker) : attacker[statName] ?? 0;
     const starSkillMult = attacker?.star >= 3 ? 1.4 : attacker?.star === 2 ? 1.2 : 1;
-    const baseDamage = (skill.base + sourceStat * skill.scale) * starSkillMult;
+    const baseDamage = ((skill.base || 0) + sourceStat * (skill.scale || 0)) * starSkillMult;
+    if (!Number.isFinite(baseDamage) || (skill.base == null && skill.scale == null)) {
+      console.warn(`[calcSkillRaw] Missing base/scale for skill ${skill.id || skill.name || "?"}: base=${skill.base}, scale=${skill.scale}, result=${baseDamage}`);
+    }
 
     // Apply gold scaling to skill damage (Requirement 2.1, 2.2, 2.3, 2.4)
     const goldMultiplier = getGoldReserveScaling(this.player.gold);
