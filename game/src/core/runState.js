@@ -149,7 +149,7 @@ export function hydrateRunState(raw) {
   if (!Array.isArray(state.player.itemBag)) state.player.itemBag = [];
   if (!Array.isArray(state.player.craftedItems)) state.player.craftedItems = [];
   state.player.craftTableLevel = Number.isFinite(state.player.craftTableLevel)
-    ? Math.max(0, Math.min(1, Math.floor(state.player.craftTableLevel)))
+    ? Math.max(0, Math.min(3, Math.floor(state.player.craftTableLevel)))
     : 0;
   if (!Array.isArray(state.player.enemyPreview)) state.player.enemyPreview = [];
   state.player.enemyPreviewRound = Number.isInteger(state.player.enemyPreviewRound) ? state.player.enemyPreviewRound : 0;

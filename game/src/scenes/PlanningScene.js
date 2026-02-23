@@ -221,6 +221,7 @@ export class PlanningScene extends Phaser.Scene {
     this.boardPointerDown = null;
     this.boardDragConsumed = false;
     this.isUnitDragging = false;
+    this.pendingDrag = null;
     this.dragUnit = null;
     this.dragClone = null;
     this.dragOrigin = null;
@@ -730,6 +731,11 @@ export class PlanningScene extends Phaser.Scene {
     // Always rebuild layout + bench hitboxes from restored state to avoid stale drag targets after continue.
     this.layout = this.computeLayout();
     this.createBenchSlots();
+    // Sync board origin with new layout so gridToScreen() returns correct coords.
+    this.originX = this.layout.boardOriginX;
+    this.originY = this.layout.boardOriginY;
+    // Sync tile centers with new layout so board hit detection works after resume.
+    this.refreshBoardGeometry();
     this.runtimeSettings.loseCondition = normalizeLoseCondition(this.player.loseCondition ?? this.runtimeSettings?.loseCondition);
     this.refreshPlanningUi();
   }
@@ -800,7 +806,7 @@ export class PlanningScene extends Phaser.Scene {
     if (!Number.isFinite(this.player.extraClassCount)) this.player.extraClassCount = 0;
     if (!Number.isFinite(this.player.extraTribeCount)) this.player.extraTribeCount = 0;
     if (!Number.isFinite(this.player.craftTableLevel)) this.player.craftTableLevel = 0;
-    this.player.craftTableLevel = clamp(Math.floor(this.player.craftTableLevel), 0, 2);
+    this.player.craftTableLevel = clamp(Math.floor(this.player.craftTableLevel), 0, 3);
     if (typeof this.player.shopLocked !== "boolean") this.player.shopLocked = false;
 
     if (!Array.isArray(this.player.itemBag)) this.player.itemBag = [];
@@ -2525,6 +2531,8 @@ export class PlanningScene extends Phaser.Scene {
     let bestNear = null;
     let bestNearDist = Number.POSITIVE_INFINITY;
 
+
+
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < PLAYER_COLS; col += 1) {
         const tile = this.tileLookup.get(gridKey(row, col));
@@ -2544,14 +2552,18 @@ export class PlanningScene extends Phaser.Scene {
       }
     }
 
-    return bestInside ?? bestNear;
+    const result = bestInside ?? bestNear;
+    return result;
   }
 
   getUnitAt(x, y) {
-    // Check Bench
+    // Check Bench – use stored slot position (DPR-safe) instead of getBounds()
     for (let i = 0; i < this.benchSlots.length; i++) {
       const slot = this.benchSlots[i];
-      if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) {
+      if (!slot.bg.visible) continue;
+      const bounds = slot.bg.getBounds();
+      const manualHit = x >= slot.x && x <= slot.x + slot.slotW && y >= slot.y && y <= slot.y + slot.slotH;
+      if (manualHit) {
         const unit = this.player?.bench?.[i];
         return unit ? { unit, region: "BENCH", index: i } : null;
       }
@@ -2568,10 +2580,11 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   getDropTarget(x, y) {
-    // Check Bench first (UI overlay)
+    // Check Bench first (UI overlay) – use stored slot position (DPR-safe)
     for (let i = 0; i < this.benchSlots.length; i++) {
       const slot = this.benchSlots[i];
-      if (slot.bg.visible && slot.bg.getBounds().contains(x, y)) {
+      if (!slot.bg.visible) continue;
+      if (x >= slot.x && x <= slot.x + slot.slotW && y >= slot.y && y <= slot.y + slot.slotH) {
         return { type: "BENCH", index: i, center: { x: slot.x + slot.slotW / 2, y: slot.y + slot.slotH / 2 } };
       }
     }
@@ -2581,9 +2594,12 @@ export class PlanningScene extends Phaser.Scene {
       const { row: r, col: c, center } = hit;
       return { type: "BOARD", r, c, center };
     }
-    // Check Sell Button
-    if (this.buttons.sell && this.buttons.sell.visible && this.buttons.sell.getBounds().contains(x, y)) {
-      return { type: "SELL" };
+    // Check Sell Button – use stored position (DPR-safe)
+    const sell = this.buttons.sell;
+    if (sell && sell.bg.visible) {
+      if (x >= sell.x && x <= sell.x + sell.w && y >= sell.y && y <= sell.y + sell.h) {
+        return { type: "SELL" };
+      }
     }
 
     return null;
@@ -2617,6 +2633,13 @@ export class PlanningScene extends Phaser.Scene {
     }
 
     this.audioFx.play("click");
+
+    // Enable sell button during drag so user can drop units there
+    if (this.buttons.sell) {
+      const price = this.getUnitSalePrice(dragData.unit);
+      this.buttons.sell.setEnabled(true);
+      this.buttons.sell.setLabel(`Bán thú (${price}🪙)`);
+    }
   }
 
   updateUnitDrag(pointer) {
@@ -2624,13 +2647,24 @@ export class PlanningScene extends Phaser.Scene {
     const dragPos = this.getPointerWorldPosition(pointer);
     this.dragClone.setPosition(dragPos.x, dragPos.y);
 
-    // Highlight target
-    const target = this.getDropTarget(dragPos.x, dragPos.y);
-    if (target) {
-      if (target.type === "SELL") {
-        this.buttons.sell.bg.setStrokeStyle(2, 0xff4444);
+    // Reset sell button highlight
+    const sell = this.buttons.sell;
+    if (sell) {
+      const overSell = sell.bg.visible &&
+        dragPos.x >= sell.x && dragPos.x <= sell.x + sell.w &&
+        dragPos.y >= sell.y && dragPos.y <= sell.y + sell.h;
+      if (overSell) {
+        sell.bg.setStrokeStyle(2.5, 0xff4444, 1);
+        sell.bg.setFillStyle(0x4a1111, 0.95);
+        if (this.dragUnit) {
+          const price = this.getUnitSalePrice(this.dragUnit);
+          sell.text.setText(`🗑 Bán (${price}🪙)`);
+        }
+      } else {
+        sell.bg.setStrokeStyle(1, 0x3a4a5c, 0.85);
+        sell.bg.setFillStyle(0x162433, 0.94);
+        sell.text.setText("Bán thú");
       }
-      // Bench/Board highlights could be added here
     }
   }
 
@@ -2647,6 +2681,13 @@ export class PlanningScene extends Phaser.Scene {
     if (this.dragClone) {
       this.dragClone.destroy();
       this.dragClone = null;
+    }
+
+    // Reset sell button appearance after drag
+    if (this.buttons.sell) {
+      this.buttons.sell.bg.setStrokeStyle(1, 0x3a4a5c, 0.85);
+      this.buttons.sell.bg.setFillStyle(0x162433, 0.94);
+      this.buttons.sell.text.setText("Bán thú");
     }
 
     // Show original back (default, will be moved if successful)
@@ -2717,22 +2758,17 @@ export class PlanningScene extends Phaser.Scene {
 
   getPointerWorldPosition(pointer) {
     if (!pointer) return { x: 0, y: 0 };
+    // Prefer pointer.x / pointer.y which are already in game coords (Scale.FIT).
+    // pointer.worldX can be offset when resolution/DPR > 1.
+    if (Number.isFinite(pointer.x) && Number.isFinite(pointer.y)) {
+      return { x: pointer.x, y: pointer.y };
+    }
     const worldX = Number(pointer.worldX);
     const worldY = Number(pointer.worldY);
     if (Number.isFinite(worldX) && Number.isFinite(worldY)) {
       return { x: worldX, y: worldY };
     }
-    const cam = this.cameras?.main;
-    if (cam && typeof cam.getWorldPoint === "function") {
-      const world = cam.getWorldPoint(pointer.x, pointer.y);
-      if (world && Number.isFinite(world.x) && Number.isFinite(world.y)) {
-        return { x: world.x, y: world.y };
-      }
-    }
-    return {
-      x: Number.isFinite(pointer.x) ? pointer.x : 0,
-      y: Number.isFinite(pointer.y) ? pointer.y : 0
-    };
+    return { x: 0, y: 0 };
   }
 
   pointInBoardPanel(x, y) {
@@ -2980,18 +3016,20 @@ export class PlanningScene extends Phaser.Scene {
   upgradeCraftTable() {
     if (this.settingsVisible || this.phase !== PHASE.PLANNING) return;
     const level = this.player?.craftTableLevel ?? 0;
-    if (level >= 2) {
+    if (level >= 3) {
       this.addLog("Bàn chế tạo đã đạt cấp tối đa (3x3).");
       return;
     }
-    const cost = level === 0 ? 5 : 15;
+    const costs = [5, 10, 15];
+    const cost = costs[level] ?? 15;
     if (this.player.gold < cost) {
       this.addLog("Không đủ vàng để nâng bàn chế tạo.");
       return;
     }
     this.player.gold -= cost;
     this.player.craftTableLevel = level + 1;
-    const sizeLabel = level === 0 ? "2x2" : "3x3";
+    const sizeLabels = ["1x1", "2x2", "3x3"];
+    const sizeLabel = sizeLabels[level] ?? "3x3";
     this.addLog(`Đã nâng bàn chế tạo lên ${sizeLabel}.`);
     this.audioFx.play("buy");
     this.refreshPlanningUi();
@@ -3186,8 +3224,9 @@ export class PlanningScene extends Phaser.Scene {
 
   getCraftGridSize() {
     const level = this.player?.craftTableLevel ?? 0;
-    if (level >= 2) return 3;
-    if (level >= 1) return 2;
+    if (level >= 3) return 3;
+    if (level >= 2) return 2;
+    if (level >= 1) return 1;
     return 0; // locked
   }
 
@@ -3195,6 +3234,7 @@ export class PlanningScene extends Phaser.Scene {
     const size = this.getCraftGridSize();
     if (size >= 3) return [0, 1, 2, 3, 4, 5, 6, 7, 8];
     if (size >= 2) return [0, 1, 3, 4];
+    if (size >= 1) return [4]; // center cell only for 1x1
     return []; // locked - no active slots
   }
 
@@ -4565,7 +4605,7 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.lock?.setLabel(`Khóa: ${lock}`);
     const craftLevel = this.player?.craftTableLevel ?? 0;
     this.buttons.upgradeBench?.setLabel(`Nâng dự bị (10🪙)`);
-    this.buttons.upgradeCraft?.setLabel(craftLevel >= 2 ? "Bàn chế: 3x3" : craftLevel >= 1 ? "Nâng 3x3 (15🪙)" : "Mở bàn chế (5🪙)");
+    this.buttons.upgradeCraft?.setLabel(craftLevel >= 3 ? "Bàn chế: 3x3" : craftLevel >= 2 ? "Nâng 3x3 (15🪙)" : craftLevel >= 1 ? "Nâng 2x2 (10🪙)" : "Mở bàn chế (5🪙)");
     const selectedUnit = this.selectedBenchIndex != null ? this.player?.bench?.[this.selectedBenchIndex] : null;
     if (selectedUnit) {
       const sellPrice = this.getUnitSalePrice(selectedUnit);
@@ -4580,7 +4620,7 @@ export class PlanningScene extends Phaser.Scene {
     this.buttons.roll?.setEnabled(planning);
     this.buttons.xp?.setEnabled(planning);
     this.buttons.lock?.setEnabled(planning);
-    this.buttons.upgradeCraft?.setEnabled(planning && craftLevel < 1);
+    this.buttons.upgradeCraft?.setEnabled(planning && craftLevel < 3);
     this.buttons.sell.setEnabled(planning && this.selectedBenchIndex != null && !!this.player?.bench?.[this.selectedBenchIndex]);
     this.buttons.start.setEnabled(planning && this.getDeployCount() > 0);
     this.buttons.reset.setEnabled(true);
