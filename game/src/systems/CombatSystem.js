@@ -20,24 +20,14 @@ import { APPLY_HANDLERS, TICK_HANDLERS, isStatusTypeSupported } from './StatusEf
  * @private
  */
 function calculateTurnOrder(allUnits) {
-  // Separate player and enemy units
+  // Separate player and enemy units — no speed sorting (turn-based game)
   const playerUnits = allUnits.filter(u => u.side === "LEFT");
   const enemyUnits = allUnits.filter(u => u.side === "RIGHT");
-  
-  // Sort each side by speed (higher speed first)
-  const sortBySpeed = (a, b) => {
-    const speedA = a.speed ?? a.stats?.speed ?? 0;
-    const speedB = b.speed ?? b.stats?.speed ?? 0;
-    return speedB - speedA;
-  };
-  
-  playerUnits.sort(sortBySpeed);
-  enemyUnits.sort(sortBySpeed);
-  
-  // Interleave player and enemy units
+
+  // Interleave player and enemy units (order determined by buildTurnQueue in scenes)
   const turnOrder = [];
   const maxLen = Math.max(playerUnits.length, enemyUnits.length);
-  
+
   for (let i = 0; i < maxLen; i += 1) {
     if (i < playerUnits.length) {
       turnOrder.push(playerUnits[i]);
@@ -46,7 +36,7 @@ function calculateTurnOrder(allUnits) {
       turnOrder.push(enemyUnits[i]);
     }
   }
-  
+
   return turnOrder;
 }
 
@@ -63,10 +53,10 @@ function calculateTurnOrder(allUnits) {
 export function initializeCombat(playerUnits, enemyUnits) {
   // Combine all units into combat state
   const allUnits = [...playerUnits, ...enemyUnits];
-  
+
   // Calculate turn order based on speed (higher speed acts first)
   const turnOrder = calculateTurnOrder(allUnits);
-  
+
   return {
     playerUnits: [...playerUnits],
     enemyUnits: [...enemyUnits],
@@ -91,18 +81,18 @@ export function getNextActor(state) {
   if (!state || !state.turnOrder || state.turnOrder.length === 0) {
     return null;
   }
-  
+
   // Find next alive unit in turn order
   while (state.currentTurn < state.turnOrder.length) {
     const actor = state.turnOrder[state.currentTurn];
     state.currentTurn += 1;
-    
+
     // Skip dead units
     if (actor && actor.alive !== false && !actor.isDead) {
       return actor;
     }
   }
-  
+
   // End of turn order reached, need to rebuild
   return null;
 }
@@ -124,7 +114,7 @@ export function executeAction(state, actor) {
       error: 'Invalid actor or state'
     };
   }
-  
+
   // Check if actor is dead or invalid
   if (actor.alive === false || actor.isDead) {
     return {
@@ -132,26 +122,26 @@ export function executeAction(state, actor) {
       error: 'Actor is dead'
     };
   }
-  
+
   // Get rage max (default 100)
   const rageMax = actor.rageMax ?? 100;
   const currentRage = actor.rage ?? 0;
-  
+
   // Determine action type based on rage
   // Requirement 4.4: When unit rage is >= 100, execute skill and reset rage to 0
   // Requirement 4.5: When unit rage is < 100, execute basic attack and increase rage
   const shouldUseSkill = currentRage >= rageMax;
-  
+
   // Check for silence status (prevents skill usage)
   const isSilenced = (actor.statuses?.silence ?? 0) > 0;
-  
+
   // Check for disarm status (prevents basic attacks)
   const isDisarmed = (actor.statuses?.disarmTurns ?? 0) > 0;
-  
+
   if (shouldUseSkill && !isSilenced) {
     // Use skill - reset rage to 0 (except for MAGE class which keeps rage)
     const resetRage = actor.classType !== "MAGE";
-    
+
     return {
       success: true,
       actionType: 'SKILL',
@@ -173,7 +163,7 @@ export function executeAction(state, actor) {
     // Use basic attack - increase rage
     // Rage gain varies but typically around 20-25 per basic attack
     const rageGain = 20;
-    
+
     return {
       success: true,
       actionType: 'BASIC_ATTACK',
@@ -203,7 +193,7 @@ export function executeSkill(caster, skill, targets, state) {
       error: 'Invalid parameters'
     };
   }
-  
+
   // Validate skill exists
   if (!skill.name || !skill.effect) {
     return {
@@ -211,7 +201,7 @@ export function executeSkill(caster, skill, targets, state) {
       error: 'Invalid skill definition'
     };
   }
-  
+
   // Check if caster is silenced
   if ((caster.statuses?.silence ?? 0) > 0) {
     return {
@@ -219,20 +209,20 @@ export function executeSkill(caster, skill, targets, state) {
       error: 'Caster is silenced'
     };
   }
-  
+
   // Ensure targets is an array
   const targetArray = Array.isArray(targets) ? targets : [targets];
-  
+
   // Filter out dead targets
   const validTargets = targetArray.filter(t => t && t.alive !== false && !t.isDead);
-  
+
   if (validTargets.length === 0) {
     return {
       success: false,
       error: 'No valid targets'
     };
   }
-  
+
   // Return skill execution result
   // The actual damage calculation and effect application will be done by the scene
   // This function validates and prepares the skill execution
@@ -286,12 +276,12 @@ export function calculateDamage(attacker, defender, skill, state) {
   // Get base damage
   let rawDamage = 0;
   let damageType = 'physical';
-  
+
   if (skill) {
     // Skill damage calculation
     const statName = skill.scaleStat || 'atk';
     let sourceStat = 0;
-    
+
     if (statName === 'atk') {
       sourceStat = getEffectiveAtk(attacker);
     } else if (statName === 'matk') {
@@ -299,13 +289,13 @@ export function calculateDamage(attacker, defender, skill, state) {
     } else {
       sourceStat = attacker[statName] ?? 0;
     }
-    
+
     // Star multiplier
     const starSkillMult = attacker?.star >= 3 ? 1.4 : attacker?.star === 2 ? 1.2 : 1;
-    
+
     // Base skill damage formula: (base + stat * scale) * starMult
     const baseDamage = (skill.base + sourceStat * skill.scale) * starSkillMult;
-    
+
     // Apply gold scaling if state has player gold
     let goldMultiplier = 1;
     if (state?.player?.gold !== undefined) {
@@ -315,7 +305,7 @@ export function calculateDamage(attacker, defender, skill, state) {
         goldMultiplier = 1 + Math.floor((gold - 100) / 10) * 0.01;
       }
     }
-    
+
     rawDamage = Math.round(baseDamage * goldMultiplier);
     damageType = skill.damageType || 'physical';
   } else {
@@ -340,7 +330,7 @@ export function calculateDamage(attacker, defender, skill, state) {
       PLANT: 'AQUA',
       AQUA: 'BEAST'
     };
-    
+
     if (TRIBE_COUNTER[attacker.tribe] === defender.tribe) {
       // Attacker has advantage
       if (defender.classType === 'TANKER') {
@@ -368,7 +358,7 @@ export function calculateDamage(attacker, defender, skill, state) {
 
   // Apply defense reduction
   let finalDamage = rawDamage;
-  
+
   if (damageType === 'physical') {
     if (isCrit) {
       // Critical hits ignore defense
@@ -377,7 +367,7 @@ export function calculateDamage(attacker, defender, skill, state) {
       // Apply armor break
       const armorBreak = defender.statuses?.armorBreakTurns > 0 ? defender.statuses.armorBreakValue : 0;
       const effectiveDef = Math.max(0, getEffectiveDef(defender) - armorBreak);
-      
+
       // Defense formula: damage * (100 / (100 + def))
       finalDamage = rawDamage * (100 / (100 + effectiveDef));
     }
@@ -507,7 +497,7 @@ export function applyDamage(unit, damage, state) {
 
   // Check if unit died
   const died = unit.hp <= 0;
-  
+
   if (died) {
     unit.hp = 0;
     unit.shield = 0;
@@ -669,7 +659,7 @@ export function tickStatusEffects(unit, state) {
     const handler = TICK_HANDLERS[statusType];
     if (handler) {
       const result = handler(unit);
-      
+
       // If damage was dealt, add to triggered effects
       if (result.damage) {
         triggeredEffects.push({
@@ -829,22 +819,22 @@ export function checkCombatEnd(state) {
 export const CombatSystem = {
   // Combat initialization
   initializeCombat,
-  
+
   // Turn management
   getNextActor,
   executeAction,
-  
+
   // Skill execution
   executeSkill,
-  
+
   // Damage calculation
   calculateDamage,
   applyDamage,
-  
+
   // Status effects
   applyStatusEffect,
   tickStatusEffects,
-  
+
   // Combat end
   checkCombatEnd
 };

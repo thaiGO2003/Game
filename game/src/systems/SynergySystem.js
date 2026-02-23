@@ -37,7 +37,7 @@ function normalizeSynergyKey(value) {
  */
 export function calculateSynergies(units, side = "LEFT", options = {}) {
   const { extraClassCount = 0, extraTribeCount = 0 } = options;
-  
+
   const classCounts = {};
   const tribeCounts = {};
 
@@ -198,27 +198,27 @@ function applyBonusToUnit(unit, bonus) {
  */
 export function applyBonusToCombatUnit(unit, bonus) {
   if (!bonus) return;
-  
+
   // Handle percentage-based bonuses
   const hpPct = bonus.hpPct ?? bonus.teamHpPct ?? 0;
   const atkPct = bonus.atkPct ?? bonus.teamAtkPct ?? 0;
   const matkPct = bonus.matkPct ?? bonus.teamMatkPct ?? 0;
-  
+
   // Apply flat stat bonuses
   if (bonus.defFlat) unit.def += bonus.defFlat;
   if (bonus.mdefFlat) unit.mdef += bonus.mdefFlat;
-  
+
   // Apply HP percentage bonus
   if (hpPct) {
     const add = Math.round(unit.maxHp * hpPct);
     unit.maxHp += add;
     unit.hp += add;
   }
-  
+
   // Apply attack percentage bonuses
   if (atkPct) unit.atk = Math.round(unit.atk * (1 + atkPct));
   if (matkPct) unit.matk = Math.round(unit.matk * (1 + matkPct));
-  
+
   // Apply mod-based bonuses
   if (bonus.healPct) unit.mods.healPct += bonus.healPct;
   if (bonus.lifestealPct) unit.mods.lifestealPct += bonus.lifestealPct;
@@ -244,9 +244,9 @@ export function applyBonusToCombatUnit(unit, bonus) {
  */
 export function applySynergyBonusesToTeam(units, side = "LEFT", options = {}) {
   if (!units || !Array.isArray(units)) return;
-  
+
   const { classCounts, tribeCounts } = calculateSynergies(units, side, options);
-  
+
   units.forEach((unit) => {
     // Apply class synergy bonus
     const classType = unit.classType;
@@ -259,7 +259,7 @@ export function applySynergyBonusesToTeam(units, side = "LEFT", options = {}) {
         }
       }
     }
-    
+
     // Apply tribe synergy bonus
     const tribe = unit.tribe;
     if (tribe && tribeCounts[tribe]) {
@@ -271,7 +271,7 @@ export function applySynergyBonusesToTeam(units, side = "LEFT", options = {}) {
         }
       }
     }
-    
+
     // Apply starting rage and shield from mods
     if (unit.mods) {
       if (unit.mods.startingRage) {
@@ -298,7 +298,7 @@ export function applySynergyBonusesToTeam(units, side = "LEFT", options = {}) {
  */
 export function getSynergyDescription(synergyId, level, type = "class") {
   const synergyDef = type === "class" ? CLASS_SYNERGY[synergyId] : TRIBE_SYNERGY[synergyId];
-  
+
   if (!synergyDef || level < 0 || level >= synergyDef.bonuses.length) {
     return "";
   }
@@ -306,7 +306,7 @@ export function getSynergyDescription(synergyId, level, type = "class") {
   const bonus = synergyDef.bonuses[level];
   const threshold = synergyDef.thresholds[level];
   const label = type === "class" ? getClassLabelVi(synergyId) : getTribeLabelVi(synergyId);
-  
+
   const bonusText = formatBonusSet(bonus);
   return `${label} (${threshold}): ${bonusText}`;
 }
@@ -359,29 +359,29 @@ function formatBonusSet(bonus) {
   if (!bonus || typeof bonus !== "object") return "";
 
   const parts = [];
-  
+
   // Common stat bonuses
   if (bonus.attack) parts.push(`+${bonus.attack} Tấn công`);
   if (bonus.defense) parts.push(`+${bonus.defense} Phòng thủ`);
   if (bonus.hp) parts.push(`+${bonus.hp} HP`);
-  if (bonus.speed) parts.push(`+${bonus.speed} Tốc độ`);
+  if (bonus.accuracy) parts.push(`+${bonus.accuracy}% Chính xác`);
   if (bonus.evasion) parts.push(`+${bonus.evasion}% Né tránh`);
   if (bonus.critChance) parts.push(`+${bonus.critChance}% Chí mạng`);
   if (bonus.critDamage) parts.push(`+${bonus.critDamage}% Sát thương chí mạng`);
-  
+
   // Special bonuses
   if (bonus.shieldStart) parts.push(`+${bonus.shieldStart} Giáp ban đầu`);
   if (bonus.startingRage) parts.push(`+${bonus.startingRage} Nộ khí ban đầu`);
   if (bonus.lifeSteal) parts.push(`+${bonus.lifeSteal}% Hút máu`);
   if (bonus.damageReduction) parts.push(`+${bonus.damageReduction}% Giảm sát thương`);
   if (bonus.healingBonus) parts.push(`+${bonus.healingBonus}% Hồi máu`);
-  
+
   // Status effect bonuses
   if (bonus.poisonOnHit) parts.push(`Độc ${bonus.poisonOnHit} khi đánh`);
   if (bonus.burnOnHit) parts.push(`Bỏng ${bonus.burnOnHit} khi đánh`);
   if (bonus.stunChance) parts.push(`+${bonus.stunChance}% Choáng`);
   if (bonus.knockbackChance) parts.push(`+${bonus.knockbackChance}% Đẩy lùi`);
-  
+
   return parts.join(", ") || "Không có bonus";
 }
 
@@ -470,19 +470,19 @@ export const SynergySystem = {
   // Core synergy calculation
   calculateSynergies,
   getActiveSynergies,
-  
+
   // Synergy bonus operations
   getSynergyBonus,
   getSynergyTier,
   applySynergiesToUnit,
   applyBonusToCombatUnit,
   applySynergyBonusesToTeam,
-  
+
   // UI/Display helpers
   getSynergyDescription,
   getSynergyIcon,
   formatBonusSet,
-  
+
   // Synergy definition getters
   getClassSynergyDef,
   getTribeSynergyDef

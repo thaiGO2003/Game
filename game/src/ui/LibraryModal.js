@@ -514,7 +514,7 @@ export class LibraryModal {
       `❤️ HP: ${hp}    🗡️ ATK: ${atk}    🛡️ DEF: ${def}`,
       `✨ MATK: ${matk}    🔰 MDEF: ${mdef}`,
       `🎯 Chính xác: ${accuracy}%    💨 Né tránh: ${evasion}%`,
-      `📏 Tầm đánh: ${range} ô (${range >= 2 ? "Đánh xa" : "Cận chiến"})    🔥 Nộ: ${rageMax}`
+      `🔥 Nộ: ${rageMax}`
     ].join("\n");
     const meta = this.scene.add.text(16, y + 52, desc, {
       fontFamily: UI_FONT,
@@ -555,7 +555,7 @@ export class LibraryModal {
     });
 
     // Basic attack description
-    const basicAtkLines = describeBasicAttack(unit.classType, range);
+    const basicAtkLines = describeBasicAttack(unit.classType, range, stats);
     const basicAtkSection = this.scene.add.text(16, y + 340, `🎯 Đánh thường:\n${basicAtkLines.map(l => `  • ${l}`).join("\n")}`, {
       fontFamily: UI_FONT,
       fontSize: "12px",

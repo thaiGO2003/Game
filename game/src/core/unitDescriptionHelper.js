@@ -65,52 +65,56 @@ export function stripSkillStarNotes(description) {
 
 // ─── Basic attack description ───────────────────────────────────────────
 
-export function describeBasicAttack(classType, range) {
+export function describeBasicAttack(classType, range, baseStats = null, star = 1) {
     const pattern = inferBasicActionPattern(classType, range);
     const lines = [];
 
+    // Determine which stat the basic attack uses
+    const isMagic = classType === "MAGE";
+    const statKey = isMagic ? "matk" : "atk";
+    const statLabel = translateScaleStat(statKey);
+    const statMult = getStarStatMultiplier(star);
+    const rawStat = Number(baseStats?.[statKey] ?? 0) || 0;
+    const scaledStat = Math.round(rawStat * statMult);
+    const formulaStr = `📊 Công thức: 1.0 x ${statLabel}(${scaledStat}) = ${scaledStat}`;
+    const fallbackFormula = `📊 Công thức: ${statLabel} vs ${isMagic ? "kháng phép" : "giáp"} mục tiêu.`;
+    const formula = baseStats ? formulaStr : fallbackFormula;
+
     if (classType === "TANKER") {
         lines.push("⚡ Thi triển: Cận chiến áp sát tiền tuyến");
-        lines.push("📏 Tầm đánh: Cận chiến");
         lines.push("💢 Loại ST: Vật lý");
         lines.push("🎯 Ưu tiên địch gần nhất cùng hàng.");
-        lines.push("📊 Công thức: ATK vs giáp mục tiêu.");
+        lines.push(formula);
     } else if (classType === "FIGHTER") {
         lines.push("⚡ Thi triển: Xung phong cận chiến");
-        lines.push("📏 Tầm đánh: Cận chiến");
         lines.push("💢 Loại ST: Vật lý");
         lines.push("🎯 Ưu tiên địch gần nhất cùng hàng.");
-        lines.push("📊 Công thức: ATK vs giáp mục tiêu.");
+        lines.push(formula);
     } else if (classType === "ASSASSIN") {
         lines.push("⚡ Thi triển: Lao sau lưng mục tiêu");
-        lines.push("📏 Tầm đánh: Cận chiến");
         lines.push("💢 Loại ST: Vật lý");
         lines.push("🎯 Ưu tiên carry hậu phương.");
-        lines.push("📊 Công thức: ATK vs giáp mục tiêu.");
+        lines.push(formula);
     } else if (classType === "ARCHER") {
         lines.push(`⚡ Thi triển: Bắn tên từ xa`);
-        lines.push(`📏 Tầm đánh: ${range} ô`);
         lines.push("💢 Loại ST: Vật lý");
         lines.push("🎯 Ưu tiên cùng hàng, gần tiền tuyến.");
-        lines.push("📊 Công thức: ATK vs giáp mục tiêu.");
+        lines.push(formula);
     } else if (classType === "MAGE") {
         lines.push(`⚡ Thi triển: Phép thuật từ xa`);
-        lines.push(`📏 Tầm đánh: ${range} ô`);
         lines.push("💢 Loại ST: Phép (không bao giờ hụt)");
         lines.push("🎯 Ưu tiên cùng hàng, gần tiền tuyến.");
-        lines.push("📊 Công thức: MATK vs kháng phép.");
+        lines.push(formula);
     } else if (classType === "SUPPORT") {
         lines.push(`⚡ Thi triển: Hỗ trợ/Phép từ xa`);
-        lines.push(`📏 Tầm đánh: ${range} ô`);
         lines.push("💢 Loại ST: Vật lý / Phép (skill)");
         lines.push("🎯 Ưu tiên địch gần hoặc đồng minh yếu.");
-        lines.push("📊 Công thức: ATK/MATK tùy skill.");
+        lines.push(formula);
     } else {
         lines.push(`⚡ Thi triển: ${translateActionPattern(pattern)}`);
-        lines.push(`📏 Tầm đánh: ${range >= 2 ? "Đánh xa" : "Cận chiến"}`);
         lines.push("💢 Loại ST: Vật lý");
         lines.push("🎯 Ưu tiên tiền tuyến gần nhất.");
-        lines.push("📊 Công thức: ATK vs giáp mục tiêu.");
+        lines.push(formula);
     }
     return lines;
 }
@@ -501,13 +505,16 @@ export function describeSkillWithElement(skill, tribe, baseUnit = null) {
     for (let star = 1; star <= 3; star += 1) {
         const targetText = getSkillTargetCountText(skill, star);
         const shapeText = getSkillShapeText(skill);
-        const { damageText } = getSkillDamageAndFormulaText(skill, baseStats, star);
+        const { damageText, formulaText } = getSkillDamageAndFormulaText(skill, baseStats, star);
         const elementEffect = getStarElementEffect(tribe, star);
 
         lines.push(`${"⭐".repeat(star)} ${star} sao:`);
         lines.push(`  • 💥 Sát thương: ${damageText}`);
         lines.push(`  • 🎯 Mục tiêu: ${targetText}`);
         lines.push(`  • 📐 Hình dạng: ${shapeText}`);
+        if (formulaText) {
+            lines.push(`  • 📊 ${formulaText}`);
+        }
         if (elementEffect) {
             lines.push(`  • ${elementLabel} ${elementEffect}`);
         }

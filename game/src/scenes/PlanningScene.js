@@ -1184,6 +1184,8 @@ export class PlanningScene extends Phaser.Scene {
 
     this.highlightLayer = this.add.graphics();
     this.highlightLayer.setDepth(999);
+    this.turnIndicatorLayer = this.add.graphics();
+    this.turnIndicatorLayer.setDepth(998);
     this.attackPreviewLayer = this.add.graphics();
     this.attackPreviewLayer.setDepth(1000);
     this.attackPreviewSword = this.add.graphics();
@@ -1476,15 +1478,15 @@ export class PlanningScene extends Phaser.Scene {
 
     if (isUpgraded) {
       const pageNavX = invX + invCols * (invCell + invGap) + 12;
-      this.invPrevBtn = this.add.text(pageNavX, invY + 14, "◀", {
+      this.invPrevBtn = this.add.text(pageNavX, invY + 6, "◀", {
         fontFamily: "Segoe UI Emoji",
-        fontSize: "12px",
+        fontSize: "22px",
         color: UI_COLORS.textSecondary
       }).setDepth(2000).setInteractive({ useHandCursor: true }).on("pointerdown", () => this.changeInvPage(-1));
 
-      this.invNextBtn = this.add.text(pageNavX + 26, invY + 14, "▶", {
+      this.invNextBtn = this.add.text(pageNavX + 32, invY + 6, "▶", {
         fontFamily: "Segoe UI Emoji",
-        fontSize: "12px",
+        fontSize: "22px",
         color: UI_COLORS.textSecondary
       }).setDepth(2000).setInteractive({ useHandCursor: true }).on("pointerdown", () => this.changeInvPage(1));
     }
@@ -5370,7 +5372,7 @@ export class PlanningScene extends Phaser.Scene {
     const elementLabel = getElementLabel(base.tribe);
 
     // Basic attack goes in left body
-    const basicAtkLines = this.describeBasicAttack(base.classType, base.stats.range);
+    const basicAtkLines = this.describeBasicAttack(base.classType, base.stats.range, base.stats, star);
 
     return {
       title: `${visual.icon} ${visual.nameVi} (${star}★)`,
@@ -5460,8 +5462,8 @@ export class PlanningScene extends Phaser.Scene {
 
   inferBasicActionPattern(classType, range) { return _inferBasicActionPattern(classType, range); }
 
-  describeBasicAttack(classType, range) {
-    return _describeBasicAttack(classType, range);
+  describeBasicAttack(classType, range, baseStats = null, star = 1) {
+    return _describeBasicAttack(classType, range, baseStats, star);
   }
 
   stripSkillStarNotes(description) { return _stripSkillStarNotes(description); }
@@ -5612,12 +5614,33 @@ export class PlanningScene extends Phaser.Scene {
   buildTurnQueue() {
     const leftOrder = this.buildOrderForSide("LEFT");
     const rightOrder = this.buildOrderForSide("RIGHT");
-    const maxLen = Math.max(leftOrder.length, rightOrder.length);
+
+    // Group cells into chunks: each chunk = [empty cells...] + [unit cell]
+    const toChunks = (cells) => {
+      const chunks = [];
+      let current = [];
+      for (const cell of cells) {
+        current.push(cell);
+        if (cell.unit && cell.unit.alive) {
+          chunks.push(current);
+          current = [];
+        }
+      }
+      if (current.length) chunks.push(current);
+      return chunks;
+    };
+
+    const leftChunks = toChunks(leftOrder);
+    const rightChunks = toChunks(rightOrder);
+
+    // Interleave chunks: LEFT chunk, RIGHT chunk, LEFT chunk, RIGHT chunk...
     const queue = [];
+    const maxLen = Math.max(leftChunks.length, rightChunks.length);
     for (let i = 0; i < maxLen; i += 1) {
-      if (leftOrder[i]) queue.push(leftOrder[i]);
-      if (rightOrder[i]) queue.push(rightOrder[i]);
+      if (i < leftChunks.length) queue.push(...leftChunks[i]);
+      if (i < rightChunks.length) queue.push(...rightChunks[i]);
     }
+
     this.turnQueue = queue;
     this.turnIndex = 0;
   }
@@ -5625,19 +5648,19 @@ export class PlanningScene extends Phaser.Scene {
   buildOrderForSide(side) {
     const list = [];
     if (side === "LEFT") {
-      // E5→E1, D5→D1, C→B→A (frontline trước, hàng lớn trước)
+      // E5→E1, D5→D1, C→B→A (frontline trước, hàng 5→1 = row 0→4)
       for (let col = PLAYER_COLS - 1; col >= 0; col -= 1) {
-        for (let row = ROWS - 1; row >= 0; row -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
-          if (unit) list.push(unit);
+          list.push({ row, col, side, unit: unit || null });
         }
       }
     } else {
-      // G5→G1, H5→H1, I→J→K (frontline trước, hàng lớn trước)
+      // G5→G1, H5→H1, I→J→K (frontline trước, hàng 5→1 = row 0→4)
       for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-        for (let row = ROWS - 1; row >= 0; row -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
-          if (unit) list.push(unit);
+          list.push({ row, col, side, unit: unit || null });
         }
       }
     }
@@ -5671,10 +5694,26 @@ export class PlanningScene extends Phaser.Scene {
       }
     }
 
-    const actor = this.turnQueue[this.turnIndex];
+    const entry = this.turnQueue[this.turnIndex];
     this.turnIndex += 1;
-    if (!actor || !actor.alive) {
+    if (!entry) {
       this.refreshQueuePreview();
+      return;
+    }
+
+    // Show turn indicator on this cell (kể cả trống)
+    this.showTurnIndicatorAt(entry.row, entry.col);
+
+    // Ô trống hoặc unit chết — flash 200ms rồi bỏ qua
+    const actor = entry.unit;
+    if (!actor || !actor.alive) {
+      this.isActing = true; // Prevent timer overlap
+      await new Promise(r => setTimeout(r, 50)); // Raw 50ms, không bị scale
+      this.turnIndicatorLayer?.clear();
+      this.refreshQueuePreview();
+      this.isActing = false;
+      // Gọi lại ngay thay vì chờ timer tick
+      this.stepCombat();
       return;
     }
 
@@ -5900,9 +5939,15 @@ export class PlanningScene extends Phaser.Scene {
 
     // Viền RGB khi đang tung skill
     this.setCombatBorder(attacker, "skill");
-    await this.runActionPattern(attacker, target, skill.actionPattern, async () => {
+    // Mặc định actionPattern theo classType nếu skill không chỉ định
+    const effectivePattern = skill.actionPattern || this.inferBasicActionPattern(attacker.classType, attacker.range);
+    await this.runActionPattern(attacker, target, effectivePattern, async () => {
       await this.applySkillEffect(attacker, target, skill);
     });
+    // RANGED_STATIC/SELF không có tween delay — chờ thêm để RGB hiện rõ
+    if (effectivePattern === "RANGED_STATIC" || effectivePattern === "SELF") {
+      await this.wait(400);
+    }
     this.clearCombatBorder(attacker);
     this.addLog(`${attacker.name} dung skill ${skill.name}.`);
   }
@@ -6920,6 +6965,7 @@ export class PlanningScene extends Phaser.Scene {
 
   clearHighlights() {
     this.highlightLayer?.clear();
+    this.turnIndicatorLayer?.clear();
     const combatUnits = Array.isArray(this.combatUnits) ? this.combatUnits : [];
     combatUnits.forEach((u) => {
       if (!u.alive) return;
@@ -6928,12 +6974,35 @@ export class PlanningScene extends Phaser.Scene {
     });
   }
 
+  showTurnIndicator(unit) {
+    if (!unit) return;
+    this.showTurnIndicatorAt(unit.row, unit.col);
+  }
+
+  showTurnIndicatorAt(row, col) {
+    this.turnIndicatorLayer?.clear();
+    const tile = this.tileLookup?.get(gridKey(row, col));
+    if (!tile) return;
+    // Tô tím nhạt filled diamond
+    this.turnIndicatorLayer.fillStyle(0xce93d8, 0.45);
+    this.turnIndicatorLayer.lineStyle(2, 0xba68c8, 0.8);
+    this.drawDiamond(this.turnIndicatorLayer, tile.center.x, tile.center.y);
+  }
+
   // ─── Combat Border Effects ───────────────────────────────────
 
   setCombatBorder(unit, type) {
     if (!unit?.sprite) return;
     const tile = this.tileLookup?.get(gridKey(unit.row, unit.col));
     if (type === "skill") {
+      // Set initial RGB color immediately
+      const initColor = Phaser.Display.Color.HSLToColor(0, 1, 0.55).color;
+      unit.sprite.setStrokeStyle(5, initColor, 1);
+      if (tile) {
+        this.highlightLayer?.clear();
+        this.highlightLayer?.lineStyle(4, initColor, 1);
+        this.drawDiamond(this.highlightLayer, tile.center.x, tile.center.y, false);
+      }
       // RGB cycling border (sprite + ô diamond) — 0.1s mỗi màu
       let hue = 0;
       unit._rgbBorderTimer = this.time.addEvent({
@@ -6944,7 +7013,6 @@ export class PlanningScene extends Phaser.Scene {
           hue = (hue + 60) % 360;
           const color = Phaser.Display.Color.HSLToColor(hue / 360, 1, 0.55).color;
           unit.sprite.setStrokeStyle(5, color, 1);
-          // Diamond tile RGB
           if (tile) {
             this.highlightLayer?.clear();
             this.highlightLayer?.lineStyle(4, color, 1);

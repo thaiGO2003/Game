@@ -557,7 +557,8 @@ export class CombatScene extends Phaser.Scene {
     }
 
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
-    this.audioFx.startBgm("bgm_warrior", 0.2);
+    const combatBgm = Math.random() < 0.5 ? "bgm_warrior" : "bgm_battle";
+    this.audioFx.startBgm(combatBgm, 0.2);
     this.player = hydrated.player;
 
     // Use game mode config for lose condition, fallback to player's loseCondition
@@ -1074,6 +1075,8 @@ export class CombatScene extends Phaser.Scene {
 
     this.highlightLayer = this.add.graphics();
     this.highlightLayer.setDepth(999);
+    this.turnIndicatorLayer = this.add.graphics();
+    this.turnIndicatorLayer.setDepth(998);
     this.attackPreviewLayer = this.add.graphics();
     this.attackPreviewLayer.setDepth(1000);
     this.attackPreviewSword = this.add.graphics();
@@ -1892,9 +1895,8 @@ export class CombatScene extends Phaser.Scene {
     const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT");
     this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
 
-    // Use turn order from CombatSystem (combat logic is delegated)
-    this.turnQueue = this.combatState.turnOrder;
-    this.turnIndex = 0;
+    // Use position-based turn order (E5→E1, D→A | G5→G1, H→K)
+    this.buildTurnQueue();
 
     // UI updates - CombatScene responsibility
     this.combatRound = this.turnQueue.length ? 1 : 0;
@@ -2826,7 +2828,7 @@ export class CombatScene extends Phaser.Scene {
     const elementLabel = getElementLabel(unit.tribe);
 
     // Basic attack goes in left body
-    const basicAtkLines = this.describeBasicAttack(unit.classType, unit.range);
+    const basicAtkLines = this.describeBasicAttack(unit.classType, unit.range, baseUnit?.stats, unit.star);
 
     const bodyLines = [
       `🏷️ ${elementLabel ? elementLabel + " " : ""}${getTribeLabelVi(unit.tribe)}/${getClassLabelVi(unit.classType)} | 🎯 Tầm ${rangeTypeLabel}`,
@@ -2923,8 +2925,8 @@ export class CombatScene extends Phaser.Scene {
 
   inferBasicActionPattern(classType, range) { return _inferBasicActionPattern(classType, range); }
 
-  describeBasicAttack(classType, range) {
-    return _describeBasicAttack(classType, range);
+  describeBasicAttack(classType, range, baseStats = null, star = 1) {
+    return _describeBasicAttack(classType, range, baseStats, star);
   }
 
   stripSkillStarNotes(description) { return _stripSkillStarNotes(description); }
@@ -3025,12 +3027,34 @@ export class CombatScene extends Phaser.Scene {
   buildTurnQueue() {
     const leftOrder = this.buildOrderForSide("LEFT");
     const rightOrder = this.buildOrderForSide("RIGHT");
-    const maxLen = Math.max(leftOrder.length, rightOrder.length);
+
+    // Group cells into chunks: each chunk = [empty cells...] + [unit cell]
+    // Last chunk may have only empties (trailing empty cells at end of side)
+    const toChunks = (cells) => {
+      const chunks = [];
+      let current = [];
+      for (const cell of cells) {
+        current.push(cell);
+        if (cell.unit && cell.unit.alive) {
+          chunks.push(current);
+          current = [];
+        }
+      }
+      if (current.length) chunks.push(current); // trailing empties
+      return chunks;
+    };
+
+    const leftChunks = toChunks(leftOrder);
+    const rightChunks = toChunks(rightOrder);
+
+    // Interleave chunks: LEFT chunk, RIGHT chunk, LEFT chunk, RIGHT chunk...
     const queue = [];
+    const maxLen = Math.max(leftChunks.length, rightChunks.length);
     for (let i = 0; i < maxLen; i += 1) {
-      if (leftOrder[i]) queue.push(leftOrder[i]);
-      if (rightOrder[i]) queue.push(rightOrder[i]);
+      if (i < leftChunks.length) queue.push(...leftChunks[i]);
+      if (i < rightChunks.length) queue.push(...rightChunks[i]);
     }
+
     this.turnQueue = queue;
     this.turnIndex = 0;
   }
@@ -3038,19 +3062,19 @@ export class CombatScene extends Phaser.Scene {
   buildOrderForSide(side) {
     const list = [];
     if (side === "LEFT") {
-      // E5→E1, D5→D1, C→B→A (frontline trước, hàng lớn trước)
+      // E5→E1, D5→D1, C→B→A (frontline trước, hàng 5→1 = row 0→4)
       for (let col = PLAYER_COLS - 1; col >= 0; col -= 1) {
-        for (let row = ROWS - 1; row >= 0; row -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
-          if (unit) list.push(unit);
+          list.push({ row, col, side, unit: unit || null });
         }
       }
     } else {
-      // G5→G1, H5→H1, I→J→K (frontline trước, hàng lớn trước)
+      // G5→G1, H5→H1, I→J→K (frontline trước, hàng 5→1 = row 0→4)
       for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-        for (let row = ROWS - 1; row >= 0; row -= 1) {
+        for (let row = 0; row < ROWS; row += 1) {
           const unit = this.getCombatUnitAt(side, row, col);
-          if (unit) list.push(unit);
+          list.push({ row, col, side, unit: unit || null });
         }
       }
     }
@@ -3185,13 +3209,8 @@ export class CombatScene extends Phaser.Scene {
           return;
         }
 
-        // COMBAT LOGIC DELEGATION: Rebuild turn queue using CombatSystem
-        // CombatSystem handles: turn order calculation based on speed
-        const playerUnits = this.combatUnits.filter(u => u.side === "LEFT" && u.alive);
-        const enemyUnits = this.combatUnits.filter(u => u.side === "RIGHT" && u.alive);
-        this.combatState = CombatSystem.initializeCombat(playerUnits, enemyUnits);
-        this.turnQueue = this.combatState.turnOrder;
-        this.turnIndex = 0;
+        // Rebuild turn queue — position-based (E5→E1, D→A | G5→G1, H→K)
+        this.buildTurnQueue();
 
         this.combatRound = Math.max(1, this.combatRound + 1);
         if (!this.turnQueue.length) {
@@ -3200,10 +3219,25 @@ export class CombatScene extends Phaser.Scene {
         }
       }
 
-      const actor = this.turnQueue[this.turnIndex];
+      const entry = this.turnQueue[this.turnIndex];
       this.turnIndex += 1;
-      if (!actor || !actor.alive) {
+      if (!entry) {
         this.refreshQueuePreview();
+        return;
+      }
+
+      // Show turn indicator (kể cả ô trống)
+      this.showTurnIndicatorAt(entry.row, entry.col);
+
+      const actor = entry.unit;
+      if (!actor || !actor.alive) {
+        this.isActing = true; // Prevent timer overlap
+        await new Promise(r => setTimeout(r, 50)); // Raw 50ms, không bị scale
+        this.turnIndicatorLayer?.clear();
+        this.refreshQueuePreview();
+        this.isActing = false;
+        // Gọi lại ngay thay vì chờ timer tick 420ms
+        this.stepCombat();
         return;
       }
 
@@ -3368,10 +3402,16 @@ export class CombatScene extends Phaser.Scene {
     this.audioFx.play("skill");
     // Viền RGB khi đang tung skill
     this.setCombatBorder(attacker, "skill");
-    await this.runActionPattern(attacker, target, skill.actionPattern, async () => {
+    // Mặc định actionPattern theo classType nếu skill không chỉ định
+    const effectivePattern = skill.actionPattern || this.inferBasicActionPattern(attacker.classType, attacker.range);
+    await this.runActionPattern(attacker, target, effectivePattern, async () => {
       this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 8, 0xb6dbff, 16, 220);
       await this.applySkillEffect(attacker, target, skill);
     });
+    // RANGED_STATIC/SELF không có tween delay — chờ thêm để RGB hiện rõ
+    if (effectivePattern === "RANGED_STATIC" || effectivePattern === "SELF") {
+      await this.wait(400);
+    }
     this.clearCombatBorder(attacker);
     this.addLog(`${attacker.name} dùng kỹ năng ${skill.name}.`);
   }
@@ -4678,11 +4718,26 @@ export class CombatScene extends Phaser.Scene {
 
   clearHighlights() {
     this.highlightLayer.clear();
+    this.turnIndicatorLayer?.clear();
     this.combatUnits.forEach((u) => {
       if (!u.alive) return;
       const roleTheme = this.getRoleTheme(u.classType);
       u.sprite.setStrokeStyle(3, roleTheme.stroke, 1);
     });
+  }
+
+  showTurnIndicator(unit) {
+    if (!unit) return;
+    this.showTurnIndicatorAt(unit.row, unit.col);
+  }
+
+  showTurnIndicatorAt(row, col) {
+    this.turnIndicatorLayer?.clear();
+    const tile = this.tileLookup?.get(gridKey(row, col));
+    if (!tile) return;
+    this.turnIndicatorLayer.fillStyle(0xce93d8, 0.45);
+    this.turnIndicatorLayer.lineStyle(2, 0xba68c8, 0.8);
+    this.drawDiamond(this.turnIndicatorLayer, tile.center.x, tile.center.y);
   }
 
   // ─── Combat Border Effects ───────────────────────────────────
@@ -4691,6 +4746,14 @@ export class CombatScene extends Phaser.Scene {
     if (!unit?.sprite) return;
     const tile = this.tileLookup?.get(gridKey(unit.row, unit.col));
     if (type === "skill") {
+      // Set initial RGB color immediately
+      const initColor = Phaser.Display.Color.HSLToColor(0, 1, 0.55).color;
+      unit.sprite.setStrokeStyle(5, initColor, 1);
+      if (tile) {
+        this.highlightLayer?.clear();
+        this.highlightLayer?.lineStyle(4, initColor, 1);
+        this.drawDiamond(this.highlightLayer, tile.center.x, tile.center.y, false);
+      }
       // RGB cycling border (sprite + ô diamond) — 0.1s mỗi màu
       let hue = 0;
       unit._rgbBorderTimer = this.time.addEvent({
@@ -4701,7 +4764,6 @@ export class CombatScene extends Phaser.Scene {
           hue = (hue + 60) % 360;
           const color = Phaser.Display.Color.HSLToColor(hue / 360, 1, 0.55).color;
           unit.sprite.setStrokeStyle(5, color, 1);
-          // Diamond tile RGB
           if (tile) {
             this.highlightLayer?.clear();
             this.highlightLayer?.lineStyle(4, color, 1);
@@ -4810,13 +4872,13 @@ export class CombatScene extends Phaser.Scene {
     const stroke = damageType === "magic" ? "#34164b" : "#20101a";
     const fontSize = isCrit ? 26 : 18;
 
-    // Clean up expired damage numbers (older than 200ms)
+    // Clean up expired damage numbers (older than 2000ms)
     const now = Date.now();
-    this.activeDamageNumbers = this.activeDamageNumbers.filter(dn => now - dn.timestamp < 200);
+    this.activeDamageNumbers = this.activeDamageNumbers.filter(dn => now - dn.timestamp < 2000);
 
     // Check for overlapping damage numbers within 30 pixels
-    const OVERLAP_THRESHOLD = 30;
-    const OFFSET_AMOUNT = 20;
+    const OVERLAP_THRESHOLD = 40;
+    const OFFSET_AMOUNT = 28;
     let adjustedY = y;
 
     for (const activeDN of this.activeDamageNumbers) {
@@ -4842,7 +4904,7 @@ export class CombatScene extends Phaser.Scene {
       fontStyle: "bold",
       color,
       stroke,
-      strokeThickness: isCrit ? 5 : 4
+      strokeThickness: isCrit ? 7 : 5
     }).setOrigin(0.5);
     label.setDepth(4300);
     if (isCrit) label.setScale(0.72);
@@ -4852,8 +4914,9 @@ export class CombatScene extends Phaser.Scene {
       y: adjustedY - (isCrit ? 44 : 34),
       alpha: 0,
       scale: isCrit ? 1.12 : 1.0,
-      duration: isCrit ? 1500 : 1200,  // Fixed slow duration (không scale theo game speed)
-      ease: "Cubic.easeOut",
+      duration: isCrit ? 7500 : 6000,
+      hold: 800, // Giữ nguyên 800ms trước khi bắt đầu mờ
+      ease: "Sine.easeIn",
       onComplete: () => {
         if (label && label.destroy) label.destroy();
       }
@@ -4867,17 +4930,21 @@ export class CombatScene extends Phaser.Scene {
     }
     const label = this.add.text(x - 10, y, text, {
       fontFamily: "Consolas",
-      fontSize: "13px",
-      color
+      fontSize: "14px",
+      fontStyle: "bold",
+      color,
+      stroke: "#000000",
+      strokeThickness: 4
     });
     label.setDepth(4000);
     this.combatSprites.push(label);
     this.tweens.add({
       targets: label,
-      y: y - 26,
+      y: y - 30,
       alpha: 0,
-      duration: 540,  // Fixed slow duration (không scale theo game speed)
-      ease: "Cubic.easeOut",
+      duration: 2700,
+      hold: 500, // Giữ nguyên 500ms trước khi mờ
+      ease: "Sine.easeIn",
       onComplete: () => {
         if (label && label.destroy) label.destroy();
       }

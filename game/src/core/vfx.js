@@ -36,16 +36,20 @@ export class VfxController {
   textPop(x, y, text, color = "#ffffff") {
     const t = this.scene.add.text(x - 8, y, text, {
       fontFamily: "Consolas",
-      fontSize: "13px",
-      color
+      fontSize: "14px",
+      fontStyle: "bold",
+      color,
+      stroke: "#000000",
+      strokeThickness: 4
     });
     t.setDepth(8600);
     this.scene.tweens.add({
       targets: t,
-      y: y - 26,
+      y: y - 30,
       alpha: 0,
-      duration: 520,
-      ease: "Cubic.easeOut",
+      duration: 2600,
+      hold: 500,
+      ease: "Sine.easeIn",
       onComplete: () => t.destroy()
     });
   }
