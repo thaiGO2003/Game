@@ -5625,15 +5625,17 @@ export class PlanningScene extends Phaser.Scene {
   buildOrderForSide(side) {
     const list = [];
     if (side === "LEFT") {
+      // E5→E1, D5→D1, C→B→A (frontline trước, hàng lớn trước)
       for (let col = PLAYER_COLS - 1; col >= 0; col -= 1) {
-        for (let row = 0; row < ROWS; row += 1) {
+        for (let row = ROWS - 1; row >= 0; row -= 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
       }
     } else {
+      // G5→G1, H5→H1, I→J→K (frontline trước, hàng lớn trước)
       for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
-        for (let row = 0; row < ROWS; row += 1) {
+        for (let row = ROWS - 1; row >= 0; row -= 1) {
           const unit = this.getCombatUnitAt(side, row, col);
           if (unit) list.push(unit);
         }
@@ -5872,6 +5874,8 @@ export class PlanningScene extends Phaser.Scene {
 
   async basicAttack(attacker, target) {
     const pattern = attacker.range >= 2 ? "RANGED_STATIC" : attacker.classType === "ASSASSIN" ? "ASSASSIN_BACK" : "MELEE_FRONT";
+    // Viền xanh dương đậm khi đang đánh thường
+    this.setCombatBorder(attacker, "attack");
     await this.runActionPattern(attacker, target, pattern, async () => {
       const basicScaleStat = attacker?.mods?.basicAttackScaleStat === "matk" ? "matk" : "atk";
       const damageType = attacker?.mods?.basicAttackType === "magic" ? "magic" : "physical";
@@ -5879,6 +5883,7 @@ export class PlanningScene extends Phaser.Scene {
       const raw = baseStat + Phaser.Math.Between(-5, 6);
       this.resolveDamage(attacker, target, raw, damageType, "BASIC");
     });
+    this.clearCombatBorder(attacker);
     this.addLog(`${attacker.name} danh ${target.name}.`);
   }
 
@@ -5893,9 +5898,12 @@ export class PlanningScene extends Phaser.Scene {
       return;
     }
 
+    // Viền RGB khi đang tung skill
+    this.setCombatBorder(attacker, "skill");
     await this.runActionPattern(attacker, target, skill.actionPattern, async () => {
       await this.applySkillEffect(attacker, target, skill);
     });
+    this.clearCombatBorder(attacker);
     this.addLog(`${attacker.name} dung skill ${skill.name}.`);
   }
 
@@ -6293,10 +6301,10 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "double_hit": {
-        const hit1 = skill.hit1.base + this.getEffectiveAtk(attacker) * skill.hit1.scale;
-        const hit2 = skill.hit2.base + this.getEffectiveAtk(attacker) * skill.hit2.scale;
-        this.resolveDamage(attacker, target, hit1, skill.damageType, `${skill.name} 1`);
-        if (target.alive) this.resolveDamage(attacker, target, hit2, skill.damageType, `${skill.name} 2`);
+        const hit1 = this.calcSkillRaw(attacker, skill.hit1 || { base: skill.base || 0, scaleStat: skill.scaleStat || "atk", scale: skill.scale || 0 });
+        const hit2 = this.calcSkillRaw(attacker, skill.hit2 || { base: skill.base || 0, scaleStat: skill.scaleStat || "atk", scale: skill.scale || 0 });
+        this.resolveDamage(attacker, target, hit1, skill.damageType || "physical", `${skill.name} 1`);
+        if (target.alive) this.resolveDamage(attacker, target, hit2, skill.damageType || "physical", `${skill.name} 2`);
         break;
       }
       case "single_burst_lifesteal": {
@@ -6513,7 +6521,7 @@ export class PlanningScene extends Phaser.Scene {
       case "self_atk_and_assist": {
         attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, skill.turns);
         attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, skill.selfAtkBuff);
-        this.resolveDamage(attacker, target, rawSkill, "physical", skill.name);
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType || "physical", skill.name);
         const helper = allies.find((ally) => ally.uid !== attacker.uid && ally.row === attacker.row);
         if (helper && target.alive) {
           const assist = this.getEffectiveAtk(helper) * skill.assistRate;
@@ -6601,7 +6609,7 @@ export class PlanningScene extends Phaser.Scene {
           .filter((enemy) => Math.abs(enemy.row - target.row) <= 1 && Math.abs(enemy.col - target.col) <= 1)
           .forEach((enemy) => {
             const isPrimary = enemy.row === target.row && enemy.col === target.col;
-            this.resolveDamage(attacker, enemy, rawSkill, "physical", skill.name, { isSplash: !isPrimary });
+            this.resolveDamage(attacker, enemy, rawSkill, skill.damageType || "physical", skill.name, { isSplash: !isPrimary });
           });
         break;
       }
@@ -6691,7 +6699,8 @@ export class PlanningScene extends Phaser.Scene {
       }
     }
 
-    if (attacker && !options.forceHit) {
+    // Magic/true damage luôn trúng — chỉ physical mới check né tránh
+    if (attacker && !options.forceHit && damageType === "physical") {
       const evadePct = getEffectiveEvasion(defender);
       if (Math.random() < evadePct) {
         this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
@@ -6747,6 +6756,8 @@ export class PlanningScene extends Phaser.Scene {
         damageType,
         isCrit: isPhysicalCrit
       });
+      // Viền đỏ nháy khi bị dính đòn
+      this.flashHitBorder(defender);
     }
 
     if (attacker && !options.noRage) {
@@ -6914,6 +6925,66 @@ export class PlanningScene extends Phaser.Scene {
       if (!u.alive) return;
       const roleTheme = this.getRoleTheme(u.classType);
       u.sprite?.setStrokeStyle?.(3, roleTheme.stroke, 1);
+    });
+  }
+
+  // ─── Combat Border Effects ───────────────────────────────────
+
+  setCombatBorder(unit, type) {
+    if (!unit?.sprite) return;
+    const tile = this.tileLookup?.get(gridKey(unit.row, unit.col));
+    if (type === "skill") {
+      // RGB cycling border (sprite + ô diamond) — 0.1s mỗi màu
+      let hue = 0;
+      unit._rgbBorderTimer = this.time.addEvent({
+        delay: 100,
+        loop: true,
+        callback: () => {
+          if (!unit.sprite?.active) return;
+          hue = (hue + 60) % 360;
+          const color = Phaser.Display.Color.HSLToColor(hue / 360, 1, 0.55).color;
+          unit.sprite.setStrokeStyle(5, color, 1);
+          // Diamond tile RGB
+          if (tile) {
+            this.highlightLayer?.clear();
+            this.highlightLayer?.lineStyle(4, color, 1);
+            this.drawDiamond(this.highlightLayer, tile.center.x, tile.center.y, false);
+          }
+        }
+      });
+    } else if (type === "attack") {
+      // Xanh dương đậm sprite + ô vàng diamond
+      unit.sprite.setStrokeStyle(5, 0x1565c0, 1);
+      if (tile) {
+        this.highlightLayer?.lineStyle(4, 0xffef9f, 1);
+        this.drawDiamond(this.highlightLayer, tile.center.x, tile.center.y, false);
+      }
+    }
+  }
+
+  clearCombatBorder(unit) {
+    if (!unit?.sprite) return;
+    // Stop RGB timer nếu có
+    if (unit._rgbBorderTimer) {
+      unit._rgbBorderTimer.destroy();
+      unit._rgbBorderTimer = null;
+    }
+    // Clear diamond tile
+    this.highlightLayer?.clear();
+    // Reset về viền mặc định
+    const roleTheme = this.getRoleTheme(unit.classType);
+    unit.sprite?.setStrokeStyle?.(3, roleTheme.stroke, 1);
+  }
+
+  flashHitBorder(unit) {
+    if (!unit?.sprite?.active) return;
+    unit.sprite.setStrokeStyle(5, 0xff1744, 1);
+    this.time.delayedCall(180, () => {
+      if (!unit.sprite?.active) return;
+      // Nếu đang RGB thì không reset (unit đang cast skill)
+      if (unit._rgbBorderTimer) return;
+      const roleTheme = this.getRoleTheme(unit.classType);
+      unit.sprite?.setStrokeStyle?.(3, roleTheme.stroke, 1);
     });
   }
 
