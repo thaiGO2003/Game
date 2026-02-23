@@ -92,7 +92,7 @@ import { CLASS_SKILL_VARIANTS } from "../data/classSkillVariants.js";
 
 
 const VERSION_INFO = {
-  version: "v0.2.0",
+  version: "v0.3.2",
   updatedAt: "2026-02-19",
   notes: [
     "Thêm màn hình Loading trước Main Menu, có tiến độ và tên tài nguyên đang tải.",

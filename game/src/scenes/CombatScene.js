@@ -1208,6 +1208,16 @@ export class CombatScene extends Phaser.Scene {
       color: UI_COLORS.textPrimary
     }).setDepth(2000);
 
+    // Round counter — góc trái, ngang với synergy panel
+    this.combatRoundLabel = this.add.text(l.boardPanelX + UI_SPACING.SM, l.sidePanelY + UI_SPACING.SM, "LƯỢT 1", {
+      fontFamily: UI_FONT,
+      fontSize: "28px",
+      fontStyle: "bold",
+      color: "#ffd97b",
+      stroke: "#1a1a2e",
+      strokeThickness: 4
+    }).setDepth(2000);
+
     const rightX = l.rightPanelX + UI_SPACING.SM;
     const rightW = l.sidePanelW - UI_SPACING.SM * 2;
     let y = l.sidePanelY + UI_SPACING.SM;
@@ -1900,6 +1910,7 @@ export class CombatScene extends Phaser.Scene {
 
     // UI updates - CombatScene responsibility
     this.combatRound = this.turnQueue.length ? 1 : 0;
+    this.updateRoundLabel();
     this.refreshHeader();
     this.refreshSynergyPreview();
     this.refreshQueuePreview();
@@ -2721,11 +2732,18 @@ export class CombatScene extends Phaser.Scene {
     for (let i = 0; i < 8; i += 1) {
       const idx = this.turnIndex + i;
       if (idx >= this.turnQueue.length) break;
-      const unit = this.turnQueue[idx];
+      const entry = this.turnQueue[idx];
+      const unit = entry?.unit;
       if (!unit || !unit.alive) continue;
-      next.push(`${i + 1}. ${unit.name} (${unit.side === "LEFT" ? "Ta" : "Địch"})`);
+      next.push(`${next.length + 1}. ${unit.name} (${unit.side === "LEFT" ? "Ta" : "Địch"})`);
     }
     this.queueText.setText(`• Thứ tự lượt tiếp theo\n${next.join("\n") || "Đã hết lượt."}`);
+  }
+
+  updateRoundLabel() {
+    if (this.combatRoundLabel) {
+      this.combatRoundLabel.setText(`LƯỢT ${this.combatRound}`);
+    }
   }
 
   inferLogCategory(message) {
@@ -3213,6 +3231,7 @@ export class CombatScene extends Phaser.Scene {
         this.buildTurnQueue();
 
         this.combatRound = Math.max(1, this.combatRound + 1);
+        this.updateRoundLabel();
         if (!this.turnQueue.length) {
           this.resolveCombat("RIGHT");
           return;

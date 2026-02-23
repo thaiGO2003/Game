@@ -28,7 +28,7 @@ const AI_LABELS = {
   HARD: "Khó"
 };
 
-const APP_VERSION = "0.3.1";
+const APP_VERSION = "0.3.2";
 const APP_VERSION_DATE = "23/02/2026";
 
 export class MainMenuScene extends Phaser.Scene {
