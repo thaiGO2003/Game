@@ -23,7 +23,7 @@ import GameModeRegistry from './GameModeRegistry.js'
  */
 const EndlessPvEClassicMode = createGameModeConfig('EndlessPvEClassic', {
     name: 'PvE Vô tận',
-    description: 'The classic auto-battler experience. Build your team, deploy strategically, and survive as long as possible against AI opponents.',
+    description: 'Chế độ auto-battler kinh điển. Xây dựng đội hình, triển khai chiến thuật và sống sót càng lâu càng tốt trước các đối thủ AI.',
 
     // Standard scene flow
     scenes: ['LoadingScene', 'MainMenuScene', 'PlanningScene', 'CombatScene'],

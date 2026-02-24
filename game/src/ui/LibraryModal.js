@@ -626,10 +626,10 @@ export class LibraryModal {
     this.contentContainer.add(hint);
     y += hint.height + 12;
 
-    const diagramHeight = 860;
-    this.recipeDiagram = new RecipeDiagram(this.scene, 0, y, this.layout.viewportW - 14, diagramHeight, this.recipes);
+    this.recipeDiagram = new RecipeDiagram(this.scene, 0, y + 20, this.layout.viewportW - 14, 0, this.recipes);
+    const diagramHeight = this.recipeDiagram.calculatedHeight ?? 860;
     this.contentContainer.add(this.recipeDiagram.container);
-    y += diagramHeight + 16;
+    y += diagramHeight + 40;
 
     return y;
   }

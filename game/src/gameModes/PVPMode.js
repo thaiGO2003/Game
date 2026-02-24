@@ -32,19 +32,19 @@ import GameModeRegistry from './GameModeRegistry.js'
  * of how to structure future game mode additions.
  */
 const PVPMode = createGameModeConfig('PVP', {
-  name: 'PVP Mode (Coming Soon)',
-  description: 'Compete against other players in strategic auto-battler matches. Test your team composition and strategy against real opponents. [NOT YET IMPLEMENTED]',
-  
+  name: 'PVP (Sắp ra mắt)',
+  description: 'Đấu với người chơi khác trong các trận auto-battler chiến thuật. Thử nghiệm đội hình và chiến lược của bạn trước đối thủ thực. [CHƯA TRIỂN KHAI]',
+
   // Standard scene flow (may need PVP-specific scenes in the future)
   scenes: ['LoadingScene', 'MainMenuScene', 'PlanningScene', 'CombatScene'],
-  
+
   // Starting resources (subject to change based on PVP balancing)
   startingGold: 10,
   startingHP: 3,
-  
+
   // Lose condition for PVP (may use different rules)
   loseCondition: LOSE_CONDITION.NO_HEARTS,
-  
+
   // Systems configuration for PVP
   enabledSystems: {
     shop: true,
@@ -52,15 +52,15 @@ const PVPMode = createGameModeConfig('PVP', {
     augments: true,
     pvp: true  // PVP system enabled (not yet implemented)
   },
-  
+
   // AI difficulty is not used in PVP mode (players face other players)
   // This is set to MEDIUM as a placeholder but should be ignored
   aiDifficulty: AI_DIFFICULTY.MEDIUM,
-  
+
   // Gold scaling for PVP (may need different balancing than PVE)
   // TODO: Determine appropriate gold scaling for PVP balance
   goldScaling: (round) => 10,
-  
+
   // Enemy scaling not used in PVP (opponent strength determined by matchmaking)
   // This is a placeholder and should be ignored in PVP implementation
   enemyScaling: (round) => round

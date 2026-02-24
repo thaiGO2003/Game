@@ -499,8 +499,11 @@ const CRAFT_RECIPES_RAW = [
 
 function resolveGridSize(recipe) {
   const raw = Number.isFinite(recipe?.gridSize) ? Math.floor(recipe.gridSize) : null;
-  if (raw === 3 || raw === 2) return raw;
+  if (raw >= 1 && raw <= 3) return raw;
   if (Array.isArray(recipe?.pattern) && recipe.pattern.length >= 9) return 3;
+  // Tier 1: pattern chỉ có 1 nguyên liệu → grid 1x1
+  const nonNull = Array.isArray(recipe?.pattern) ? recipe.pattern.filter(Boolean).length : 0;
+  if (nonNull <= 1) return 1;
   return 2;
 }
 

@@ -46,7 +46,11 @@ function parseSkillsCsv(csvText) {
         "maxHits", "sleepChance", "sleepTurns", "armorBreak", "freezeChance", "freezeTurns",
         "splashCount", "poisonTurns", "poisonPerTurn", "shieldScale", "rageGain",
         "maxTargets", "selfAtkBuff", "assistRate", "evadeBuff", "atkBuff", "armorPen",
-        "killRage", "diseaseTurns", "diseaseDamage"
+        "killRage", "diseaseTurns", "diseaseDamage",
+        "selfHealPct", "maxHpPct", "absorbPct", "nextHitReduction",
+        "silenceTurns", "selfRegenPct", "allyHealPct", "teamAtkBuffPct",
+        "evadeBuffPct", "selfMultiplier", "atkDebuffPct", "selfDefBuff",
+        "teamAtkTurns", "selfDefTurns", "allyCount"
       ];
       const jsonFields = ["hit1", "hit2", "buffStats"];
 

@@ -13,11 +13,7 @@ import {
 } from "../core/uiSettings.js";
 import { hydrateRunState } from "../core/runState.js";
 import { getLoseConditionLabel, normalizeLoseCondition } from "../core/gameRules.js";
-import { UNIT_CATALOG } from "../data/unitCatalog.js";
-import { SKILL_LIBRARY } from "../data/skills.js";
-import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
-import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
 import { LibraryModal } from "../ui/LibraryModal.js";
 import GameModeRegistry from "../gameModes/GameModeRegistry.js";
 import { getAvailableLocales, getLocaleLabel } from "../i18n/index.js";
@@ -44,14 +40,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.continueButton = null;
     this.savedRun = null;
     this._craftRecipes = null;
-    this.updatePanel = null;
-    this.updateContent = null;
-    this.updateScrollY = 0;
-    this.updateScrollMax = 0;
-    this.updateContentBaseY = 0;
-    this.updateViewport = null;
-    this.updateWheelArea = null;
-    this.updateScrollHint = null;
   }
 
   preload() {
@@ -72,7 +60,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createSettingsPanel();
     this.createStartPanel();
     this.libraryModal = new LibraryModal(this, { title: "Thư Viện Linh Thú" });
-    this.createUpdatePanel();
+
     const w = this.scale.width;
     const h = this.scale.height;
     this.add.text(24, h - 18, `Thời gian cập nhật: ${APP_VERSION_DATE}\nBản cập nhật: v${APP_VERSION}`, {
@@ -97,19 +85,11 @@ export class MainMenuScene extends Phaser.Scene {
         .join(" + ")
     })).sort((a, b) => (a.tier ?? 1) - (b.tier ?? 1));
     this.input.on("wheel", (pointer, _objects, _deltaX, deltaY) => {
-      if (this.updatePanel?.visible && this.updateWheelArea && Phaser.Geom.Rectangle.Contains(this.updateWheelArea, pointer.x, pointer.y)) {
-        this.scrollUpdateBy(deltaY);
-        return;
-      }
       if (this.libraryModal?.isOpen()) {
         this.libraryModal.scrollBy(deltaY);
       }
     });
     this.input.keyboard?.on("keydown-ESC", () => {
-      if (this.updatePanel?.visible) {
-        this.updatePanel.setVisible(false);
-        return;
-      }
       if (this.libraryModal?.isOpen()) this.libraryModal.hide();
     });
   }
@@ -156,34 +136,28 @@ export class MainMenuScene extends Phaser.Scene {
       clearProgress();
       this.savedRun = null;
       this.refreshMainButtons();
-      this.updatePanel?.setVisible(false);
+
       this.startPanel.setVisible(!this.startPanel.visible);
     }, 0x2f8f6f, 0x8bffd7);
 
     this.createButton(w * 0.5, startY + 140, 320, 50, "Cài đặt", () => {
-      this.updatePanel?.setVisible(false);
       this.settingsPanel.setVisible(!this.settingsPanel.visible);
     }, 0x284b78, 0x9cd0ff);
 
     this.createButton(w * 0.5, startY + 206, 320, 50, "Thư Viện", () => {
-      this.updatePanel?.setVisible(false);
       this.startPanel?.setVisible(false);
       this.settingsPanel?.setVisible(false);
       this.libraryModal.toggle();
     }, 0x2e5f7d, 0x9ed8ff);
 
-    this.createButton(w * 0.5, startY + 272, 320, 50, "Thông tin cập nhật", () => {
-      this.toggleUpdatePanel();
-    }, 0x355d4f, 0xa4ffd4);
-
-    this.createButton(w * 0.5, startY + 338, 320, 50, "Xóa tiến trình lưu", () => {
+    this.createButton(w * 0.5, startY + 272, 320, 50, "Xóa tiến trình lưu", () => {
       clearProgress();
       this.savedRun = null;
       this.refreshMainButtons();
       this.flashStatus("Đã xóa dữ liệu ván chơi.");
     }, 0x5f2f3d, 0xffc0cf);
 
-    this.statusText = this.add.text(w * 0.5, startY + 406, "", {
+    this.statusText = this.add.text(w * 0.5, startY + 340, "", {
       fontFamily: "Consolas",
       fontSize: "17px",
       color: "#ccecff"
@@ -216,8 +190,8 @@ export class MainMenuScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const panelWidth = Math.min(Math.floor(w * 0.9), 930);
-    const panelHeight = 360;
-    const panel = this.add.container(w * 0.5, h * 0.76);
+    const panelHeight = 400;
+    const panel = this.add.container(w * 0.5, h * 0.72); // Move up slightly so it doesn't get clipped
     panel.setDepth(100);
     panel.setVisible(false);
 
@@ -281,7 +255,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.difficultyRadioGroup = this.createRadioGroup({
       parent: panel,
       x: rightX,
-      y: topY + 142,
+      y: topY + 170,
       width: rightWidth,
       title: "Độ khó AI",
       options: [
@@ -298,7 +272,7 @@ export class MainMenuScene extends Phaser.Scene {
       }
     });
 
-    const actionY = panelHeight * 0.5 - 20;
+    const actionY = panelHeight * 0.5 - 35;
     this.createButton(-102, actionY, 220, 50, "Vào game", () => {
       clearProgress();
       this.savedRun = null;
@@ -423,276 +397,6 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.settingsPanel = panel;
     this.refreshSettingsPanel();
-  }
-
-  createUpdatePanel() {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const panelWidth = Math.min(Math.floor(w * 0.9), 1100);
-    const panelHeight = Math.min(Math.floor(h * 0.88), 780);
-    const panelX = w * 0.5;
-    const panelY = h * 0.5;
-    const panel = this.add.container(panelX, panelY);
-    panel.setVisible(false);
-
-    const dim = this.add.rectangle(0, 0, w, h, 0x060d18, 0.72);
-    dim.setInteractive({ useHandCursor: true });
-    dim.on("pointerdown", () => panel.setVisible(false));
-    panel.add(dim);
-
-    const bg = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x0e1a2d, 0.98);
-    bg.setStrokeStyle(2, 0x86c8ff, 1);
-    bg.setInteractive(
-      new Phaser.Geom.Rectangle(-panelWidth * 0.5, -panelHeight * 0.5, panelWidth, panelHeight),
-      Phaser.Geom.Rectangle.Contains
-    );
-    bg.on("pointerdown", (_pointer, _lx, _ly, event) => {
-      event?.stopPropagation?.();
-    });
-    panel.add(bg);
-
-    const title = this.add.text(-panelWidth * 0.5 + 28, -panelHeight * 0.5 + 22, `Thông tin phiên bản ${APP_VERSION}`, {
-      fontFamily: "Consolas",
-      fontSize: "28px",
-      color: "#ffeab0"
-    });
-    panel.add(title);
-
-    const subtitle = this.add.text(
-      -panelWidth * 0.5 + 28,
-      -panelHeight * 0.5 + 60,
-      "Tổng hợp toàn bộ nội dung hiện có trong game ở bản đang chạy.",
-      {
-        fontFamily: "Consolas",
-        fontSize: "16px",
-        color: "#cde8ff",
-        wordWrap: { width: panelWidth - 220 }
-      }
-    );
-    panel.add(subtitle);
-
-    const viewport = {
-      x: -panelWidth * 0.5 + 24,
-      y: -panelHeight * 0.5 + 98,
-      width: panelWidth - 48,
-      height: panelHeight - 172
-    };
-    this.updateViewport = viewport;
-    this.updateWheelArea = new Phaser.Geom.Rectangle(
-      panelX + viewport.x,
-      panelY + viewport.y,
-      viewport.width,
-      viewport.height
-    );
-
-    const contentMaskGfx = this.add.graphics();
-    contentMaskGfx.fillStyle(0xffffff, 1);
-    contentMaskGfx.fillRect(
-      panelX + viewport.x,
-      panelY + viewport.y,
-      viewport.width,
-      viewport.height
-    );
-    contentMaskGfx.setVisible(false);
-
-    this.updateContentBaseY = viewport.y + 6;
-    this.updateContent = this.add.container(viewport.x + 6, this.updateContentBaseY);
-    this.updateContent.setMask(contentMaskGfx.createGeometryMask());
-    panel.add(this.updateContent);
-
-    this.updateScrollHint = this.add.text(
-      -panelWidth * 0.5 + 28,
-      panelHeight * 0.5 - 42,
-      "Lăn chuột để cuộn • ESC hoặc Đóng để thoát",
-      {
-        fontFamily: "Consolas",
-        fontSize: "15px",
-        color: "#9ec4e8"
-      }
-    );
-    panel.add(this.updateScrollHint);
-
-    this.createButton(panelWidth * 0.5 - 116, panelHeight * 0.5 - 38, 180, 42, "Đóng", () => {
-      panel.setVisible(false);
-    }, 0x3b4e66, 0xb6d3ff, panel);
-
-    this.updatePanel = panel;
-    this.refreshUpdatePanel();
-  }
-
-  toggleUpdatePanel(force = null) {
-    if (!this.updatePanel) return;
-    const nextVisible = typeof force === "boolean" ? force : !this.updatePanel.visible;
-    this.updatePanel.setVisible(nextVisible);
-    if (nextVisible) {
-      this.settingsPanel?.setVisible(false);
-      this.startPanel?.setVisible(false);
-      this.libraryModal?.hide();
-      this.refreshUpdatePanel();
-    }
-  }
-
-  scrollUpdateBy(deltaY) {
-    if (!this.updateContent || !this.updateViewport) return;
-    this.updateScrollY = Phaser.Math.Clamp(this.updateScrollY + deltaY * 0.55, 0, this.updateScrollMax);
-    this.updateContent.y = this.updateContentBaseY - this.updateScrollY;
-    if (this.updateScrollHint) {
-      const ratio = this.updateScrollMax <= 0 ? 100 : Math.round((this.updateScrollY / this.updateScrollMax) * 100);
-      this.updateScrollHint.setText(`Lăn chuột để cuộn • Vị trí ${ratio}% • ESC hoặc Đóng để thoát`);
-    }
-  }
-
-  refreshUpdatePanel() {
-    if (!this.updateContent || !this.updateViewport) return;
-    this.updateContent.removeAll(true);
-    this.updateScrollY = 0;
-    this.updateContent.y = this.updateContentBaseY;
-
-    const body = this.buildVersionContentText();
-    const contentText = this.add.text(0, 0, body, {
-      fontFamily: "Consolas",
-      fontSize: "14px",
-      color: "#d7ecff",
-      lineSpacing: 5,
-      wordWrap: { width: this.updateViewport.width - 18 }
-    });
-    this.updateContent.add(contentText);
-
-    this.updateScrollMax = Math.max(0, contentText.height - (this.updateViewport.height - 12));
-    if (this.updateScrollHint) {
-      this.updateScrollHint.setText("Lăn chuột để cuộn • Vị trí 0% • ESC hoặc Đóng để thoát");
-    }
-  }
-
-  buildVersionContentText() {
-    const unitRows = UNIT_CATALOG.map((unit) => ({
-      unit,
-      visual: getUnitVisual(unit.id, unit.classType),
-      skill: SKILL_LIBRARY?.[unit.skillId]
-    })).sort((a, b) => {
-      if ((a.unit.tier ?? 1) !== (b.unit.tier ?? 1)) return (a.unit.tier ?? 1) - (b.unit.tier ?? 1);
-      return (a.visual?.nameVi ?? a.unit.name ?? a.unit.id).localeCompare(
-        b.visual?.nameVi ?? b.unit.name ?? b.unit.id,
-        "vi"
-      );
-    });
-
-    const classCount = {};
-    const tribeCount = {};
-    const tierCount = {};
-    unitRows.forEach(({ unit }) => {
-      const classLabel = getClassLabelVi(unit.classType);
-      const tribeLabel = getTribeLabelVi(unit.tribe);
-      const tier = Number.isFinite(unit.tier) ? unit.tier : 1;
-      classCount[classLabel] = (classCount[classLabel] ?? 0) + 1;
-      tribeCount[tribeLabel] = (tribeCount[tribeLabel] ?? 0) + 1;
-      tierCount[tier] = (tierCount[tier] ?? 0) + 1;
-    });
-
-    const formatSummary = (obj) =>
-      Object.entries(obj)
-        .sort((a, b) => a[0].localeCompare(b[0], "vi"))
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(" | ");
-    const formatTierSummary = () =>
-      Object.entries(tierCount)
-        .sort((a, b) => Number(a[0]) - Number(b[0]))
-        .map(([tier, value]) => `Bậc ${tier}: ${value}`)
-        .join(" | ");
-
-    const classSynergyLines = Object.entries(CLASS_SYNERGY ?? {})
-      .sort((a, b) => getClassLabelVi(a[0]).localeCompare(getClassLabelVi(b[0]), "vi"))
-      .map(([id, entry]) => `• ${getClassLabelVi(id)}: mốc ${Array.isArray(entry?.thresholds) ? entry.thresholds.join("/") : "-"}`);
-    const tribeSynergyLines = Object.entries(TRIBE_SYNERGY ?? {})
-      .sort((a, b) => getTribeLabelVi(a[0]).localeCompare(getTribeLabelVi(b[0]), "vi"))
-      .map(([id, entry]) => `• ${getTribeLabelVi(id)}: mốc ${Array.isArray(entry?.thresholds) ? entry.thresholds.join("/") : "-"}`);
-
-    const skillRows = Object.entries(SKILL_LIBRARY ?? {})
-      .sort((a, b) => (a[1]?.name ?? a[0]).localeCompare(b[1]?.name ?? b[0], "vi"))
-      .map(([id, skill]) => `• ${skill?.icon ?? "✨"} ${skill?.name ?? id} (${id})`);
-
-    const baseItems = Object.values(ITEM_BY_ID)
-      .filter((item) => item?.kind === "base")
-      .sort((a, b) => String(a?.name ?? "").localeCompare(String(b?.name ?? ""), "vi"))
-      .map((item) => `• ${item.icon} ${item.name} (${item.id})`);
-    const equipItems = Object.values(ITEM_BY_ID)
-      .filter((item) => item?.kind === "equipment")
-      .sort((a, b) => String(a?.name ?? "").localeCompare(String(b?.name ?? ""), "vi"))
-      .map((item) => `• ${item.icon} ${item.name} (${item.id})`);
-
-    const recipeRows = [...CRAFT_RECIPES]
-      .sort((a, b) => {
-        if ((a.tier ?? 1) !== (b.tier ?? 1)) return (a.tier ?? 1) - (b.tier ?? 1);
-        return String(a.name ?? "").localeCompare(String(b.name ?? ""), "vi");
-      })
-      .map((recipe) => {
-        const reqText = (recipe.requires ?? [])
-          .map((id) => {
-            const item = ITEM_BY_ID[id];
-            return `${item?.icon ?? "?"} ${item?.name ?? id}`;
-          })
-          .join(" + ");
-        const size = Number.isFinite(recipe.gridSize) ? recipe.gridSize : 2;
-        return `• ${recipe.icon} ${recipe.name} [Bậc ${recipe.tier ?? 1} • Bàn ${size}x${size}] = ${reqText}`;
-      });
-    const recipeTierSummary = [...CRAFT_RECIPES].reduce((acc, recipe) => {
-      const tier = Number.isFinite(recipe?.tier) ? recipe.tier : 1;
-      acc[tier] = (acc[tier] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    const unitLines = unitRows.map(({ unit, visual, skill }) => {
-      const range = (unit.stats?.range ?? 1) >= 2 ? "Đánh xa" : "Cận chiến";
-      return `• ${visual.icon} ${visual.nameVi} [${unit.id}] | Bậc ${unit.tier ?? 1} | ${getTribeLabelVi(unit.tribe)} - ${getClassLabelVi(unit.classType)} | ${range} | Kỹ năng: ${skill?.name ?? unit.skillId}`;
-    });
-
-    return [
-      `FOREST THRONE • THÔNG TIN PHIÊN BẢN ${APP_VERSION}`,
-      `Ngày cập nhật: ${APP_VERSION_DATE}`,
-      "",
-      "0) Điểm mới của bản 0.2.0",
-      "• Thêm màn hình Loading trước Main Menu, hiển thị tiến độ và tài nguyên đang tải.",
-      "• Đổi màu nhận diện nghề Pháp sư sang tông hồng để dễ phân biệt với Đỡ đòn.",
-      "• Một thú không thể mang 2 trang bị cùng tên; dữ liệu save cũ/merge/combat tự loại trùng.",
-      "• Sát thủ ưu tiên mục tiêu cùng hàng, sau đó chọn cột xa nhất.",
-      "• Nút Thông tin cập nhật đặt ở màn hình chính, nội dung lấy trực tiếp từ dữ liệu game.",
-      "",
-      "1) Tóm tắt nội dung hiện có",
-      `• Tổng linh thú: ${unitRows.length}`,
-      `• Tổng kỹ năng: ${skillRows.length}`,
-      `• Tổng nguyên liệu cơ bản: ${baseItems.length}`,
-      `• Tổng trang bị chế tạo: ${equipItems.length}`,
-      `• Tổng công thức: ${CRAFT_RECIPES.length} (${Object.entries(recipeTierSummary).sort((a, b) => Number(a[0]) - Number(b[0])).map(([tier, value]) => `Bậc ${tier}: ${value}`).join(" | ")})`,
-      `• Linh thú theo bậc: ${formatTierSummary()}`,
-      `• Linh thú theo nghề: ${formatSummary(classCount)}`,
-      `• Linh thú theo tộc: ${formatSummary(tribeCount)}`,
-      "",
-      "2) Chế độ và hệ thống chính",
-      "• Chế độ: PvE Vô tận (không giới hạn số vòng).",
-      "• Hệ thống: Mua thú, đổi shop, mua XP, nâng dự bị, nâng bàn chế, ghép trang bị, giao tranh tự động theo lượt.",
-      "• Điều kiện thua: Hết quân hoặc hết tim (tùy cài đặt).",
-      "",
-      "3) Cộng hưởng nghề",
-      ...classSynergyLines,
-      "",
-      "4) Cộng hưởng tộc",
-      ...tribeSynergyLines,
-      "",
-      "5) Danh sách linh thú",
-      ...unitLines,
-      "",
-      "6) Danh sách kỹ năng",
-      ...skillRows,
-      "",
-      "7) Danh sách nguyên liệu cơ bản",
-      ...baseItems,
-      "",
-      "8) Danh sách trang bị chế tạo",
-      ...equipItems,
-      "",
-      "9) Danh sách công thức chế tạo",
-      ...recipeRows
-    ].join("\n");
   }
 
   createButton(x, y, w, h, label, onClick, fill, stroke, parent = null) {

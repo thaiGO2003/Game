@@ -82,6 +82,7 @@ export class RecipeDiagram {
     const categoryKeys = Object.keys(this.categories);
     const categoryWidth = this.width / categoryKeys.length;
     const headerHeight = 40;
+    let maxCatHeight = 0;
     
     categoryKeys.forEach((catKey, catIndex) => {
       const category = this.categories[catKey];
@@ -104,7 +105,7 @@ export class RecipeDiagram {
       
       // Create nodes for recipes in this category
       const nodeSpacing = 120;
-      const startY = headerHeight + 20;
+      const startY = headerHeight + 60;
       
       category.recipes.forEach((recipe, index) => {
         const nodeX = catX + categoryWidth / 2;
@@ -113,10 +114,15 @@ export class RecipeDiagram {
         const node = this.createRecipeNode(recipe, nodeX, nodeY, category.color);
         this.nodes.push(node);
       });
+
+      const catHeight = startY + category.recipes.length * nodeSpacing;
+      if (catHeight > maxCatHeight) maxCatHeight = catHeight;
     });
     
     // Create connections between nodes
     this.createConnections();
+    
+    this.calculatedHeight = maxCatHeight + 40;
   }
   
   /**

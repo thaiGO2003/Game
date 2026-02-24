@@ -229,6 +229,10 @@ export class CombatScene extends Phaser.Scene {
     this.planningSprites = [];
     this.combatSprites = [];
     this.overlaySprites = [];
+    if (Array.isArray(this.decorationSprites)) {
+      this.decorationSprites.forEach(s => s?.destroy?.());
+    }
+    this.decorationSprites = [];
     this.logs = [];
     this.selectedBenchIndex = null;
     this.turnQueue = [];
@@ -1039,6 +1043,41 @@ export class CombatScene extends Phaser.Scene {
     this.originY = this.layout.boardOriginY;
     this.createBoardBackground();
 
+    // Decorative elements around the board
+    const random = new Phaser.Math.RandomDataGenerator([456]);
+    const decoOptions = ["🌲", "🌳", "🪨", "��", "🌿", "🌺", "🌾"];
+    const bpX = this.layout.boardPanelX;
+    const bpY = this.layout.boardPanelY;
+    const bpW = this.layout.boardPanelW;
+    const bpH = this.layout.boardPanelH;
+    const margin = 60;
+    for (let i = 0; i < 24; i++) {
+      const side = random.between(0, 3);
+      let x, y;
+      if (side === 0) {
+        x = random.between(bpX - margin, bpX + bpW + margin);
+        y = random.between(bpY - margin - 30, bpY - 8);
+      } else if (side === 1) {
+        x = random.between(bpX - margin, bpX + bpW + margin);
+        y = random.between(bpY + bpH + 8, bpY + bpH + margin + 30);
+      } else if (side === 2) {
+        x = random.between(bpX - margin - 30, bpX - 8);
+        y = random.between(bpY - margin, bpY + bpH + margin);
+      } else {
+        x = random.between(bpX + bpW + 8, bpX + bpW + margin + 30);
+        y = random.between(bpY - margin, bpY + bpH + margin);
+      }
+      x = Math.max(4, Math.min(this.scale.width - 30, x));
+      y = Math.max(4, Math.min(this.scale.height - 30, y));
+      const text = this.add.text(x, y, random.pick(decoOptions), {
+        fontSize: random.pick(["18px", "22px", "26px"]),
+        color: "#ffffff"
+      });
+      text.setAlpha(0.35 + random.realInRange(0, 0.35));
+      text.setDepth(1);
+      this.decorationSprites.push(text);
+    }
+
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < COLS; col += 1) {
         const center = this.gridToScreen(col, row);
@@ -1118,12 +1157,21 @@ export class CombatScene extends Phaser.Scene {
       const p = this.gridToScreen(entry.col, entry.row);
       let dx = 0;
       let dy = 0;
-      if (entry.anchor === "bottom") dy = tileH * 0.72;
-      if (entry.anchor === "top") dy = -tileH * 0.72;
-      if (entry.anchor === "left") dx = -tileW * 0.68;
-      if (entry.anchor === "right") dx = tileW * 0.68;
+      if (entry.anchor === "bottom") {
+        dx = tileW * 0.3;
+        dy = tileH * 0.6;
+      } else if (entry.anchor === "top") {
+        dx = -tileW * 0.3;
+        dy = -tileH * 0.6;
+      } else if (entry.anchor === "left") {
+        dx = -tileW * 0.3;
+        dy = tileH * 0.6;
+      } else if (entry.anchor === "right") {
+        dx = tileW * 0.3;
+        dy = -tileH * 0.6;
+      }
       entry.label.setPosition(p.x + dx, p.y + dy);
-      entry.label.setDepth(p.y + 4);
+      entry.label.setDepth(2101);
     });
   }
 
@@ -2404,8 +2452,48 @@ export class CombatScene extends Phaser.Scene {
       case "turtle_protection":
       case "rhino_counter":
       case "pangolin_reflect":
+      case "self_armor_reflect":
+      case "self_shield_immune":
+      case "self_maxhp_boost":
+      case "self_def_fortify":
+      case "resilient_shield":
         pushCell(attacker.row, attacker.col);
         break;
+      case "guardian_pact": {
+        pushCell(attacker.row, attacker.col);
+        const weakestAlly = allies
+          .filter(a => a.alive && a.uid !== attacker.uid)
+          .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+        if (weakestAlly) pushCell(weakestAlly.row, weakestAlly.col);
+        break;
+      }
+      case "frost_aura_buff":
+      case "roar_debuff_heal": {
+        pushCell(attacker.row, attacker.col);
+        const nearbyTargets = (skill.effect === "frost_aura_buff" ? allies : enemies)
+          .filter(a => a.alive && a.uid !== attacker.uid)
+          .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
+          .slice(0, skill.maxTargets || 2);
+        nearbyTargets.forEach(u => pushCell(u.row, u.col));
+        break;
+      }
+      case "team_rage_self_heal":
+      case "warcry_atk_def":
+      case "team_evade_buff":
+      case "team_shield":
+        pushUnits(allies);
+        break;
+      case "single_silence_lock":
+        pushCell(target.row, target.col);
+        break;
+      case "self_regen_team_heal": {
+        pushCell(attacker.row, attacker.col);
+        allies.filter(a => a.alive && a.uid !== attacker.uid)
+          .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)
+          .slice(0, 2)
+          .forEach(a => pushCell(a.row, a.col));
+        break;
+      }
       case "metamorphosis":
         pushCell(attacker.row, attacker.col);
         if ((attacker.star ?? 1) >= 2) pushUnits(allies);
@@ -3580,8 +3668,10 @@ export class CombatScene extends Phaser.Scene {
             // Move target to new position if different from current
             if (targetPosition !== target.col) {
               target.col = targetPosition;
+              target.homeCol = targetPosition; // Sync home position so attack animation returns to correct spot
               const screen = this.gridToScreen(target.col, target.row);
               await this.tweenCombatUnit(target, screen.x, screen.y - 10, 220);
+              this.syncCombatLabels(target);
               this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
             } else {
               // Target blocked - cannot move
@@ -3660,8 +3750,10 @@ export class CombatScene extends Phaser.Scene {
             const blocked = enemies.some((u) => u.uid !== enemy.uid && u.alive && u.row === enemy.row && u.col === newCol);
             if (blocked || newCol === enemy.col) continue;
             enemy.col = newCol;
+            enemy.homeCol = newCol; // Sync home position so attack animation returns to correct spot
             const screen = this.gridToScreen(enemy.col, enemy.row);
             await this.tweenCombatUnit(enemy, screen.x, screen.y - 10, 180);
+            this.syncCombatLabels(enemy);
             this.showFloatingText(screen.x, screen.y - 45, "ĐẨY LÙI", "#ffffff");
             this.updateCombatUnitUi(enemy);
           }
@@ -4204,6 +4296,211 @@ export class CombatScene extends Phaser.Scene {
           attacker.statuses.physReflectTurns = skill.turns || 3;
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "GIÁP VẢY SẮC", "#ff9b9b");
           this.updateCombatUnitUi(attacker);
+          break;
+        }
+        // ═══════════════════════════════════════════════════════
+        // 14 NEW TANKER SKILLS — each tanker gets unique identity
+        // ═══════════════════════════════════════════════════════
+        case "self_armor_reflect": {
+          // Lửng Đá: Gai Đá — self buff armor + reflect physical damage
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const defBuff = Math.max(1, Math.round((skill.armorBuff || 25) * starScale));
+          const reflectPct = skill.reflectPct || 0.20;
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
+          attacker.statuses.physReflectTurns = Math.max(attacker.statuses.physReflectTurns, skill.turns || 3);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "GAI ĐÁ", "#ffa944");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "roar_debuff_heal": {
+          // Gấu Cổ Thụ: Gầm Gừ — debuff ATK 2 nearest enemies + self heal
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const maxTargets = skill.maxTargets || 2;
+          const debuffValue = Math.max(1, Math.round(20 * starScale));
+          const nearest = enemies
+            .filter(e => e.alive)
+            .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
+            .slice(0, maxTargets);
+          nearest.forEach(e => {
+            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns || 3);
+            e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, debuffValue);
+            this.showFloatingText(e.sprite.x, e.sprite.y - 45, "SỢ HÃI", "#ffaaaa");
+            this.updateCombatUnitUi(e);
+          });
+          const selfHeal = Math.round(attacker.maxHp * 0.10 * starScale);
+          this.healUnit(attacker, attacker, selfHeal, "GẦM GỪ");
+          break;
+        }
+        case "self_shield_immune": {
+          // Ốc Sên Pháo Đài: shield + CC immunity
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const shieldAmt = Math.round(((skill.shieldBase || 50) + this.getEffectiveDef(attacker) * (skill.shieldScale || 0.40)) * starScale);
+          this.addShield(attacker, shieldAmt);
+          attacker.statuses.immuneTurns = Math.max(attacker.statuses.immuneTurns, skill.turns || 2);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "PHÁO ĐÀI", "#83e5ff");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "guardian_pact": {
+          // Cua Giáp: protect weakest ally — absorb 30% damage for them
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const weakest = allies
+            .filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weakest) {
+            weakest.statuses.guardianId = attacker.uid;
+            weakest.statuses.guardianTurns = Math.max(weakest.statuses.guardianTurns || 0, skill.turns || 3);
+            weakest.statuses.guardianAbsorb = 0.30;
+            this.showFloatingText(weakest.sprite.x, weakest.sprite.y - 45, "ĐƯỢC BẢO VỆ", "#9dffba");
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "KẸP BẢO VỆ", "#9dffba");
+            this.updateCombatUnitUi(weakest);
+          }
+          // Also self buff DEF
+          const defBuff = Math.max(1, Math.round(15 * starScale));
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "self_maxhp_boost": {
+          // Bò Núi: permanently increase max HP by 15%
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const boostPct = 0.15 * starScale;
+          const increase = Math.round(attacker.maxHp * boostPct);
+          attacker.maxHp += increase;
+          attacker.hp += increase;
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, `+${increase} HP`, "#00ff88");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "self_def_fortify": {
+          // Tatu Cuộn: huge DEF+MDEF buff + 50% damage reduction on next hit
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const defBuff = Math.max(1, Math.round((skill.armorBuff || 30) * starScale));
+          const mdefBuff = Math.max(1, Math.round((skill.mdefBuff || 30) * starScale));
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 2);
+          attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
+          attacker.statuses.mdefBuffTurns = Math.max(attacker.statuses.mdefBuffTurns, skill.turns || 2);
+          attacker.statuses.mdefBuffValue = Math.max(attacker.statuses.mdefBuffValue, mdefBuff);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỘN TRÒN", "#ffd97b");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "resilient_shield": {
+          // Rùa Đầm Lầy: large shield, if shield survives 2 turns → heal 20% HP
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const shieldAmt = Math.round(((skill.shieldBase || 80) + this.getEffectiveDef(attacker) * (skill.shieldScale || 0.50)) * starScale);
+          this.addShield(attacker, shieldAmt);
+          attacker.statuses.resilientShieldTurns = skill.turns || 2;
+          attacker.statuses.resilientShieldHealPct = 0.20;
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "MAI THẦN", "#9dffba");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "frost_aura_buff": {
+          // Hải Mã Băng: buff DEF+MDEF for 2 nearest allies
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const defBuff = Math.max(1, Math.round((skill.armorBuff || 20) * starScale));
+          const mdefBuff = Math.max(1, Math.round((skill.mdefBuff || 15) * starScale));
+          const maxTargets = skill.maxTargets || 2;
+          const nearby = allies
+            .filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
+            .slice(0, maxTargets);
+          nearby.forEach(ally => {
+            ally.statuses.defBuffTurns = Math.max(ally.statuses.defBuffTurns, skill.turns || 3);
+            ally.statuses.defBuffValue = Math.max(ally.statuses.defBuffValue, defBuff);
+            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, skill.turns || 3);
+            ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, mdefBuff);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "BĂNG HỘ", "#83e5ff");
+            this.updateCombatUnitUi(ally);
+          });
+          // Also buff self
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "HÀO QUANG BĂNG", "#83e5ff");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "team_rage_self_heal": {
+          // Voi Ma Mút: +3 rage to all allies + self heal 15% HP
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const rageGain = skill.rageGain || 3;
+          allies.forEach(ally => {
+            if (ally.uid === attacker.uid) return;
+            ally.rage = Math.min(ally.rageMax, ally.rage + rageGain);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${rageGain} NỘ`, "#b8f5ff");
+            this.updateCombatUnitUi(ally);
+          });
+          const selfHeal = Math.round(attacker.maxHp * 0.15 * starScale);
+          this.healUnit(attacker, attacker, selfHeal, "BẦY ĐÀN");
+          break;
+        }
+        case "warcry_atk_def": {
+          // Bò Tây Tạng: buff ATK whole team 2 turns + self DEF 3 turns
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const atkBuff = Math.max(1, Math.round(20 * starScale));
+          const defBuff = Math.max(1, Math.round((skill.armorBuff || 25) * starScale));
+          allies.forEach(ally => {
+            ally.statuses.atkBuffTurns = Math.max(ally.statuses.atkBuffTurns, 2);
+            ally.statuses.atkBuffValue = Math.max(ally.statuses.atkBuffValue, atkBuff);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "+SỨC MẠNH", "#ffa944");
+            this.updateCombatUnitUi(ally);
+          });
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 55, "THÉT CHIẾN", "#ff4444");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "team_evade_buff": {
+          // Trâu Sương Mù: evade buff for whole team
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const evadeBuff = 0.20 * starScale;
+          allies.forEach(ally => {
+            ally.mods.evadePct = Math.max(ally.mods.evadePct || 0, evadeBuff);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "SƯƠNG MÙ", "#d4bcff");
+            this.updateCombatUnitUi(ally);
+          });
+          break;
+        }
+        case "single_silence_lock": {
+          // Mực Khổng Lồ: damage + silence strongest enemy
+          this.resolveDamage(attacker, target, rawSkill, skill.damageType || "physical", skill.name, skillOpts);
+          if (target.alive) {
+            const silenceTurns = skill.turns || 2;
+            target.statuses.silence = Math.max(target.statuses.silence || 0, silenceTurns);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "KHÓA SKILL", "#ff6b9d");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "self_regen_team_heal": {
+          // Hydra Đầm Lầy: self heal 8% + heal 2 weakest allies 5%
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const selfHeal = Math.round(attacker.maxHp * 0.08 * starScale);
+          this.healUnit(attacker, attacker, selfHeal, "TÁI SINH");
+          const weakest = allies
+            .filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)
+            .slice(0, 2);
+          weakest.forEach(ally => {
+            const heal = Math.round(ally.maxHp * 0.05 * starScale);
+            this.healUnit(attacker, ally, heal, "ĐA ĐẦU");
+          });
+          break;
+        }
+        case "team_shield": {
+          // Rồng Đất: shield for all allies, self gets double
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const baseShield = Math.round(((skill.shieldBase || 40) + this.getEffectiveDef(attacker) * (skill.shieldScale || 0.20)) * starScale);
+          allies.forEach(ally => {
+            const amount = ally.uid === attacker.uid ? baseShield * 2 : baseShield;
+            this.addShield(ally, amount);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${amount} KHIÊN`, "#ffd97b");
+            this.updateCombatUnitUi(ally);
+          });
           break;
         }
         default:

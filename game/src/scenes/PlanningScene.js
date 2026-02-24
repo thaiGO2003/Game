@@ -204,6 +204,12 @@ export class PlanningScene extends Phaser.Scene {
     this.planningSprites = [];
     this.combatSprites = [];
     this.overlaySprites = [];
+    // Destroy old decorations when scene restarts
+    if (Array.isArray(this.decorationSprites)) {
+      this.decorationSprites.forEach(s => s?.destroy?.());
+    }
+    this.decorationSprites = [];
+    this.decorationsCreated = false;
     this.logs = [];
     this.selectedBenchIndex = null;
     this.turnQueue = [];
@@ -302,6 +308,7 @@ export class PlanningScene extends Phaser.Scene {
     this.incomingData = data ?? null;
   }
 
+
   create() {
     this.cameras.main.setBackgroundColor("#10141b");
     this.input.mouse?.disableContextMenu();
@@ -343,6 +350,7 @@ export class PlanningScene extends Phaser.Scene {
     this.setupInput();
     this.setupGamepadInput();
 
+
     const forceNewRun = this.incomingData?.forceNewRun === true;
     if (forceNewRun) {
       this.startNewRun();
@@ -364,6 +372,7 @@ export class PlanningScene extends Phaser.Scene {
     if (this.incomingData?.combatResult) {
       this.applyCombatResult(this.incomingData.combatResult);
     }
+
   }
 
   startPlanningMusic() {
@@ -1127,24 +1136,39 @@ export class PlanningScene extends Phaser.Scene {
       this.decorationsCreated = true;
       const random = new Phaser.Math.RandomDataGenerator([123]);
       const decoOptions = ["🌲", "🌳", "🪨", "🍄", "🌿", "🌺", "🌾"];
-      for (let i = 0; i < 18; i++) {
-        const angle = random.angle();
-        const dist = random.between(this.layout.boardPanelW * 0.6, this.layout.boardPanelW * 0.9);
-        const x = this.layout.boardPanelX + this.layout.boardPanelW / 2 + Math.cos(angle) * dist;
-        const y = this.layout.boardPanelY + this.layout.boardPanelH / 2 + Math.sin(angle) * dist * 0.6;
-        if (this.pointInBoardPanel(x, y)) continue;
-
+      const bpX = this.layout.boardPanelX;
+      const bpY = this.layout.boardPanelY;
+      const bpW = this.layout.boardPanelW;
+      const bpH = this.layout.boardPanelH;
+      const margin = 60;
+      for (let i = 0; i < 24; i++) {
+        // Place decorations along the 4 edges of the board panel, just outside
+        const side = random.between(0, 3);
+        let x, y;
+        if (side === 0) { // top edge
+          x = random.between(bpX - margin, bpX + bpW + margin);
+          y = random.between(bpY - margin - 30, bpY - 8);
+        } else if (side === 1) { // bottom edge
+          x = random.between(bpX - margin, bpX + bpW + margin);
+          y = random.between(bpY + bpH + 8, bpY + bpH + margin + 30);
+        } else if (side === 2) { // left edge
+          x = random.between(bpX - margin - 30, bpX - 8);
+          y = random.between(bpY - margin, bpY + bpH + margin);
+        } else { // right edge
+          x = random.between(bpX + bpW + 8, bpX + bpW + margin + 30);
+          y = random.between(bpY - margin, bpY + bpH + margin);
+        }
+        // Clamp to screen bounds
+        x = Math.max(4, Math.min(this.scale.width - 30, x));
+        y = Math.max(4, Math.min(this.scale.height - 30, y));
         const text = this.add.text(x, y, random.pick(decoOptions), {
-          fontSize: random.pick(["20px", "24px", "28px"]),
+          fontSize: random.pick(["18px", "22px", "26px"]),
           color: "#ffffff"
         });
-        text.setAlpha(0.6 + random.realInRange(0, 0.4));
-        text.setDepth(y);
-        this.overlaySprites.push(text); // Add to overlay so they get cleared/managed or just leave them? 
-        // Actually overlaySprites is cleared often. Using planningSprites or a separate list.
-        // Let's attach to nothing for now, just let them be background. 
-        // Or better, check if they persist. They are Phaser GameObjects.
-        // I should probably track them to destroy on restart maybe?
+        text.setAlpha(0.35 + random.realInRange(0, 0.35));
+        text.setDepth(1);
+        // Track in separate array — NOT overlaySprites which blocks moveUnit()
+        this.decorationSprites.push(text);
       }
     }
 
@@ -2479,27 +2503,7 @@ export class PlanningScene extends Phaser.Scene {
       // Check left click for Unit Drag
       if (pointer.leftButtonDown() && this.phase === PHASE.PLANNING && !this.libraryModal?.isOpen() && !this.historyModalVisible && !this.settingsVisible && !this.versionInfoVisible) {
         const pos = this.getPointerWorldPosition(pointer);
-        const canvas = this.sys.game.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const slot0 = this.benchSlots?.[0];
-        const evt = pointer.event;
-        console.log('[DIAG] === CLICK DIAGNOSTIC ===');
-        console.log('[DIAG] DOM event: clientX=', evt?.clientX, 'clientY=', evt?.clientY);
-        console.log('[DIAG] Canvas rect: left=', Math.round(rect.left), 'top=', Math.round(rect.top), 'width=', Math.round(rect.width), 'height=', Math.round(rect.height));
-        console.log('[DIAG] Canvas actual: width=', canvas.width, 'height=', canvas.height);
-        console.log('[DIAG] Canvas CSS: width=', canvas.clientWidth, 'height=', canvas.clientHeight);
-        console.log('[DIAG] Scale game: width=', this.scale.width, 'height=', this.scale.height);
-        console.log('[DIAG] Scale display:', JSON.stringify({ w: Math.round(this.scale.displaySize?.width ?? 0), h: Math.round(this.scale.displaySize?.height ?? 0) }));
-        console.log('[DIAG] Pointer: x=', Math.round(pointer.x), 'y=', Math.round(pointer.y), 'worldX=', Math.round(pointer.worldX), 'worldY=', Math.round(pointer.worldY));
-        console.log('[DIAG] pos (getPointerWorldPosition):', Math.round(pos.x), Math.round(pos.y));
-        console.log('[DIAG] Bench0:', slot0 ? `x=${Math.round(slot0.x)} y=${Math.round(slot0.y)} w=${Math.round(slot0.slotW)} h=${Math.round(slot0.slotH)}` : 'none');
-        // Manual calculation: what SHOULD the game coords be?
-        const expectedX = ((evt?.clientX ?? 0) - rect.left) / rect.width * this.scale.width;
-        const expectedY = ((evt?.clientY ?? 0) - rect.top) / rect.height * this.scale.height;
-        console.log('[DIAG] Expected game coords (manual calc):', Math.round(expectedX), Math.round(expectedY));
-        console.log('[DIAG] Mismatch:', Math.round(pos.x - expectedX), Math.round(pos.y - expectedY));
         const unit = this.getUnitAt(pos.x, pos.y);
-        console.log('[DIAG] Unit found:', unit ? `${unit.region} ${unit.unit?.baseId}` : 'null');
         if (unit) {
           this.startUnitDrag(unit, pointer, pos);
           return;
@@ -2654,6 +2658,7 @@ export class PlanningScene extends Phaser.Scene {
 
   startUnitDrag(dragData, pointer) {
     const dragPos = this.getPointerWorldPosition(pointer);
+
     this.isBoardDragging = false;
     this.lastDragPoint = null;
     this.boardPointerDown = null;
@@ -2716,6 +2721,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   endUnitDrag(pointer) {
+
     const cleanupDragState = () => {
       this.dragUnit = null;
       this.dragOrigin = null;
@@ -2771,20 +2777,24 @@ export class PlanningScene extends Phaser.Scene {
       : target.type === "BENCH" ? { region: "BENCH", index: target.index }
         : null;
 
+
     if (to) {
       // Check if same slot
       if (from.region === to.region) {
         if (from.region === "BOARD" && from.row === to.row && from.col === to.col) {
+
           cleanupDragState();
           return;
         }
         if (from.region === "BENCH" && from.index === to.index) {
+
           cleanupDragState();
           return;
         }
       }
 
       const moved = this.moveUnit(from, to, true); // true = swap
+
       if (moved) {
         this.audioFx.play("click");
       }
@@ -3287,7 +3297,7 @@ export class PlanningScene extends Phaser.Scene {
 
   getRecipeGridSize(recipe) {
     const sizeRaw = Number.isFinite(recipe?.gridSize) ? Math.floor(recipe.gridSize) : null;
-    if (sizeRaw === 3 || sizeRaw === 2) return sizeRaw;
+    if (sizeRaw >= 1 && sizeRaw <= 3) return sizeRaw;
     return Array.isArray(recipe?.pattern) && recipe.pattern.length >= 9 ? 3 : 2;
   }
 
@@ -3310,6 +3320,11 @@ export class PlanningScene extends Phaser.Scene {
 
   getCraftGridState(tableSize = this.getCraftGridSize()) {
     const grid = Array.from({ length: tableSize * tableSize }, () => null);
+    if (tableSize <= 1) {
+      // 1x1 grid: chỉ dùng ô trung tâm (index 4)
+      grid[0] = this.craftGridItems[4] ?? null;
+      return grid;
+    }
     if (tableSize <= 2) {
       const src = [0, 1, 3, 4];
       src.forEach((sourceIdx, i) => {
@@ -5206,7 +5221,7 @@ export class PlanningScene extends Phaser.Scene {
         this.craftOutputSlot.bg.setStrokeStyle(1, UI_COLORS.panelEdgeSoft, 0.8);
         this.craftOutputSlot.icon.setText("?");
         this.craftOutputSlot.icon.setColor(UI_COLORS.textMuted);
-        const lockedCount = tableSize >= 3 ? 0 : 5;
+        const lockedCount = tableSize >= 3 ? 0 : tableSize >= 2 ? 5 : 8;
         this.craftHintText?.setText(
           lockedCount > 0
             ? `Nhấn vật phẩm để xếp mẫu ${tableSize}x${tableSize}. Còn ${lockedCount} ô sẽ mở khi nâng cấp.`

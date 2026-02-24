@@ -1,8 +1,8 @@
 id,name,species,icon,tribe,tribeVi,classType,classVi,tier,hp,atk,def,matk,mdef,range,rageMax,skillId,star1Desc,star2Desc,star3Desc
-bear_ancient,Gấu Cổ Thụ,gau,🐻,STONE,Nham,TANKER,Đỡ đòn,1,340,42,30,10,24,1,4,unit_skill_bear_ancient,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+bear_ancient,Gấu Cổ Thụ,gau,🐻,STONE,Nham,TANKER,Đỡ đòn,1,340,42,30,10,24,1,4,bear_roar,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
 rhino_quake,Tê Giác Địa Chấn,te-giac,🦏,STONE,Nham,SUPPORT,Hỗ trợ,2,380,48,33,10,24,1,4,unit_skill_rhino_quake,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-turtle_mire,Rùa Đầm Lầy,rua,🐢,TIDE,Thủy,TANKER,Đỡ đòn,3,410,50,36,16,30,1,5,unit_skill_turtle_mire,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
-buffalo_mist,Trâu Sương Mù,trau,🐃,WIND,Phong,TANKER,Đỡ đòn,4,450,55,38,18,31,1,4,unit_skill_buffalo_mist,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
+turtle_mire,Rùa Đầm Lầy,rua,🐢,TIDE,Thủy,TANKER,Đỡ đòn,3,410,50,36,16,30,1,5,turtle_shell,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+buffalo_mist,Trâu Sương Mù,trau,🐃,WIND,Phong,TANKER,Đỡ đòn,4,450,55,38,18,31,1,4,buffalo_mist_veil,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
 ant_guard,Kiến Hộ Vệ,kien,🐜,SWARM,Trùng,TANKER,Đỡ đòn,1,420,45,45,10,30,1,4,unit_skill_ant_guard,+5% mỗi đồng minh Trùng,+8% mỗi đồng minh Trùng,+10% mỗi đồng minh Trùng
 panther_void,Báo Hư Không,bao,🐈‍⬛,NIGHT,Dạ,ASSASSIN,Sát thủ,5,320,95,14,14,12,1,2,unit_skill_panther_void,Chảy máu + giảm 25% hồi máu,Chảy máu mạnh + giảm 25% hồi máu,Chảy máu nghiêm trọng + giảm 25% hồi máu
 fox_flame,Cáo Hỏa,cao,🦊,FIRE,Hỏa,ASSASSIN,Sát thủ,1,255,72,15,18,13,1,2,unit_skill_fox_flame,15% tỷ lệ gây cháy lan,25% tỷ lệ gây cháy lan,35% tỷ lệ gây cháy lan
@@ -48,18 +48,18 @@ kraken_void,Kraken Hư Không,bach-tuoc,🦑,TIDE,Thủy,MAGE,Pháp sư,5,480,30
 kirin_thunder,Kỳ Lân Lôi,ky-lan,🐴,WIND,Phong,MAGE,Pháp sư,5,460,35,22,100,38,4,5,unit_skill_kirin_thunder,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
 lizard_elder,Rồng Đất Cổ,tac-ke,🦕,STONE,Nham,SUPPORT,Hỗ trợ,5,500,40,45,80,40,3,4,unit_skill_lizard_elder,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
 pangolin_plate,Tê Tê Thiết Giáp,te-te,🛡️,STONE,Nham,TANKER,Đỡ đòn,3,390,45,40,12,32,1,4,unit_skill_pangolin_plate,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-badger_stone,Lửng Đá,lung,🦡,STONE,Nham,TANKER,Đỡ đòn,1,355,43,32,10,25,1,4,unit_skill_badger_stone,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-crab_shell,Cua Giáp,cua,🦀,TIDE,Thủy,TANKER,Đỡ đòn,2,375,46,34,12,27,1,4,unit_skill_crab_shell,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
-armadillo_roll,Tatu Cuộn,tatu,🦔,STONE,Nham,TANKER,Đỡ đòn,2,370,45,35,11,26,1,4,unit_skill_armadillo_roll,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-snail_fortress,Ốc Sên Pháo Đài,oc,🐌,TIDE,Thủy,TANKER,Đỡ đòn,2,380,44,36,13,28,1,5,unit_skill_snail_fortress,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
-ox_mountain,Bò Núi,bo,🐂,STONE,Nham,TANKER,Đỡ đòn,2,385,47,33,12,27,1,4,unit_skill_ox_mountain,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-walrus_ice,Hải Mã Băng,hai-ma,🦭,TIDE,Thủy,TANKER,Đỡ đòn,3,405,48,38,15,31,1,5,unit_skill_walrus_ice,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+badger_stone,Lửng Đá,lung,🦡,STONE,Nham,TANKER,Đỡ đòn,1,355,43,32,10,25,1,4,badger_thorns,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+crab_shell,Cua Giáp,cua,🦀,TIDE,Thủy,TANKER,Đỡ đòn,2,375,46,34,12,27,1,4,crab_guard,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+armadillo_roll,Tatu Cuộn,tatu,🦔,STONE,Nham,TANKER,Đỡ đòn,2,370,45,35,11,26,1,4,armadillo_roll,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+snail_fortress,Ốc Sên Pháo Đài,oc,🐌,TIDE,Thủy,TANKER,Đỡ đòn,2,380,44,36,13,28,1,5,snail_fortress,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+ox_mountain,Bò Núi,bo,🐂,STONE,Nham,TANKER,Đỡ đòn,2,385,47,33,12,27,1,4,ox_endure,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+walrus_ice,Hải Mã Băng,hai-ma,🦭,TIDE,Thủy,TANKER,Đỡ đòn,3,405,48,38,15,31,1,5,walrus_frost_aura,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
 golem_stone,Golem Đá,golem,🗿,STONE,Nham,TANKER,Đỡ đòn,3,420,52,42,14,33,1,4,unit_skill_golem_stone,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-yak_highland,Bò Tây Tạng,yak,🦙,WIND,Phong,TANKER,Đỡ đòn,4,460,54,40,17,32,1,4,unit_skill_yak_highland,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
-mammoth_ancient,Voi Ma Mút,voi-long,🦣,STONE,Nham,TANKER,Đỡ đòn,4,470,56,43,16,34,1,4,unit_skill_mammoth_ancient,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-kraken_deep,Mực Khổng Lồ,muc,🐙,TIDE,Thủy,TANKER,Đỡ đòn,5,680,58,58,28,48,1,5,unit_skill_kraken_deep,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+yak_highland,Bò Tây Tạng,yak,🦙,WIND,Phong,TANKER,Đỡ đòn,4,460,54,40,17,32,1,4,yak_warcry,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
+mammoth_ancient,Voi Ma Mút,voi-long,🦣,STONE,Nham,TANKER,Đỡ đòn,4,470,56,43,16,34,1,4,mammoth_rally,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+kraken_deep,Mực Khổng Lồ,muc,🐙,TIDE,Thủy,TANKER,Đỡ đòn,5,680,58,58,28,48,1,5,kraken_grasp,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
 titan_earth,Titan Đất,titan,⛰️,STONE,Nham,TANKER,Đỡ đòn,5,720,62,62,32,52,1,5,unit_skill_titan_earth,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
-hydra_swamp,Hydra Đầm Lầy,hydra,🐪,TIDE,Thủy,TANKER,Đỡ đòn,5,690,60,60,30,50,1,5,unit_skill_hydra_swamp,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
+hydra_swamp,Hydra Đầm Lầy,hydra,🐪,TIDE,Thủy,TANKER,Đỡ đòn,5,690,60,60,30,50,1,5,hydra_regen,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
 ram_charge,Cừu Núi Húc,cuu,🐏,STONE,Nham,TANKER,Đỡ đòn,1,310,60,21,15,17,1,3,unit_skill_ram_charge,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
 jaguar_hunt,Báo Đốm Săn,bao-dom,🐆,NIGHT,Dạ,SUPPORT,Hỗ trợ,1,300,62,19,14,16,1,3,unit_skill_jaguar_hunt,Chảy máu + giảm 25% hồi máu,Chảy máu mạnh + giảm 25% hồi máu,Chảy máu nghiêm trọng + giảm 25% hồi máu
 komodo_bite,Kỳ Đà Khổng Lồ,ky-da,🦎,SWARM,Trùng,FIGHTER,Đấu sĩ,1,315,59,22,16,18,1,3,unit_skill_komodo_bite,+5% mỗi đồng minh Trùng,+8% mỗi đồng minh Trùng,+10% mỗi đồng minh Trùng
@@ -69,7 +69,7 @@ hyena_pack,Linh Cẩu Bầy,linh-cau,🐕,NIGHT,Dạ,SUPPORT,Hỗ trợ,2,345,65
 wolverine_rage,Chồn Sói Cuồng,chon-soi,🦫,FIRE,Hỏa,FIGHTER,Đấu sĩ,3,360,72,24,19,19,1,3,unit_skill_wolverine_rage,15% tỷ lệ gây cháy lan,25% tỷ lệ gây cháy lan,35% tỷ lệ gây cháy lan
 bison_stampede,Bò Rừng Dẫm,bo-rung,🦌,STONE,Nham,FIGHTER,Đấu sĩ,3,365,71,25,18,20,1,3,unit_skill_bison_stampede,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
 shark_frenzy,Cá Mập Điên,ca-map,🦈,TIDE,Thủy,FIGHTER,Đấu sĩ,3,355,74,23,20,18,1,3,unit_skill_shark_frenzy,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
-dragon_earth,Rồng Đất,rong-dat,🐲,STONE,Nham,TANKER,Đỡ đòn,5,580,105,45,28,33,1,4,unit_skill_dragon_earth,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
+dragon_earth,Rồng Đất,rong-dat,🐲,STONE,Nham,TANKER,Đỡ đòn,5,580,105,45,28,33,1,4,dragon_earth_wall,20% giảm giáp mục tiêu,30% giảm giáp mục tiêu,40% giảm giáp mục tiêu
 chimera_flame,Chimera Lửa,chimera,🐅,FIRE,Hỏa,FIGHTER,Đấu sĩ,5,570,108,42,32,36,1,4,unit_skill_chimera_flame,15% tỷ lệ gây cháy lan,25% tỷ lệ gây cháy lan,35% tỷ lệ gây cháy lan
 weasel_quick,Chồn Nhanh,chon,🐿️,WIND,Phong,ASSASSIN,Sát thủ,1,260,70,16,17,14,1,2,unit_skill_weasel_quick,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
 spider_venom,Nhện Độc,nhen-doc,🕸️,SWARM,Trùng,ASSASSIN,Sát thủ,1,250,73,15,16,13,1,2,unit_skill_spider_venom,+5% mỗi đồng minh Trùng,+8% mỗi đồng minh Trùng,+10% mỗi đồng minh Trùng
