@@ -4503,6 +4503,632 @@ export class CombatScene extends Phaser.Scene {
           });
           break;
         }
+        // ═══════════════════════════════════════════════════════
+        // MAGE SKILLS (12 new effects)
+        // ═══════════════════════════════════════════════════════
+        case "chain_shock": {
+          // Sứa Điện: sét lan 3 mục tiêu giảm 20% mỗi lần
+          const pool = enemies.filter(e => e.alive);
+          let dmg = rawSkill;
+          for (let i = 0; i < Math.min(3, pool.length); i++) {
+            const e = pool[Math.floor(Math.random() * pool.length)];
+            if (e) this.resolveDamage(attacker, e, dmg, "magic", "SÉT LAN", skillOpts);
+            dmg *= 0.8;
+          }
+          break;
+        }
+        case "frost_storm": {
+          // Chuồn Chuồn Băng: nguyên hàng ngang + debuff ATK
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          enemies.filter(e => e.row === target.row).forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
+            if (e.alive) {
+              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns || 3);
+              e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, Math.round(15 * starScale));
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "ĐÓNG BĂNG", "#83e5ff");
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "pollen_confuse": {
+          // Ong Phép: damage nhỏ toàn thể + 40% silence
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          enemies.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
+            if (e.alive && Math.random() < 0.40 * starChanceMult * goldMult) {
+              e.statuses.silence = Math.max(e.statuses.silence || 0, 1);
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "IM LẶNG", "#d4bcff");
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "fire_breath_cone": {
+          // Kỳ Nhông Lửa: 3 ô phía trước + đốt cháy
+          const dir = attacker.side === "LEFT" ? 1 : -1;
+          const coneTargets = enemies.filter(e =>
+            Math.abs(e.row - attacker.row) <= 1 &&
+            e.col >= Math.min(attacker.col, attacker.col + dir * 2) &&
+            e.col <= Math.max(attacker.col, attacker.col + dir * 2)
+          );
+          coneTargets.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "magic", "PHUN LỬA", skillOpts);
+            if (e.alive) {
+              e.statuses.burnTurns = Math.max(e.statuses.burnTurns || 0, 3);
+              e.statuses.burnDamage = Math.max(e.statuses.burnDamage || 0, 12);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "flash_blind": {
+          // Đom Đóm Sáng: damage nhỏ toàn thể + giảm accuracy
+          enemies.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "magic", "LÓE SÁNG", skillOpts);
+            if (e.alive) {
+              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, 2);
+              e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, 10);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "plague_spread": {
+          // Bọ Dịch Hạch: damage + disease lây sang lân cận
+          this.resolveDamage(attacker, target, rawSkill, "magic", skill.name, skillOpts);
+          const neighbors = enemies.filter(e =>
+            Math.abs(e.row - target.row) <= 1 && Math.abs(e.col - target.col) <= 1 && e.uid !== target.uid
+          );
+          [target, ...neighbors].forEach(e => {
+            if (e.alive) {
+              e.statuses.diseaseTurns = Math.max(e.statuses.diseaseTurns || 0, 3);
+              e.statuses.diseaseDamage = Math.max(e.statuses.diseaseDamage || 0, 12);
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "DỊCH BỆNH", "#880088");
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "fireball_burn": {
+          // Kỳ Giông Lửa: 9 ô vuông + đốt cháy
+          const expandAoe = 1 + areaBonus;
+          enemies.filter(e => Math.abs(e.row - target.row) <= expandAoe && Math.abs(e.col - target.col) <= expandAoe)
+            .forEach(e => {
+              this.resolveDamage(attacker, e, rawSkill, "magic", "CẦU LỬA", skillOpts);
+              if (e.alive) {
+                e.statuses.burnTurns = Math.max(e.statuses.burnTurns || 0, 3);
+                e.statuses.burnDamage = Math.max(e.statuses.burnDamage || 0, 15);
+                this.updateCombatUnitUi(e);
+              }
+            });
+          break;
+        }
+        case "ice_blast_freeze": {
+          // Cóc Băng: single target damage CAO + 50% đóng băng
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          this.resolveDamage(attacker, target, rawSkill, "magic", skill.name, skillOpts);
+          if (target.alive && Math.random() < 0.50 * starChanceMult * goldMult) {
+            target.statuses.freeze = Math.max(target.statuses.freeze, 1);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐÓNG BĂNG", "#83e5ff");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "dust_sleep": {
+          // Bướm Đêm Bụi: 9 ô vuông + 35% ngủ
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          const expandAoe = 1 + areaBonus;
+          enemies.filter(e => Math.abs(e.row - target.row) <= expandAoe && Math.abs(e.col - target.col) <= expandAoe)
+            .forEach(e => {
+              this.resolveDamage(attacker, e, rawSkill, "magic", "BỤI MÊ", skillOpts);
+              if (e.alive && Math.random() < 0.35 * starChanceMult * goldMult) {
+                e.statuses.sleep = Math.max(e.statuses.sleep, 1);
+                this.showFloatingText(e.sprite.x, e.sprite.y - 45, "NGỦ", "#d4bcff");
+                this.updateCombatUnitUi(e);
+              }
+            });
+          break;
+        }
+        case "ink_blast_debuff": {
+          // Bạch Tuộc Tâm: nguyên cột + giảm DEF
+          enemies.filter(e => e.col === target.col).forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "magic", "MỰC PHUN", skillOpts);
+            if (e.alive) {
+              e.statuses.armorBreakTurns = Math.max(e.statuses.armorBreakTurns, skill.turns || 2);
+              e.statuses.armorBreakValue = Math.max(e.statuses.armorBreakValue, skill.armorBreak || 20);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "ink_bomb_blind": {
+          // Mực Mực: 9 ô vuông + giảm ATK
+          const expandAoe = 1 + areaBonus;
+          enemies.filter(e => Math.abs(e.row - target.row) <= expandAoe && Math.abs(e.col - target.col) <= expandAoe)
+            .forEach(e => {
+              this.resolveDamage(attacker, e, rawSkill, "magic", "BOM MỰC", skillOpts);
+              if (e.alive) {
+                e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, 2);
+                e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, 12);
+                this.updateCombatUnitUi(e);
+              }
+            });
+          break;
+        }
+        // ═══════════════════════════════════════════════════════
+        // ARCHER SKILLS (14 new effects)
+        // ═══════════════════════════════════════════════════════
+        case "piercing_shot": {
+          // Cắt Lao: xuyên nguyên hàng ngang, giảm 20% mỗi mục tiêu
+          let dmg = rawSkill;
+          const rowTargets = enemies.filter(e => e.row === target.row)
+            .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b));
+          rowTargets.forEach(e => {
+            this.resolveDamage(attacker, e, dmg, "physical", "XUYÊN", skillOpts);
+            dmg *= 0.8;
+          });
+          break;
+        }
+        case "arrow_rain": {
+          // Đại Bàng Xạ Thủ: 4 mũi tên ngẫu nhiên (cho phép trùng)
+          const maxHits = skill.maxHits || 4;
+          for (let i = 0; i < maxHits; i++) {
+            const pool = enemies.filter(e => e.alive);
+            if (pool.length === 0) break;
+            const e = pool[Math.floor(Math.random() * pool.length)];
+            this.resolveDamage(attacker, e, rawSkill, "physical", "MƯA TÊN", skillOpts);
+          }
+          break;
+        }
+        case "fish_bomb_aoe": {
+          // Bồ Nông Bom: 9 ô vuông + 30% choáng
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          const expandAoe = 1 + areaBonus;
+          enemies.filter(e => Math.abs(e.row - target.row) <= expandAoe && Math.abs(e.col - target.col) <= expandAoe)
+            .forEach(e => {
+              this.resolveDamage(attacker, e, rawSkill, "physical", "BOM CÁ", skillOpts);
+              if (e.alive && Math.random() < (skill.stunChance || 0.30) * starChanceMult * goldMult) {
+                e.statuses.stun = Math.max(e.statuses.stun, skill.stunTurns || 1);
+                this.showFloatingText(e.sprite.x, e.sprite.y - 45, "CHOÁNG", "#ffd97b");
+                this.updateCombatUnitUi(e);
+              }
+            });
+          break;
+        }
+        case "feather_bleed": {
+          // Hải Âu Gió: 3 mục tiêu ngẫu nhiên + chảy máu
+          const maxT = skill.maxHits || 3;
+          const pool = enemies.filter(e => e.alive);
+          const victims = sampleWithoutReplacement(pool, Math.min(maxT, pool.length));
+          victims.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "physical", "LÔNG VŨ", skillOpts);
+            if (e.alive) {
+              e.statuses.bleedTurns = Math.max(e.statuses.bleedTurns, skill.turns || 2);
+              e.statuses.bleedDamage = Math.max(e.statuses.bleedDamage || 0, Math.round(this.getEffectiveAtk(attacker) * 0.2));
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "CHẢY MÁU", "#ff4444");
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "rock_throw_stun": {
+          // Khỉ Lao Cành: single target CAO + 40% choáng
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          this.resolveDamage(attacker, target, rawSkill, "physical", skill.name, skillOpts);
+          if (target.alive && Math.random() < (skill.stunChance || 0.40) * starChanceMult * goldMult) {
+            target.statuses.stun = Math.max(target.statuses.stun, skill.stunTurns || 1);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHOÁNG", "#ffd97b");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "snipe_execute": {
+          // Chim Mỏ To: x2 damage nếu target <30% HP
+          const bonus = target.hp < target.maxHp * 0.3 ? rawSkill * 2 : rawSkill;
+          this.resolveDamage(attacker, target, bonus, "physical", "MỎ XUYÊN", skillOpts);
+          break;
+        }
+        case "sniper_crit": {
+          // Cò Bắn Tỉa: damage rất cao + 50% xuyên giáp
+          const penOpts = { ...skillOpts, armorPen: skill.armorPen || 0.5 };
+          this.resolveDamage(attacker, target, rawSkill, "physical", "BẮN TỈA", penOpts);
+          break;
+        }
+        case "dive_bomb": {
+          // Diều Hâu Khổng Lồ: nguyên cột + phá giáp
+          enemies.filter(e => e.col === target.col).forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "physical", "BỔ NHÀO", skillOpts);
+            if (e.alive) {
+              e.statuses.armorBreakTurns = Math.max(e.statuses.armorBreakTurns, skill.turns || 2);
+              e.statuses.armorBreakValue = Math.max(e.statuses.armorBreakValue, skill.armorBreak || 15);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "beak_disarm": {
+          // Chim Mỏ To: damage + tước vũ khí (disarm)
+          this.resolveDamage(attacker, target, rawSkill, "physical", skill.name, skillOpts);
+          if (target.alive) {
+            target.statuses.disarmTurns = Math.max(target.statuses.disarmTurns, 1);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "TƯỚC KHÍ", "#ffffff");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "fire_arrow_burn": {
+          // Hồng Hạc Bắn: single target + đốt cháy 3 lượt
+          this.resolveDamage(attacker, target, rawSkill, "physical", "TÊN LỬA", skillOpts);
+          if (target.alive) {
+            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, 3);
+            target.statuses.burnDamage = Math.max(target.statuses.burnDamage || 0, 12);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỐT CHÁY", "#ff6600");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "heat_seek": {
+          // Diều Hâu Săn: tìm HP thấp nhất, x2 nếu <50% HP
+          const weakest = enemies.filter(e => e.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weakest) {
+            const bonus = weakest.hp < weakest.maxHp * 0.5 ? rawSkill * 2 : rawSkill;
+            this.resolveDamage(attacker, weakest, bonus, "physical", "TẦM NHIỆT", skillOpts);
+          }
+          break;
+        }
+        case "rapid_fire": {
+          // Gõ Kiến Khoan: 3 phát cùng 1 mục tiêu
+          for (let i = 0; i < 3; i++) {
+            if (!target.alive) break;
+            this.resolveDamage(attacker, target, rawSkill, "physical", `KHOAN ${i + 1}`, skillOpts);
+          }
+          break;
+        }
+        case "dark_feather_debuff": {
+          // Quạ Bão Táp: 3 mục tiêu ngẫu nhiên + giảm ATK
+          const maxT = skill.maxHits || 3;
+          const pool = enemies.filter(e => e.alive);
+          const victims = sampleWithoutReplacement(pool, Math.min(maxT, pool.length));
+          victims.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "physical", "LÔNG ĐEN", skillOpts);
+            if (e.alive) {
+              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns || 2);
+              e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, 15);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        case "multi_sting_poison": {
+          // Ong Bắp Cày: 2 mục tiêu + poison nhẹ
+          const pool = enemies.filter(e => e.alive);
+          const victims = sampleWithoutReplacement(pool, Math.min(2, pool.length));
+          victims.forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, "physical", "CHÂM", skillOpts);
+            if (e.alive) {
+              e.statuses.poisonTurns = Math.max(e.statuses.poisonTurns, 2);
+              e.statuses.poisonDamage = Math.max(e.statuses.poisonDamage, skill.poisonPerTurn || 10);
+              this.updateCombatUnitUi(e);
+            }
+          });
+          break;
+        }
+        // ═══════════════════════════════════════════════════════
+        // ASSASSIN SKILLS (11 new effects)
+        // ═══════════════════════════════════════════════════════
+        case "backstab_crit": {
+          // Chồn Hương Bóng: x1.5 nếu đứng phía sau
+          const behind = (attacker.side === "LEFT" && attacker.col > target.col) ||
+            (attacker.side === "RIGHT" && attacker.col < target.col);
+          const dmg = behind ? rawSkill * 1.5 : rawSkill;
+          this.resolveDamage(attacker, target, dmg, "physical", behind ? "CẮN GÁY!" : skill.name, skillOpts);
+          break;
+        }
+        case "scavenge_heal": {
+          // Kền Kền Ăn Xác: damage + nếu giết hồi 30% HP
+          const wasAlive = target.alive;
+          this.resolveDamage(attacker, target, rawSkill, "physical", skill.name, skillOpts);
+          if (wasAlive && !target.alive) {
+            const heal = Math.round(attacker.maxHp * 0.3);
+            this.healUnit(attacker, attacker, heal, "XÉ XÁC");
+          }
+          break;
+        }
+        case "death_mark": {
+          // Quạ Tử Thần: damage + đánh dấu tử thần (dùng disease giả lập)
+          this.resolveDamage(attacker, target, rawSkill, "physical", skill.name, skillOpts);
+          if (target.alive) {
+            const markDmg = Math.round((target.maxHp - target.hp) * 0.25);
+            target.statuses.diseaseTurns = Math.max(target.statuses.diseaseTurns || 0, skill.turns || 2);
+            target.statuses.diseaseDamage = Math.max(target.statuses.diseaseDamage || 0, markDmg);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "TỬ THẦN", "#ff0000");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "quick_strike_rage": {
+          // Chồn Nhanh: damage thấp + hồi nộ bản thân
+          this.resolveDamage(attacker, target, rawSkill, "physical", "ĐÂM NHANH", skillOpts);
+          const rageGain = skill.rageGain || 5;
+          attacker.rage = Math.min(attacker.rageMax, attacker.rage + rageGain);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, `+${rageGain} NỘ`, "#b8f5ff");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "stealth_strike": {
+          // Tắc Kè Ẩn: damage + buff né 25%
+          this.resolveDamage(attacker, target, rawSkill, "physical", "ẨN ĐÁNH", skillOpts);
+          attacker.mods.evadePct = Math.max(attacker.mods.evadePct || 0, 0.25);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "ẨN MÌNH", "#d4bcff");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "sting_paralyze": {
+          // Bọ Cạp Bóng: damage + 40% choáng (same as damage_stun)
+          const goldMult = getGoldReserveScaling(this.player.gold);
+          this.resolveDamage(attacker, target, rawSkill, "physical", "CHÍCH", skillOpts);
+          if (target.alive && Math.random() < (skill.stunChance || 0.40) * starChanceMult * goldMult) {
+            target.statuses.stun = Math.max(target.statuses.stun, skill.stunTurns || 1);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "TÊ LIỆT", "#ffd97b");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "double_poison_hit": {
+          // Rắn Lục Tấn: 2 đòn + cộng dồn poison
+          for (let i = 0; i < 2; i++) {
+            if (!target.alive) break;
+            this.resolveDamage(attacker, target, rawSkill, "physical", `ĐỘC ${i + 1}`, skillOpts);
+            if (target.alive) {
+              target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 3);
+              target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + 10;
+              this.updateCombatUnitUi(target);
+            }
+          }
+          break;
+        }
+        case "flame_combo_assassin": {
+          // Cáo Hỏa: damage + đốt cháy
+          this.resolveDamage(attacker, target, rawSkill, "physical", "LỬA CÁO", skillOpts);
+          if (target.alive) {
+            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, 2);
+            target.statuses.burnDamage = Math.max(target.statuses.burnDamage || 0, 15);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỐT CHÁY", "#ff6600");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "x_slash_bleed": {
+          // Bọ Ngựa Kiếm: damage + chảy máu mạnh
+          this.resolveDamage(attacker, target, rawSkill, "physical", "KIẾM X", skillOpts);
+          if (target.alive) {
+            target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
+            target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, Math.round(this.getEffectiveAtk(attacker) * 0.35));
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "web_trap_slow": {
+          // Nhện Độc: damage + debuff ATK
+          this.resolveDamage(attacker, target, rawSkill, "physical", "MẠNG TƠ", skillOpts);
+          if (target.alive) {
+            target.statuses.atkDebuffTurns = Math.max(target.statuses.atkDebuffTurns, skill.turns || 2);
+            target.statuses.atkDebuffValue = Math.max(target.statuses.atkDebuffValue, 20);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "MẮC BẪY", "#ffffff");
+            this.updateCombatUnitUi(target);
+          }
+          break;
+        }
+        case "silent_kill_stealth": {
+          // Chồn Mink Im: damage + nếu giết tăng né 30%
+          const wasAlive = target.alive;
+          this.resolveDamage(attacker, target, rawSkill, "physical", "ÁM SÁT", skillOpts);
+          if (wasAlive && !target.alive) {
+            attacker.mods.evadePct = Math.max(attacker.mods.evadePct || 0, 0.30);
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "TÀNG HÌNH", "#d4bcff");
+            this.updateCombatUnitUi(attacker);
+          }
+          break;
+        }
+        // ═══════════════════════════════════════════════════════
+        // SUPPORT SKILLS (15 new effects)
+        // ═══════════════════════════════════════════════════════
+        case "heal_over_time": {
+          // Nai Thần Ca: HoT cho 3 đồng minh
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const targets = allies.filter(a => a.alive)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3);
+          targets.forEach(ally => {
+            const hotAmount = Math.round(ally.maxHp * 0.05 * starScale);
+            ally.statuses.hotTurns = Math.max(ally.statuses.hotTurns || 0, skill.turns || 3);
+            ally.statuses.hotAmount = Math.max(ally.statuses.hotAmount || 0, hotAmount);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "HỒI DẦN", "#9dffba");
+            this.updateCombatUnitUi(ally);
+          });
+          break;
+        }
+        case "spring_aoe_heal": {
+          // Tiên Rừng: heal TẤT CẢ đồng minh
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const healAmt = Math.round(rawSkill * starScale);
+          allies.filter(a => a.alive).forEach(ally => {
+            this.healUnit(attacker, ally, healAmt, "SUỐI NGUỒN");
+          });
+          break;
+        }
+        case "soul_link_heal": {
+          // Hồn Ma Sáng: liên kết đồng minh yếu nhất
+          const weakest = allies.filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weakest) {
+            weakest.statuses.soulLinkId = attacker.uid;
+            weakest.statuses.soulLinkTurns = skill.turns || 2;
+            this.showFloatingText(weakest.sprite.x, weakest.sprite.y - 45, "HỘ MỆNH", "#ffff00");
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "LIÊN KẾT", "#ffff00");
+            this.updateCombatUnitUi(weakest);
+          }
+          break;
+        }
+        case "phoenix_rebirth": {
+          // Phượng Hoàng Lửa: heal ally yếu nhất 40% + set self-revive flag
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const weakest = allies.filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weakest) {
+            const heal = Math.round(weakest.maxHp * 0.4 * starScale);
+            this.healUnit(attacker, weakest, heal, "BẤT DIỆT");
+          }
+          if (!attacker.statuses.phoenixUsed) {
+            attacker.statuses.phoenixRevive = true;
+            this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "PHƯỢNG HOÀNG", "#ff6600");
+          }
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "light_purify": {
+          // Đom Đóm Chữa: xóa 1 debuff + heal nhỏ cho 2 ally
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const targets = allies.filter(a => a.alive)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 2);
+          targets.forEach(ally => {
+            // Remove 1 random debuff
+            const debuffs = ["stun", "freeze", "sleep", "silence", "burnTurns", "poisonTurns", "bleedTurns"];
+            const active = debuffs.filter(d => (ally.statuses[d] || 0) > 0);
+            if (active.length > 0) {
+              const chosen = active[Math.floor(Math.random() * active.length)];
+              ally.statuses[chosen] = 0;
+              this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "THANH TẨY", "#ffff00");
+            }
+            this.healUnit(attacker, ally, Math.round(20 * starScale), "ÁNH SÁNG");
+            this.updateCombatUnitUi(ally);
+          });
+          break;
+        }
+        case "unicorn_atk_buff": {
+          // Kỳ Lân Sáng: buff ATK +25% cho 1 ally ATK cao nhất
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const strongest = allies.filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => this.getEffectiveAtk(b) - this.getEffectiveAtk(a))[0];
+          if (strongest) {
+            const buff = Math.round(this.getEffectiveAtk(strongest) * 0.25 * starScale);
+            strongest.statuses.atkBuffTurns = Math.max(strongest.statuses.atkBuffTurns, skill.turns || 3);
+            strongest.statuses.atkBuffValue = Math.max(strongest.statuses.atkBuffValue, buff);
+            this.showFloatingText(strongest.sprite.x, strongest.sprite.y - 45, "+SỨC MẠNH", "#ffa944");
+            this.updateCombatUnitUi(strongest);
+          }
+          break;
+        }
+        case "wind_shield_ally": {
+          // Yêu Tinh Gió: khiên cho 2 đồng minh yếu nhất
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const shieldAmt = Math.round(((skill.shieldBase || 40) + this.getEffectiveMatk(attacker) * (skill.shieldScale || 0.3)) * starScale);
+          const targets = allies.filter(a => a.alive)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, skill.maxTargets || 2);
+          targets.forEach(ally => {
+            this.addShield(ally, shieldAmt);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${shieldAmt} KHIÊN`, "#ffd97b");
+            this.updateCombatUnitUi(ally);
+          });
+          break;
+        }
+        case "bless_rain_mdef": {
+          // Hạc Phước: buff MDEF toàn đội
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const mdefBuff = Math.max(1, Math.round(20 * starScale));
+          allies.forEach(ally => {
+            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, skill.turns || 2);
+            ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, mdefBuff);
+            this.updateCombatUnitUi(ally);
+          });
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "PHƯỚC LÀNH", "#9dffba");
+          break;
+        }
+        case "mirror_reflect": {
+          // Bướm Kính: khiên + phản phép cho bản thân
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          this.addShield(attacker, Math.round(((skill.shieldBase || 50) + this.getEffectiveDef(attacker) * 0.3) * starScale));
+          attacker.statuses.reflectTurns = Math.max(attacker.statuses.reflectTurns, skill.reflectTurns || 2);
+          attacker.statuses.reflectPct = Math.max(attacker.statuses.reflectPct, skill.reflectPct || 0.25);
+          this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "VẢY GƯƠNG", "#83e5ff");
+          this.updateCombatUnitUi(attacker);
+          break;
+        }
+        case "mass_cleanse": {
+          // Tiên Nước: xóa ALL debuff 1 ally + heal 15% HP
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const worst = allies.filter(a => a.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (worst) {
+            worst.statuses.freeze = 0; worst.statuses.stun = 0; worst.statuses.sleep = 0;
+            worst.statuses.silence = 0; worst.statuses.burnTurns = 0; worst.statuses.poisonTurns = 0;
+            worst.statuses.bleedTurns = 0; worst.statuses.diseaseTurns = 0;
+            const heal = Math.round(worst.maxHp * 0.15 * starScale);
+            this.healUnit(attacker, worst, heal, "THANH TẨY");
+            this.updateCombatUnitUi(worst);
+          }
+          break;
+        }
+        case "scout_buff_ally": {
+          // Báo Đốm Săn: buff ATK + 1 nộ cho 1 ally cùng hàng
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const rowAlly = allies.filter(a => a.alive && a.uid !== attacker.uid && a.row === attacker.row)[0];
+          if (rowAlly) {
+            rowAlly.statuses.atkBuffTurns = Math.max(rowAlly.statuses.atkBuffTurns, 3);
+            rowAlly.statuses.atkBuffValue = Math.max(rowAlly.statuses.atkBuffValue, Math.round(15 * starScale));
+            rowAlly.rage = Math.min(rowAlly.rageMax, rowAlly.rage + 1);
+            this.showFloatingText(rowAlly.sprite.x, rowAlly.sprite.y - 45, "DẪN ĐƯỜNG", "#ffa944");
+            this.updateCombatUnitUi(rowAlly);
+          }
+          break;
+        }
+        case "pack_howl_rage": {
+          // Linh Cẩu Bầy: +2 nộ cho ally cùng hàng
+          const rageGain = skill.rageGain || 2;
+          allies.filter(a => a.alive && a.uid !== attacker.uid && a.row === attacker.row).forEach(ally => {
+            ally.rage = Math.min(ally.rageMax, ally.rage + rageGain);
+            this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${rageGain} NỘ`, "#b8f5ff");
+            this.updateCombatUnitUi(ally);
+          });
+          break;
+        }
+        case "peace_heal_reduce": {
+          // Bồ Câu Hòa Bình: heal ally yếu nhất + giảm damage nhận
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          const weakest = allies.filter(a => a.alive)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weakest) {
+            this.healUnit(attacker, weakest, Math.round(rawSkill * starScale), "BÌNH AN");
+            weakest.statuses.defBuffTurns = Math.max(weakest.statuses.defBuffTurns, 1);
+            weakest.statuses.defBuffValue = Math.max(weakest.statuses.defBuffValue, Math.round(20 * starScale));
+            this.updateCombatUnitUi(weakest);
+          }
+          break;
+        }
+        case "mimic_rage_buff": {
+          // Vẹt Linh Hô: +3 nộ cho 1 ally nộ thấp nhất
+          const rageGain = skill.rageGain || 3;
+          const lowRage = allies.filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.rage - b.rage)[0];
+          if (lowRage) {
+            lowRage.rage = Math.min(lowRage.rageMax, lowRage.rage + rageGain);
+            this.showFloatingText(lowRage.sprite.x, lowRage.sprite.y - 45, `+${rageGain} NỘ`, "#b8f5ff");
+            this.updateCombatUnitUi(lowRage);
+          }
+          break;
+        }
+        case "root_snare": {
+          // Yêu Tinh Cây: damage nhẹ + silence + tự heal
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          this.resolveDamage(attacker, target, rawSkill, "magic", "RỄ CÂY", skillOpts);
+          if (target.alive) {
+            target.statuses.silence = Math.max(target.statuses.silence || 0, 1);
+            this.showFloatingText(target.sprite.x, target.sprite.y - 45, "IM LẶNG", "#9dffba");
+            this.updateCombatUnitUi(target);
+          }
+          this.healUnit(attacker, attacker, Math.round(attacker.maxHp * 0.10 * starScale), "RỄ CÂY");
+          break;
+        }
         default:
           // Log error for unknown skill effect (Requirement 26.3)
           console.error(`[Skill Error] Unknown skill effect "${skill.effect}" for skill "${skill.name}" (ID: ${skill.id || 'unknown'}). Falling back to basic damage.`);
