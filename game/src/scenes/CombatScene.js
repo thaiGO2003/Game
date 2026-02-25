@@ -3498,24 +3498,18 @@ export class CombatScene extends Phaser.Scene {
   async castSkill(attacker, target) {
     const skill = SKILL_LIBRARY[attacker.skillId];
     if (!skill) {
-      // Log error for missing skill (Requirement 18.3)
       console.error(`[Skill Error] Unit "${attacker.name}" (ID: ${attacker.baseId || attacker.id}) references non-existent skill "${attacker.skillId}". Falling back to basic attack.`);
-
-      // Skip skill execution gracefully without crashing (Requirement 18.4)
       await this.basicAttack(attacker, target);
       return;
     }
 
     this.audioFx.play("skill");
-    // Viền RGB khi đang tung skill
     this.setCombatBorder(attacker, "skill");
-    // Mặc định actionPattern theo classType nếu skill không chỉ định
     const effectivePattern = skill.actionPattern || this.inferBasicActionPattern(attacker.classType, attacker.range);
     await this.runActionPattern(attacker, target, effectivePattern, async () => {
       this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 8, 0xb6dbff, 16, 220);
       await this.applySkillEffect(attacker, target, skill);
     });
-    // RANGED_STATIC/SELF không có tween delay — chờ thêm để RGB hiện rõ
     if (effectivePattern === "RANGED_STATIC" || effectivePattern === "SELF") {
       await this.wait(400);
     }
