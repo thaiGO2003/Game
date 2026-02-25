@@ -160,6 +160,10 @@ export function getSkillTargetCountText(skill, star) {
     if (effect === "team_rage") {
         return `${maxTargets ?? 3} đồng minh`;
     }
+    if (effect === "roar_debuff_heal") {
+        const targets = Math.min(3, Math.max(1, star));
+        return `${targets} kẻ địch gần nhất`;
+    }
     if (effect === "single_sleep") {
         const sleepTargets = Math.min(3, Math.max(1, star));
         return `1 mục tiêu chính + ru ngủ tối đa ${sleepTargets} mục tiêu`;

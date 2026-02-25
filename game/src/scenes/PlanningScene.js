@@ -1085,7 +1085,7 @@ export class PlanningScene extends Phaser.Scene {
 
   toChessCoord(row, col) {
     const file = BOARD_FILES[this.toVisualCol(col)] ?? "?";
-    const rank = ROWS - row;
+    const rank = row;
     return `${file}${rank}`;
   }
 
@@ -1226,13 +1226,13 @@ export class PlanningScene extends Phaser.Scene {
       add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, ROWS - 1, "bottom");
     }
     for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), 0, row, "left");
+      add(String(row), 0, row, "left");
     }
     for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
       add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, 0, "top");
     }
     for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), RIGHT_COL_END, row, "right");
+      add(String(row), RIGHT_COL_END, row, "right");
     }
     this.refreshBoardEdgeLabels();
   }
@@ -4295,6 +4295,16 @@ export class PlanningScene extends Phaser.Scene {
       case "pangolin_reflect":
         pushCell(attacker.row, attacker.col);
         break;
+      case "roar_debuff_heal": {
+        pushCell(attacker.row, attacker.col);
+        const starTargets = Math.min(3, Math.max(1, attacker.star ?? 1));
+        enemies
+          .filter(e => e.alive)
+          .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
+          .slice(0, starTargets)
+          .forEach(e => pushCell(e.row, e.col));
+        break;
+      }
       case "metamorphosis":
         pushCell(attacker.row, attacker.col);
         if ((attacker.star ?? 1) >= 2) pushUnits(allies);
@@ -4552,6 +4562,7 @@ export class PlanningScene extends Phaser.Scene {
       row,
       col,
       classType,
+      star,
       skillId,
       range,
       hp: hpBase,

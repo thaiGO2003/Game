@@ -546,12 +546,12 @@ function findTargetAssassin(attacker, enemies) {
     // Same row gets highest priority (0 = same, 1 = different)
     const sameRow = enemy.row === myRow ? 0 : 1;
 
-    // Row sweep: visual label increases downward but row index decreases
-    // e.g. Assassin at label "2" (row 3): label order 2→3→4→5→1 = row order 3→2→1→0→4
-    // So: negative delta (row decreasing = label increasing) first, then positive delta
+    // Row sweep: same row → downward (row+1,+2,...) → then upward (row-1,-2,...)
+    // Labels now match indices: row 0 at top, row 4 at bottom
+    // e.g. Assassin at row 1 (label "1"): order is 1→2→3→4→0
     const rowDelta = enemy.row - myRow;
-    // Negative delta (going "down" visually) gets priority 0..4, positive delta gets 5+
-    const rowSweep = rowDelta <= 0 ? Math.abs(rowDelta) : (5 + rowDelta);
+    // Positive delta (downward) gets priority 0..4, negative delta (upward) gets 5+
+    const rowSweep = rowDelta >= 0 ? rowDelta : (5 + Math.abs(rowDelta));
 
     // Final tie-breaker: prefer squishy targets (MAGE > ARCHER > others)
     const classScore = classPriority[enemy.classType] !== undefined ? classPriority[enemy.classType] : 5;
@@ -661,10 +661,10 @@ function scoreTarget(attacker, target) {
   // Melee units (Tank/Fighter)
   if (attacker.range <= 1) {
     if (attacker.classType === 'ASSASSIN') {
-      // Assassin: Farthest column → Same row → Downward sweep (visual)
+      // Assassin: Farthest column → Same row → Downward sweep
       const farthestCol = attacker.side === 'LEFT' ? -targetCol : targetCol;
       const rowDelta = targetRow - myRow;
-      const rowSweep = rowDelta <= 0 ? Math.abs(rowDelta) : (5 + rowDelta);
+      const rowSweep = rowDelta >= 0 ? rowDelta : (5 + Math.abs(rowDelta));
       return [farthestCol, sameRow, rowSweep, totalDist, hpRatio, hpRaw];
     } else {
       // Tank/Fighter: Closest column → Same row → Row distance

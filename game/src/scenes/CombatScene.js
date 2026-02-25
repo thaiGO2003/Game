@@ -1004,7 +1004,7 @@ export class CombatScene extends Phaser.Scene {
 
   toChessCoord(row, col) {
     const file = BOARD_FILES[this.toVisualCol(col)] ?? "?";
-    const rank = ROWS - row;
+    const rank = row;
     return `${file}${rank}`;
   }
 
@@ -1139,13 +1139,13 @@ export class CombatScene extends Phaser.Scene {
       add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, ROWS - 1, "bottom");
     }
     for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), 0, row, "left");
+      add(String(row), 0, row, "left");
     }
     for (let col = RIGHT_COL_START; col <= RIGHT_COL_END; col += 1) {
       add(BOARD_FILES[this.toVisualCol(col)] ?? "?", col, 0, "top");
     }
     for (let row = 0; row < ROWS; row += 1) {
-      add(String(ROWS - row), RIGHT_COL_END, row, "right");
+      add(String(row), RIGHT_COL_END, row, "right");
     }
     this.refreshBoardEdgeLabels();
   }
@@ -4307,9 +4307,9 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "roar_debuff_heal": {
-          // Gấu Cổ Thụ: Gầm Gừ — debuff ATK 2 nearest enemies + self heal
+          // Gấu Cổ Thụ: Gầm Gừ — debuff ATK N nearest enemies (N = star) + self heal
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
-          const maxTargets = skill.maxTargets || 2;
+          const maxTargets = Math.min(3, Math.max(1, attacker?.star ?? 1));
           const debuffValue = Math.max(1, Math.round(20 * starScale));
           const nearest = enemies
             .filter(e => e.alive)
