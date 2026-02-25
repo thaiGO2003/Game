@@ -561,8 +561,7 @@ export class CombatScene extends Phaser.Scene {
     }
 
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
-    const combatBgm = Math.random() < 0.5 ? "bgm_warrior" : "bgm_battle";
-    this.audioFx.startBgm(combatBgm, 0.2);
+    this.audioFx.startBgm("bgm_combat", 0.2);
     this.player = hydrated.player;
 
     // Use game mode config for lose condition, fallback to player's loseCondition

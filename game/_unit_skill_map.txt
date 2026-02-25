@@ -1,0 +1,132 @@
+
+=== TANKER ===
+  T1 bear_ancient              ✅ bear_roar                           base= scale= type=
+  T1 ant_guard                 ✅ unit_skill_ant_guard                base= scale= type=
+  T1 badger_stone              ✅ badger_thorns                       base= scale= type=
+  T1 ram_charge                ✅ ram_headbutt                        base=18 scale=0.8 type=physical
+  T2 crab_shell                ✅ crab_guard                          base= scale= type=
+  T2 armadillo_roll            ✅ armadillo_roll                      base= scale= type=
+  T2 snail_fortress            ✅ snail_fortress                      base= scale= type=
+  T2 ox_mountain               ✅ ox_endure                           base= scale= type=
+  T3 turtle_mire               ✅ turtle_shell                        base= scale= type=
+  T3 pangolin_plate            ✅ unit_skill_pangolin_plate           base= scale= type=
+  T3 walrus_ice                ✅ walrus_frost_aura                   base= scale= type=
+  T3 golem_stone               ✅ golem_anchor                        base=15 scale=0.4 type=physical
+  T4 buffalo_mist              ✅ buffalo_mist_veil                   base= scale= type=
+  T4 elephant_guard            ✅ unit_skill_elephant_guard           base=35 scale=1.0 type=physical
+  T4 yak_highland              ✅ yak_warcry                          base= scale= type=
+  T4 mammoth_ancient           ✅ mammoth_rally                       base= scale= type=
+  T5 kraken_deep               ✅ kraken_grasp                        base=40 scale=0.8 type=physical
+  T5 titan_earth               ✅ unit_skill_titan_earth              base= scale= type=
+  T5 hydra_swamp               ✅ hydra_regen                         base= scale= type=
+  T5 dragon_earth              ✅ dragon_earth_wall                   base= scale= type=
+
+=== FIGHTER ===
+  T1 tiger_fang                ✅ unit_skill_tiger_fang               base=18 scale=0.85 type=physical
+  T1 triceratops_charge        ✅ unit_skill_triceratops_charge       base=20 scale=0.8 type=physical
+  T1 jaguar_hunt               ✅ scout_buff_ally                     base= scale= type=
+  T1 komodo_bite               ✅ komodo_venom                        base=18 scale=0.8 type=physical
+  T2 rhino_quake               ✅ unit_skill_rhino_quake              base= scale= type=
+  T2 otter_river               ✅ otter_combo                         base=20 scale=0.85 type=physical
+  T2 kangaroo_kick             ✅ kangaroo_uppercut                   base=22 scale=0.9 type=physical
+  T2 hyena_pack                ✅ pack_howl_rage                      base= scale= type=
+  T3 hippo_maul                ✅ unit_skill_hippo_maul               base=28 scale=1.1 type=physical
+  T3 wolverine_rage            ✅ wolverine_frenzy                    base= scale= type=
+  T3 bison_stampede            ✅ bison_charge                        base=28 scale=1.05 type=physical
+  T3 shark_frenzy              ✅ shark_bite_frenzy                   base=30 scale=1.1 type=physical
+  T4 beetle_drill              ✅ unit_skill_beetle_drill             base=35 scale=1.2 type=true
+  T4 scorpion_king             ✅ unit_skill_scorpion_king            base=32 scale=1.15 type=physical
+  T4 crocodile_bite            ✅ unit_skill_crocodile_bite           base=38 scale=1.4 type=physical
+  T4 gorilla_smash             ✅ unit_skill_gorilla_smash            base=35 scale=1.2 type=physical
+  T5 lion_general              ✅ unit_skill_lion_general             base=40 scale=1.0 type=magic
+  T5 trex_bite                 ✅ unit_skill_trex_bite                base=55 scale=2.2 type=physical
+  T5 whale_song                ✅ unit_skill_whale_song               base=45 scale=1.1 type=magic
+  T5 chimera_flame             ✅ unit_skill_chimera_flame            base=42 scale=1.0 type=magic
+
+=== MAGE ===
+  T1 toad_poison               ✅ poison_spit                         base=15 scale=0.6 type=magic
+  T1 newt_fire                 ✅ fireball_burn                       base=20 scale=0.75 type=magic
+  T1 salamander_flame          ✅ fire_breath_cone                    base=18 scale=0.7 type=magic
+  T1 jellyfish_shock           ✅ chain_shock                         base=18 scale=0.65 type=magic
+  T2 ice_mage                  ✅ frost_storm                         base=22 scale=0.8 type=magic
+  T2 worm_ice                  ✅ ice_blast_freeze                    base=25 scale=0.85 type=magic
+  T2 squid_ink                 ✅ ink_bomb_blind                      base=20 scale=0.7 type=magic
+  T2 octopus_mind              ✅ ink_blast_debuff                    base=22 scale=0.75 type=magic
+  T3 storm_mage                ✅ unit_skill_storm_mage               base=30 scale=1.0 type=magic
+  T3 worm_queen                ✅ unit_skill_worm_queen               base= scale= type=
+  T3 firefly_light             ✅ flash_blind                         base=18 scale=0.55 type=magic
+  T3 moth_dust                 ✅ dust_sleep                          base=22 scale=0.7 type=magic
+  T4 spore_mage                ✅ unit_skill_spore_mage               base=32 scale=1.0 type=magic
+  T4 bug_plague                ✅ plague_spread                       base=28 scale=0.85 type=magic
+  T4 wasp_arcane               ✅ pollen_confuse                      base=20 scale=0.6 type=magic
+  T4 beetle_mystic             ✅ unit_skill_beetle_mystic            base=35 scale=1.1 type=magic
+  T5 dragon_breath             ✅ unit_skill_dragon_breath            base=42 scale=1.1 type=magic
+  T5 kraken_void               ✅ unit_skill_kraken_void              base=40 scale=1.2 type=magic
+  T5 kirin_thunder             ✅ unit_skill_kirin_thunder            base=45 scale=1.1 type=magic
+  T5 lich_undead               ✅ unit_skill_lich_undead              base=48 scale=1.3 type=magic
+
+=== ARCHER ===
+  T1 monkey_spear              ✅ rock_throw_stun                     base=18 scale=0.7 type=physical
+  T1 wasp_sting                ✅ multi_sting_poison                  base=15 scale=0.65 type=physical
+  T1 hawk_hunter               ✅ heat_seek                           base=20 scale=0.75 type=physical
+  T1 falcon_dive               ✅ piercing_shot                       base=18 scale=0.7 type=physical
+  T2 eagle_marksman            ✅ arrow_rain                          base=12 scale=0.5 type=physical
+  T2 toucan_snipe              ✅ snipe_execute                       base=22 scale=0.85 type=physical
+  T2 heron_pierce              ✅ beak_disarm                         base=20 scale=0.8 type=physical
+  T2 woodpecker_drill          ✅ rapid_fire                          base=10 scale=0.45 type=physical
+  T3 owl_nightshot             ✅ unit_skill_owl_nightshot            base=28 scale=1.05 type=physical
+  T3 pelican_bomb              ✅ fish_bomb_aoe                       base=25 scale=0.9 type=physical
+  T3 stork_sniper              ✅ sniper_crit                         base=32 scale=1.15 type=physical
+  T3 flamingo_shot             ✅ fire_arrow_burn                     base=28 scale=1.0 type=physical
+  T4 cat_goldbow               ✅ unit_skill_cat_goldbow              base=32 scale=1.25 type=physical
+  T4 crow_storm                ✅ dark_feather_debuff                 base=25 scale=0.85 type=physical
+  T4 condor_sky                ✅ dive_bomb                           base=35 scale=1.3 type=physical
+  T4 albatross_wind            ✅ feather_bleed                       base=30 scale=1.1 type=physical
+  T5 phoenix_arrow             ✅ unit_skill_phoenix_arrow            base=45 scale=1.6 type=physical
+  T5 garuda_divine             ✅ unit_skill_garuda_divine            base=42 scale=1.5 type=physical
+  T5 thunderbird_storm         ✅ unit_skill_thunderbird_storm        base=48 scale=1.7 type=physical
+  T5 roc_legend                ✅ unit_skill_roc_legend               base=50 scale=1.8 type=physical
+
+=== ASSASSIN ===
+  T1 fox_flame                 ✅ flame_combo_assassin                base=18 scale=0.75 type=physical
+  T1 weasel_quick              ✅ quick_strike_rage                   base=15 scale=0.6 type=physical
+  T1 spider_venom              ✅ web_trap_slow                       base=18 scale=0.7 type=physical
+  T1 scorpion_shadow           ✅ sting_paralyze                      base=20 scale=0.8 type=physical
+  T2 wolf_alpha                ✅ unit_skill_wolf_alpha               base=22 scale=0.9 type=physical
+  T2 mosquito_toxic            ✅ unit_skill_mosquito_toxic           base=25 scale=0.95 type=physical
+  T2 chameleon_stealth         ✅ stealth_strike                      base=24 scale=0.9 type=physical
+  T2 viper_strike              ✅ double_poison_hit                   base=12 scale=0.5 type=physical
+  T3 bat_blood                 ✅ unit_skill_bat_blood                base=30 scale=1.15 type=physical
+  T3 mantis_blade              ✅ x_slash_bleed                       base=28 scale=1.1 type=physical
+  T3 ferret_shadow             ✅ backstab_crit                       base=30 scale=1.2 type=physical
+  T3 mink_silent               ✅ silent_kill_stealth                 base=32 scale=1.2 type=physical
+  T4 lynx_echo                 ✅ unit_skill_lynx_echo                base=35 scale=1.35 type=physical
+  T4 cobra_venom               ✅ unit_skill_cobra_venom              base=35 scale=1.3 type=magic
+  T4 vulture_scavunge          ✅ scavenge_heal                       base=38 scale=1.4 type=physical
+  T4 wasp_assassin             ✅ unit_skill_wasp_assassin            base=40 scale=1.5 type=physical
+  T5 panther_void              ✅ unit_skill_panther_void             base=55 scale=2.2 type=physical
+  T5 raven_death               ✅ death_mark                          base=40 scale=1.5 type=physical
+  T5 wraith_shadow             ✅ unit_skill_wraith_shadow            base=50 scale=1.8 type=physical
+  T5 reaper_void               ✅ unit_skill_reaper_void              base=60 scale=2.5 type=physical
+
+=== SUPPORT ===
+  T1 deer_song                 ✅ heal_over_time                      base= scale= type=
+  T1 dove_peace                ✅ peace_heal_reduce                   base=20 scale=0.6 type=
+  T1 crane_blessing            ✅ bless_rain_mdef                     base= scale= type=
+  T1 firefly_heal              ✅ light_purify                        base= scale= type=
+  T2 butterfly_mirror          ✅ mirror_reflect                      base= scale= type=
+  T2 unicorn_light             ✅ unicorn_atk_buff                    base= scale= type=
+  T2 fairy_forest              ✅ spring_aoe_heal                     base=25 scale=0.5 type=
+  T2 dryad_tree                ✅ root_snare                          base=18 scale=0.6 type=magic
+  T3 parrot_roar               ✅ mimic_rage_buff                     base= scale= type=
+  T3 wisp_light                ✅ soul_link_heal                      base= scale= type=
+  T3 nymph_water               ✅ mass_cleanse                        base= scale= type=
+  T3 sprite_wind               ✅ wind_shield_ally                    base= scale= type=
+  T4 qilin_breeze              ✅ unit_skill_qilin_breeze             base= scale= type=
+  T4 peacock_dazzle            ✅ unit_skill_peacock_dazzle           base=22 scale=0.65 type=magic
+  T4 swan_grace                ✅ unit_skill_swan_grace               base= scale= type=
+  T4 angel_guardian            ✅ revive_or_heal                      base=30 scale=0.4 type=
+  T5 phoenix_rebirth           ✅ phoenix_rebirth                     base= scale= type=
+  T5 lizard_elder              ✅ unit_skill_lizard_elder             base= scale= type=
+  T5 seraphim_light            ✅ unit_skill_seraphim_light           base=45 scale=1.3 type=
+  T5 oracle_wisdom             ✅ unit_skill_oracle_wisdom            base= scale= type=

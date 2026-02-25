@@ -376,15 +376,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   startPlanningMusic() {
-    const weights = {
-      bgm_planning: 25,
-      bgm_nature_1: 12,
-      bgm_nature_2: 12,
-      bgm_nature_3: 12,
-      bgm_nature_4: 12,
-      bgm_nature_5: 12
-    };
-    this.audioFx.playWeightedPlaylist(weights, 0.2);
+    this.audioFx.startBgm("bgm_planning", 0.2);
   }
 
   applyRuntimeSettings(settings) {
@@ -4353,7 +4345,7 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "column_freeze":
-        pushUnits(enemies.filter((enemy) => enemy.col === target.col));
+        for (let r = 0; r < ROWS; r++) pushCell(r, target.col);
         break;
       case "aoe_circle":
       case "aoe_poison":
@@ -4364,7 +4356,7 @@ export class PlanningScene extends Phaser.Scene {
         pushUnits(enemies.filter((enemy) => enemy.col === target.col || enemy.col === target.col - 1 || enemy.col === target.col + 1));
         break;
       case "column_bleed":
-        pushUnits(enemies.filter((enemy) => enemy.col === target.col));
+        for (let r = 0; r < ROWS; r++) pushCell(r, target.col);
         break;
       case "row_cleave":
         pushUnits(enemies.filter((enemy) => enemy.row === target.row));

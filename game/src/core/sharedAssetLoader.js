@@ -9,14 +9,7 @@ const SHARED_AUDIO_ASSETS = [
   ["sfx_blaster", "assets/audio/blaster.mp3"],
   ["sfx_sword", "assets/audio/sword.mp3"],
   ["sfx_ping", "assets/audio/p-ping.mp3"],
-  ["sfx_shot", "assets/audio/shot1.wav"],
-  ["bgm_warrior", "assets/audio/warrior.mp3"],
-  ["bgm_battle", "assets/audio/battle.mp3"],
-  ["bgm_nature_1", "assets/audio/nature_1.mp3"],
-  ["bgm_nature_2", "assets/audio/nature_2.mp3"],
-  ["bgm_nature_3", "assets/audio/nature_3.mp3"],
-  ["bgm_nature_4", "assets/audio/nature_4.mp3"],
-  ["bgm_nature_5", "assets/audio/nature_5.mp3"]
+  ["sfx_shot", "assets/audio/shot1.wav"]
 ];
 
 export function queueSharedAssets(scene) {

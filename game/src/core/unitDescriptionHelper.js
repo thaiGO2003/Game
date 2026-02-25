@@ -63,6 +63,27 @@ export function stripSkillStarNotes(description) {
     return raw.replace(/\s*Mốc sao:[\s\S]*$/i, "").trim();
 }
 
+/**
+ * Parse "Mốc sao: 1★ text A, 2★ text B, 3★ text C" từ descriptionVi.
+ * Trả về mảng [{star:1, text:'text A'}, ...] hoặc [] nếu không có.
+ */
+export function parseStarMilestonesFromDesc(description) {
+    const raw = String(description ?? "");
+    const match = raw.match(/Mốc sao:\s*([\s\S]+)$/i);
+    if (!match) return [];
+    const part = match[1].trim();
+    // Tách theo pattern "N★" hoặc "N★"
+    const segments = part.split(/(?=\d[★⭐])/);
+    const result = [];
+    for (const seg of segments) {
+        const m = seg.match(/^(\d)[★⭐]\s*(.+?)[\.\,]?\s*$/);
+        if (m) {
+            result.push({ star: Number(m[1]), text: m[2].trim().replace(/[.,]$/, "") });
+        }
+    }
+    return result;
+}
+
 // ─── Basic attack description ───────────────────────────────────────────
 
 export function describeBasicAttack(classType, range, baseStats = null, star = 1) {
@@ -272,13 +293,29 @@ export function buildSkillStarMilestoneLines(skill, baseUnit) {
     if (!skill) return [];
     const baseStats = baseUnit?.stats ?? null;
     const lines = [];
+
+    // Đọc mốc sao từ descriptionVi CSV nếu có
+    const csvMilestones = parseStarMilestonesFromDesc(skill.descriptionVi || skill.description);
+    const milestoneMap = {};
+    for (const m of csvMilestones) milestoneMap[m.star] = m.text;
+
     for (let star = 1; star <= 3; star += 1) {
+        const starIcons = "⭐".repeat(star);
+        // Dòng mốc sao chính từ CSV
+        const milestoneText = milestoneMap[star];
+        if (milestoneText) {
+            lines.push(`${starIcons} Mốc ${star} sao: ${milestoneText}`);
+        } else {
+            lines.push(`${starIcons} ${star} sao:`);
+        }
+        // Các dòng cơ học chi tiết (giữ nguyên)
         const targetText = getSkillTargetCountText(skill, star);
         const shapeText = getSkillShapeText(skill);
         const { damageText, formulaText } = getSkillDamageAndFormulaText(skill, baseStats, star);
-        lines.push(
-            `${star} sao: Sát thương: ${damageText} | Số mục tiêu: ${targetText} | Hình dạng chiêu thức: ${shapeText} | ${formulaText}`
-        );
+        lines.push(`  • 💥 Sát thương: ${damageText}`);
+        lines.push(`  • 🎯 Mục tiêu: ${targetText}`);
+        lines.push(`  • 📐 Hình dạng: ${shapeText}`);
+        if (formulaText) lines.push(`  • 📊 ${formulaText}`);
     }
     return lines;
 }
@@ -508,7 +545,16 @@ export function describeSkillWithElement(skill, tribe, baseUnit = null) {
         const { damageText, formulaText } = getSkillDamageAndFormulaText(skill, baseStats, star);
         const elementEffect = getStarElementEffect(tribe, star);
 
-        lines.push(`${"⭐".repeat(star)} ${star} sao:`);
+        // Dòng mốc sao chính từ CSV
+        const csvMilestones = parseStarMilestonesFromDesc(skill.descriptionVi || skill.description);
+        const milestoneMap = {};
+        for (const m of csvMilestones) milestoneMap[m.star] = m.text;
+        const milestoneText = milestoneMap[star];
+        if (milestoneText) {
+            lines.push(`${"⭐".repeat(star)} Mốc ${star} sao: ${milestoneText}`);
+        } else {
+            lines.push(`${"⭐".repeat(star)} ${star} sao:`);
+        }
         lines.push(`  • 💥 Sát thương: ${damageText}`);
         lines.push(`  • 🎯 Mục tiêu: ${targetText}`);
         lines.push(`  • 📐 Hình dạng: ${shapeText}`);

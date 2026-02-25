@@ -531,7 +531,7 @@ function findTargetMeleeFrontline(attacker, enemies) {
 function findTargetAssassin(attacker, enemies) {
   const myRow = attacker.row;
 
-  // Find farthest enemy (backline)
+  // Find farthest enemy (backline), then sweep down before up
   let best = null;
   let bestScore = -Infinity;
 
@@ -543,20 +543,21 @@ function findTargetAssassin(attacker, enemies) {
     // For RIGHT side: lower col = farther (want to minimize enemy.col, so negate it)
     const farthestCol = attacker.side === 'LEFT' ? enemy.col : -enemy.col;
 
-    // Tie-breaking: same row → top row → bottom row
-    // Priority: same row (0) > different row (1)
+    // Same row gets highest priority (0 = same, 1 = different)
     const sameRow = enemy.row === myRow ? 0 : 1;
 
-    // When not same row, prefer top rows (lower row numbers)
-    // Row 1 (top) > Row 2 (middle) > Row 3 (bottom)
-    const rowPriority = enemy.row;
+    // Row sweep: visual label increases downward but row index decreases
+    // e.g. Assassin at label "2" (row 3): label order 2→3→4→5→1 = row order 3→2→1→0→4
+    // So: negative delta (row decreasing = label increasing) first, then positive delta
+    const rowDelta = enemy.row - myRow;
+    // Negative delta (going "down" visually) gets priority 0..4, positive delta gets 5+
+    const rowSweep = rowDelta <= 0 ? Math.abs(rowDelta) : (5 + rowDelta);
 
     // Final tie-breaker: prefer squishy targets (MAGE > ARCHER > others)
     const classScore = classPriority[enemy.classType] !== undefined ? classPriority[enemy.classType] : 5;
 
-    // Score: minimize sameRow penalty (paramount), maximize farthest column, minimize row number, minimize class score
-    // User wants: "ưu tiên cùng hàng mà xa nhất" (prioritize same row, then farthest)
-    const score = -sameRow * 1000000 + farthestCol * 10000 - rowPriority * 100 - classScore;
+    // Score: farthest column first, then same row bonus, then downward sweep, then class
+    const score = farthestCol * 1000000 - sameRow * 100000 - rowSweep * 1000 - classScore;
 
     if (score > bestScore) {
       bestScore = score;
@@ -660,9 +661,11 @@ function scoreTarget(attacker, target) {
   // Melee units (Tank/Fighter)
   if (attacker.range <= 1) {
     if (attacker.classType === 'ASSASSIN') {
-      // Assassin: Same row → Farthest column → Row distance
+      // Assassin: Farthest column → Same row → Downward sweep (visual)
       const farthestCol = attacker.side === 'LEFT' ? -targetCol : targetCol;
-      return [sameRow, farthestCol, rowDist, totalDist, hpRatio, hpRaw];
+      const rowDelta = targetRow - myRow;
+      const rowSweep = rowDelta <= 0 ? Math.abs(rowDelta) : (5 + rowDelta);
+      return [farthestCol, sameRow, rowSweep, totalDist, hpRatio, hpRaw];
     } else {
       // Tank/Fighter: Closest column → Same row → Row distance
       return [colDist, sameRow, rowDist, totalDist, hpRatio, hpRaw];

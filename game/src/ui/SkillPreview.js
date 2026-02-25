@@ -1,9 +1,217 @@
 /**
- * SkillPreview - Hiển thị preview kỹ năng
+ * SkillPreview - Hiển thị preview kỹ năng với grid màu và blink animation
+ *
+ * Layout grid 3x4:
+ *   Col 0-1 = bên ta (xanh lá đậm nếu trống)
+ *   Col 2-3 = bên địch (đỏ nếu trống)
+ *
+ * Ô ảnh hưởng bởi skill: nhấp nháy (blink tween).
  */
 
 import { getUnitVisual } from "../data/unitVisuals.js";
 import { UI_FONT } from "../core/uiTheme.js";
+
+// ─── Màu sắc ─────────────────────────────────────────────────────────────
+const COLOR = {
+  ALLY_EMPTY: 0x0d3d1a,  // xanh lá đậm — ô trống bên ta
+  ENEMY_EMPTY: 0x3d0d0d,  // đỏ đậm — ô trống bên địch
+  CELL_STROKE_ALLY: 0x1a6632,
+  CELL_STROKE_ENEMY: 0x662222,
+  HIGHLIGHT_ENEMY: 0xff3333,  // màu blink ô địch bị ảnh hưởng
+  HIGHLIGHT_ALLY: 0x33ff88,  // màu blink ô ta bị ảnh hưởng (buff/heal)
+  STROKE_ENEMY_HIT: 0xff8888,
+  STROKE_ALLY_HIT: 0x88ffbb,
+};
+
+// ─── Skill pattern → danh sách ô bị ảnh hưởng ────────────────────────────
+// Grid layout: 3 hàng x 4 cột. Cột 0-1 = ta, cột 2-3 = địch.
+// Mỗi ô: { row, col, side: 'ally'|'enemy' }
+function getAffectedCells(skill, unit) {
+  const effect = String(skill?.effect ?? "");
+  const actionPattern = String(skill?.actionPattern ?? "");
+  const classType = String(unit?.classType ?? "");
+
+  // MELEE_FRONT / FIGHTER / TANKER: đánh ô tiền tuyến địch (col 2)
+  if (actionPattern === "MELEE_FRONT" || classType === "TANKER" || classType === "FIGHTER") {
+    switch (effect) {
+      // Single target front
+      case "damage_shield_taunt":
+      case "damage_stun":
+      case "damage_shield_reflect":
+      case "single_burst":
+      case "double_hit":
+      case "single_burst_lifesteal":
+      case "single_delayed_echo":
+      case "single_armor_break":
+      case "single_bleed":
+      case "true_single":
+      case "komodo_venom":
+      case "otter_combo":
+      case "kangaroo_uppercut":
+      case "bison_charge":
+      case "shark_bite_frenzy":
+      case "wolverine_frenzy":
+        return [{ row: 1, col: 2, side: "enemy" }];
+
+      // Row cleave (hàng ngang địch)
+      case "row_cleave":
+        return [
+          { row: 1, col: 2, side: "enemy" },
+          { row: 1, col: 3, side: "enemy" },
+        ];
+
+      // AoE vùng lớn
+      case "aoe_circle":
+      case "aoe_poison":
+        return [
+          { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
+          { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+          { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+        ];
+
+      // Cross 5 ô
+      case "cross_5":
+        return [
+          { row: 1, col: 2, side: "enemy" },
+          { row: 0, col: 2, side: "enemy" },
+          { row: 2, col: 2, side: "enemy" },
+          { row: 1, col: 3, side: "enemy" },
+        ];
+
+      // Column
+      case "column_freeze":
+      case "column_bleed":
+      case "column_plus_splash":
+        return [
+          { row: 0, col: 2, side: "enemy" },
+          { row: 1, col: 2, side: "enemy" },
+          { row: 2, col: 2, side: "enemy" },
+        ];
+
+      // Global enemy
+      case "global_knockback":
+      case "global_poison_team":
+      case "global_stun":
+      case "global_debuff_atk":
+        return [
+          { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
+          { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+          { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+        ];
+
+      // Self / ally buff
+      case "ally_row_def_buff":
+        return [
+          { row: 1, col: 0, side: "ally" },
+          { row: 1, col: 1, side: "ally" },
+        ];
+      case "roar_debuff_heal":
+      case "rhino_counter":
+      case "metamorphosis":
+      case "turtle_protection":
+      case "pangolin_reflect":
+        return [{ row: 1, col: 0, side: "ally" }];
+
+      // Default single enemy front
+      default:
+        return [{ row: 1, col: 2, side: "enemy" }];
+    }
+  }
+
+  // ASSASSIN_BACK: lao sau, đánh col 3
+  if (actionPattern === "ASSASSIN_BACK" || classType === "ASSASSIN") {
+    return [{ row: 1, col: 3, side: "enemy" }];
+  }
+
+  // RANGED_STATIC — Archer/Mage
+  switch (effect) {
+    case "cross_5":
+      return [
+        { row: 1, col: 2, side: "enemy" },
+        { row: 0, col: 2, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" },
+        { row: 1, col: 3, side: "enemy" },
+        { row: 1, col: 1, side: "enemy" },
+      ];
+
+    case "row_multi":
+    case "piercing_shot":
+    case "dive_bomb":
+      return [
+        { row: 1, col: 2, side: "enemy" },
+        { row: 1, col: 3, side: "enemy" },
+      ];
+
+    case "random_multi":
+    case "arrow_rain":
+    case "multi_sting_poison":
+    case "feather_bleed":
+    case "dark_feather_debuff":
+      return [
+        { row: 0, col: 2, side: "enemy" },
+        { row: 1, col: 3, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" },
+      ];
+
+    case "aoe_circle":
+    case "fish_bomb_aoe":
+      return [
+        { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
+        { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+      ];
+
+    case "column_freeze":
+    case "fire_breath_cone":
+    case "column_plus_splash":
+      return [
+        { row: 0, col: 2, side: "enemy" },
+        { row: 1, col: 2, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" },
+      ];
+
+    case "global_poison_team":
+    case "global_stun":
+    case "plague_spread":
+      return [
+        { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
+        { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+      ];
+
+    // SELF / Heal / Buff
+    case "dual_heal":
+    case "spring_aoe_heal":
+    case "heal_over_time":
+    case "bless_rain_mdef":
+    case "light_purify":
+    case "mass_cleanse":
+    case "wind_shield_ally":
+    case "soul_link_heal":
+    case "phoenix_rebirth":
+    case "revive_or_heal":
+    case "mirror_reflect":
+    case "shield_cleanse":
+    case "team_def_buff":
+    case "team_rage":
+    case "column_bless":
+    case "unicorn_atk_buff":
+    case "mimic_rage_buff":
+    case "peace_heal_reduce_dmg":
+    case "global_tide_evade":
+      return [
+        { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
+        { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
+        { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
+      ];
+
+    // Single target enemy
+    default:
+      return [{ row: 1, col: 2, side: "enemy" }];
+  }
+}
+
+// ─── Class ────────────────────────────────────────────────────────────────
 
 export class SkillPreview {
   constructor(scene, x, y, width, height, unit, skill) {
@@ -13,224 +221,286 @@ export class SkillPreview {
     this.width = width;
     this.height = height;
     this.container = scene.add.container(x, y);
-    this.highlightTween = null;
+    this.tweens = [];
     this.build();
     this.startAnimation();
   }
 
   build() {
+    const { width: W, height: H } = this;
+
     // Background
-    const bg = this.scene.add.rectangle(0, 0, this.width, this.height, 0x0a1520, 0.9);
-    bg.setOrigin(0, 0);
+    const bg = this.scene.add.rectangle(0, 0, W, H, 0x0a1520, 0.9).setOrigin(0, 0);
     bg.setStrokeStyle(1, 0x3a5070, 0.8);
     this.container.add(bg);
 
     // Title
     const skillName = this.skill?.name || "Kỹ năng";
-    const title = this.scene.add.text(8, 8, `⚡ ${skillName}`, {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: "#8df2ff",
-      fontStyle: "bold"
+    const title = this.scene.add.text(8, 6, `⚡ ${skillName}`, {
+      fontFamily: UI_FONT, fontSize: "12px", color: "#8df2ff", fontStyle: "bold"
     });
     this.container.add(title);
 
-    // Grid setup (3 rows x 4 cols mini)
-    const gridStartY = 32;
-    const cellSize = Math.min(32, (this.width - 32) / 4);
-    const gridW = cellSize * 4;
-    const gridH = cellSize * 3;
-    const gridX = (this.width - gridW) / 2;
+    // Grid setup: 3 rows × 4 cols
+    const ROWS = 3, COLS = 4;
+    const cellSize = Math.floor(Math.min((W - 16) / COLS, (H - 56) / ROWS));
+    const gridW = cellSize * COLS;
+    const gridH = cellSize * ROWS;
+    const gridX = Math.floor((W - gridW) / 2);
+    const gridY = 30;
 
-    // Draw grid
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 4; col++) {
-        const cellX = gridX + col * cellSize;
-        const cellY = gridStartY + row * cellSize;
+    this.cellSize = cellSize;
+    this.gridX = gridX;
+    this.gridY = gridY;
+
+    // Affected cells set
+    const affected = getAffectedCells(this.skill, this.unit);
+    const affectedSet = new Set(affected.map(c => `${c.row},${c.col}`));
+    const affectedMap = {};
+    for (const c of affected) affectedMap[`${c.row},${c.col}`] = c.side;
+
+    // Draw grid cells
+    this.cellRects = {};
+    this.blinkRects = [];
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const isAlly = col <= 1;
+        const cellKey = `${row},${col}`;
+        const isAffected = affectedSet.has(cellKey);
+        const side = affectedMap[cellKey] ?? (isAlly ? "ally" : "enemy");
+
+        const cx = gridX + col * cellSize;
+        const cy = gridY + row * cellSize;
+
+        // Base cell fill: màu theo bên
+        const baseFill = isAlly ? COLOR.ALLY_EMPTY : COLOR.ENEMY_EMPTY;
+        const baseStroke = isAlly ? COLOR.CELL_STROKE_ALLY : COLOR.CELL_STROKE_ENEMY;
+
         const cell = this.scene.add.rectangle(
-          cellX, cellY, cellSize - 2, cellSize - 2, 0x1a2d40, 0.5
-        );
-        cell.setOrigin(0, 0);
-        cell.setStrokeStyle(1, 0x2a4060, 0.6);
+          cx + 1, cy + 1, cellSize - 2, cellSize - 2, baseFill, 0.7
+        ).setOrigin(0, 0);
+        cell.setStrokeStyle(1, baseStroke, 0.8);
         this.container.add(cell);
+        this.cellRects[cellKey] = cell;
+
+        // Blink overlay cho ô bị ảnh hưởng
+        if (isAffected) {
+          const blinkColor = side === "ally" ? COLOR.HIGHLIGHT_ALLY : COLOR.HIGHLIGHT_ENEMY;
+          const blinkStroke = side === "ally" ? COLOR.STROKE_ALLY_HIT : COLOR.STROKE_ENEMY_HIT;
+          const blink = this.scene.add.rectangle(
+            cx + 1, cy + 1, cellSize - 2, cellSize - 2, blinkColor, 0.0
+          ).setOrigin(0, 0);
+          blink.setStrokeStyle(2, blinkStroke, 0.9);
+          this.container.add(blink);
+          this.blinkRects.push(blink);
+        }
       }
     }
 
-    // Get unit visual
-    const visual = getUnitVisual(this.unit.id, this.unit.classType);
+    // Divider line between sides (between col 1 and 2)
+    const divX = gridX + 2 * cellSize;
+    const divLine = this.scene.add.rectangle(divX, gridY, 1, gridH, 0x8888ff, 0.4).setOrigin(0, 0);
+    this.container.add(divLine);
 
-    // Place attacker (left side, middle row)
+    // Unit icon (bên ta, hàng giữa)
+    const visual = getUnitVisual(this.unit?.id, this.unit?.classType);
+    const attackerCol = this.unit?.classType === "ASSASSIN" ? 1 : 0;
     const attackerRow = 1;
-    const attackerCol = 0;
     const attackerX = gridX + attackerCol * cellSize + cellSize / 2;
-    const attackerY = gridStartY + attackerRow * cellSize + cellSize / 2;
-
+    const attackerY = gridY + attackerRow * cellSize + cellSize / 2;
     this.attackerIcon = this.scene.add.text(attackerX, attackerY, visual.icon, {
-      fontFamily: "Segoe UI Emoji",
-      fontSize: "20px"
+      fontFamily: "Segoe UI Emoji", fontSize: `${Math.floor(cellSize * 0.65)}px`
     }).setOrigin(0.5);
     this.container.add(this.attackerIcon);
+    this._attackerStartX = attackerX;
+    this._attackerStartY = attackerY;
 
-    // Place enemies
-    const enemies = [
-      { row: 0, col: 2 },
-      { row: 1, col: 3 },
-      { row: 2, col: 2 }
+    // Enemy icons — chỉ đặt ở ô KHÔNG bị affect để tránh che blink
+    const allEnemySlots = [
+      { row: 0, col: 2 }, { row: 1, col: 3 }, { row: 2, col: 2 }
     ];
-
     this.enemyIcons = [];
-    enemies.forEach((enemy) => {
-      const enemyX = gridX + enemy.col * cellSize + cellSize / 2;
-      const enemyY = gridStartY + enemy.row * cellSize + cellSize / 2;
-      const enemyIcon = this.scene.add.text(enemyX, enemyY, "👹", {
-        fontFamily: "Segoe UI Emoji",
-        fontSize: "18px"
+    allEnemySlots.forEach(({ row, col }) => {
+      const key = `${row},${col}`;
+      const ex = gridX + col * cellSize + cellSize / 2;
+      const ey = gridY + row * cellSize + cellSize / 2;
+      const icon = this.scene.add.text(ex, ey, "👹", {
+        fontFamily: "Segoe UI Emoji", fontSize: `${Math.floor(cellSize * 0.55)}px`
       }).setOrigin(0.5);
-      this.container.add(enemyIcon);
-      this.enemyIcons.push({ icon: enemyIcon, row: enemy.row, col: enemy.col });
+      this.container.add(icon);
+      this.enemyIcons.push({ icon, row, col, key });
     });
 
-    // Determine skill targeting pattern
-    this.highlightTargets = [];
-    const skillDesc = this.skill?.description || this.skill?.descriptionVi || "";
-    const range = this.unit.stats?.range || 1;
+    // Target center list (for hit effects)
+    this.targetCenters = affected.map(c => ({
+      x: gridX + c.col * cellSize + cellSize / 2,
+      y: gridY + c.row * cellSize + cellSize / 2,
+      side: c.side,
+    }));
 
-    // Parse skill type from description
-    if (skillDesc.includes("toàn bộ") || skillDesc.includes("tất cả")) {
-      // AOE - highlight all enemies
-      enemies.forEach((enemy) => {
-        const targetX = gridX + enemy.col * cellSize + cellSize / 2;
-        const targetY = gridStartY + enemy.row * cellSize + cellSize / 2;
-        const highlight = this.scene.add.circle(
-          targetX, targetY, cellSize / 2 - 2, 0x8844ff, 0.4
-        );
-        highlight.setStrokeStyle(2, 0xaa88ff, 0.8);
-        this.container.add(highlight);
-        this.highlightTargets.push(highlight);
-      });
-    } else {
-      // Single target - use same logic as basic attack
-      let targetRow, targetCol;
-
-      if (range <= 1) {
-        if (this.unit.classType === "ASSASSIN") {
-          targetRow = 1;
-          targetCol = 3;
-        } else {
-          // Tank/Fighter: ưu tiên hàng trên (row 0)
-          targetRow = 0;
-          targetCol = 2;
-        }
-      } else {
-        targetRow = 1;
-        targetCol = 3;
-      }
-
-      const targetX = gridX + targetCol * cellSize + cellSize / 2;
-      const targetY = gridStartY + targetRow * cellSize + cellSize / 2;
-      const highlight = this.scene.add.circle(
-        targetX, targetY, cellSize / 2 - 2, 0x8844ff, 0.4
-      );
-      highlight.setStrokeStyle(2, 0xaa88ff, 0.8);
-      this.container.add(highlight);
-      this.highlightTargets.push(highlight);
-    }
-
-    // Skill info
-    const targetType = this.highlightTargets.length > 1 ? "Đa mục tiêu" : "Đơn mục tiêu";
-    const info = this.scene.add.text(8, this.height - 32, targetType, {
-      fontFamily: UI_FONT,
-      fontSize: "11px",
-      color: "#8ab4d4"
+    // Info bar
+    const areaCount = affected.length;
+    const areaLabel = areaCount === 1 ? "Đơn mục tiêu"
+      : areaCount <= 3 ? `${areaCount} mục tiêu`
+        : "Diện rộng";
+    const info = this.scene.add.text(8, H - 20, areaLabel, {
+      fontFamily: UI_FONT, fontSize: "11px", color: "#8ab4d4"
     });
     this.container.add(info);
   }
 
   startAnimation() {
-    // Pulse animation for all highlights
-    if (this.highlightTargets.length > 0) {
-      this.highlightTween = this.scene.tweens.add({
-        targets: this.highlightTargets,
-        alpha: { from: 0.6, to: 0.2 },
-        scale: { from: 1, to: 1.2 },
-        duration: 800,
+    // Blink animation: ô ảnh hưởng nhấp nháy 0 → 0.65 → 0, repeat
+    if (this.blinkRects.length > 0) {
+      const t = this.scene.tweens.add({
+        targets: this.blinkRects,
+        alpha: { from: 0, to: 0.65 },
+        duration: 550,
         yoyo: true,
         repeat: -1,
-        ease: 'Sine.easeInOut'
+        ease: "Sine.easeInOut"
       });
+      this.tweens.push(t);
     }
 
     this.playSkillLoop();
   }
 
   playSkillLoop() {
-    if (!this.scene || !this.container.active) return;
+    if (!this.scene || !this.container?.active) return;
 
-    // Windup
-    this.scene.tweens.add({
-      targets: this.attackerIcon,
-      y: this.attackerIcon.y - 12,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 350,
-      yoyo: true,
-      onComplete: () => {
-        if (!this.container.active) return;
-        this.showSkillEffect();
-        this.scene.time.delayedCall(1200, () => this.playSkillLoop());
-      }
-    });
+    const classType = this.unit?.classType ?? "";
+    const actionPattern = this.skill?.actionPattern ?? "";
+    const range = this.unit?.stats?.range ?? 1;
+
+    // Attacker animation
+    if (actionPattern === "ASSASSIN_BACK" || classType === "ASSASSIN") {
+      // Dash tới ô đích rồi quay về
+      const target = this.targetCenters[0];
+      if (!target) { this.scene.time.delayedCall(1500, () => this.playSkillLoop()); return; }
+      const t = this.scene.tweens.add({
+        targets: this.attackerIcon,
+        x: target.x - this.cellSize * 0.4,
+        y: target.y,
+        duration: 200,
+        ease: "Power2",
+        onComplete: () => {
+          if (!this.container?.active) return;
+          this.showSkillEffect();
+          const t2 = this.scene.tweens.add({
+            targets: this.attackerIcon,
+            x: this._attackerStartX,
+            y: this._attackerStartY,
+            duration: 220,
+            ease: "Power2",
+            delay: 250,
+            onComplete: () => {
+              this.scene.time.delayedCall(900, () => this.playSkillLoop());
+            }
+          });
+          this.tweens.push(t2);
+        }
+      });
+      this.tweens.push(t);
+
+    } else if (range >= 2 || actionPattern === "RANGED_STATIC" ||
+      classType === "ARCHER" || classType === "MAGE" || classType === "SUPPORT") {
+      // Ranged: co người lại → bắn projectile
+      const t = this.scene.tweens.add({
+        targets: this.attackerIcon,
+        scaleX: 1.25, scaleY: 0.85,
+        duration: 180,
+        yoyo: true,
+        onComplete: () => {
+          if (!this.container?.active) return;
+          // Spawn projectile tới từng target
+          this.targetCenters.forEach((tc, i) => {
+            this.scene.time.delayedCall(i * 60, () => {
+              if (!this.container?.active) return;
+              const proj = this.scene.add.circle(
+                this._attackerStartX + this.cellSize * 0.6,
+                this._attackerStartY, 4,
+                tc.side === "ally" ? 0x44ffaa : 0xffdd44
+              );
+              this.container.add(proj);
+              const tp = this.scene.tweens.add({
+                targets: proj, x: tc.x, y: tc.y, duration: 220,
+                ease: "Power1",
+                onComplete: () => { proj.destroy(); this.showHitAt(tc); }
+              });
+              this.tweens.push(tp);
+            });
+          });
+          this.scene.time.delayedCall(500, () => this.playSkillLoop());
+        }
+      });
+      this.tweens.push(t);
+
+    } else {
+      // Melee: nhún người → dash sang địch rồi quay về
+      const target = this.targetCenters[0];
+      if (!target) { this.scene.time.delayedCall(1500, () => this.playSkillLoop()); return; }
+      const t = this.scene.tweens.add({
+        targets: this.attackerIcon,
+        x: target.x - this.cellSize * 0.5,
+        y: target.y,
+        duration: 220,
+        ease: "Power2",
+        onComplete: () => {
+          if (!this.container?.active) return;
+          this.showSkillEffect();
+          const t2 = this.scene.tweens.add({
+            targets: this.attackerIcon,
+            x: this._attackerStartX, y: this._attackerStartY,
+            duration: 220, ease: "Power2", delay: 250,
+            onComplete: () => {
+              this.scene.time.delayedCall(900, () => this.playSkillLoop());
+            }
+          });
+          this.tweens.push(t2);
+        }
+      });
+      this.tweens.push(t);
+    }
   }
 
   showSkillEffect() {
-    if (!this.container.active) return;
+    if (!this.container?.active) return;
+    this.targetCenters.forEach(tc => this.showHitAt(tc));
+  }
 
-    // Screen flash
-    const flash = this.scene.add.rectangle(0, 0, this.width, this.height, 0xb6dbff, 0.2).setOrigin(0, 0);
-    this.container.add(flash);
-    this.scene.tweens.add({
-      targets: flash,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => flash.destroy()
+  showHitAt({ x, y, side }) {
+    if (!this.container?.active) return;
+    const emoji = side === "ally" ? "✨" : "💥";
+    const hit = this.scene.add.text(x, y - 8, emoji, { fontSize: "14px" }).setOrigin(0.5);
+    this.container.add(hit);
+    const t = this.scene.tweens.add({
+      targets: hit, y: y - 20, alpha: 0, duration: 380,
+      onComplete: () => hit.destroy()
     });
+    this.tweens.push(t);
 
-    this.highlightTargets.forEach(target => {
-      const hit = this.scene.add.text(target.x, target.y - 10, "⚡", { fontSize: "16px" }).setOrigin(0.5);
-      this.container.add(hit);
-
-      this.scene.tweens.add({
-        targets: hit,
-        y: hit.y - 15,
-        scaleX: 1.5,
-        scaleY: 1.5,
-        alpha: 0,
-        duration: 400,
-        onComplete: () => hit.destroy()
-      });
-    });
-
-    this.enemyIcons.forEach(enemy => {
-      // Find if this enemy is targeted
-      const isTargeted = this.highlightTargets.some(t =>
-        Math.abs(t.x - enemy.icon.x) < 5 && Math.abs(t.y - enemy.icon.y) < 5
+    // Shake enemy icons in affected cells
+    this.enemyIcons.forEach(({ icon, row, col }) => {
+      const key = `${row},${col}`;
+      const affected = this.targetCenters.some(
+        tc => Math.abs(tc.x - (this.gridX + col * this.cellSize + this.cellSize / 2)) < 5
+          && Math.abs(tc.y - (this.gridY + row * this.cellSize + this.cellSize / 2)) < 5
       );
-      if (isTargeted) {
-        this.scene.tweens.add({
-          targets: enemy.icon,
-          x: enemy.icon.x + 6,
-          duration: 50,
-          yoyo: true,
-          repeat: 2
+      if (affected) {
+        const origX = icon.x;
+        const ts = this.scene.tweens.add({
+          targets: icon, x: origX + 5, duration: 40, yoyo: true, repeat: 2,
+          onComplete: () => icon.setX(origX)
         });
+        this.tweens.push(ts);
       }
     });
   }
 
   destroy() {
-    if (this.highlightTween) {
-      this.highlightTween.stop();
-    }
+    this.tweens.forEach(t => t?.stop?.());
     this.container.destroy();
   }
 }
