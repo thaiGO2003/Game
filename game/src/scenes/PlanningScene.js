@@ -92,8 +92,8 @@ import { CLASS_SKILL_VARIANTS } from "../data/classSkillVariants.js";
 
 
 const VERSION_INFO = {
-  version: "v0.3.2",
-  updatedAt: "2026-02-19",
+  version: "v0.3.3",
+  updatedAt: "2026-02-25",
   notes: [
     "Thêm màn hình Loading trước Main Menu, có tiến độ và tên tài nguyên đang tải.",
     "Đổi tông màu nghề Pháp sư sang hồng để tách biệt với Đỡ đòn.",
