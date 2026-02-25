@@ -76,6 +76,11 @@ export function createDefaultRunState() {
     audioEnabled: true,
     player: {
       ...PLAYER_TEMPLATE,
+      augments: [],
+      augmentRoundsTaken: [],
+      itemBag: [],
+      craftedItems: [],
+      enemyPreview: [],
       board,
       bench: [],
       shop: []
