@@ -18,7 +18,7 @@ ice_mage,Chuồn Chuồn Băng,chuon-chuon,❄️,TIDE,Thủy,MAGE,Pháp sư,2,2
 worm_ice,Cóc Băng,coc,🧊,TIDE,Thủy,MAGE,Pháp sư,2,230,18,10,80,21,4,5,ice_blast_freeze,15% giảm né tránh mục tiêu,25% giảm né tránh mục tiêu,35% giảm né tránh mục tiêu
 storm_mage,Rắn Lôi,ran,⚡,WIND,Phong,MAGE,Pháp sư,3,245,20,11,88,22,4,5,unit_skill_storm_mage,15% giảm chính xác mục tiêu,25% giảm chính xác mục tiêu,35% giảm chính xác mục tiêu
 spore_mage,Nhện Bào Tử,nhen,🦠,SWARM,Trùng,MAGE,Pháp sư,4,260,22,11,96,23,4,5,unit_skill_spore_mage,+5% mỗi đồng minh Trùng,+8% mỗi đồng minh Trùng,+10% mỗi đồng minh Trùng
-deer_song,Nai Thần Ca,nai,🦌,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,245,22,14,62,25,3,4,heal_over_time,Buff đặc biệt,Buff mạnh đặc biệt,Buff cực mạnh đặc biệt
+deer_song,Nai Thần Ca,nai,🦌,SPIRIT,Linh,SUPPORT,Hỗ trợ,1,245,22,14,62,25,3,1,heal_over_time,Buff đặc biệt,Buff mạnh đặc biệt,Buff cực mạnh đặc biệt
 butterfly_mirror,Bướm Kính,buom,🦋,SPIRIT,Linh,SUPPORT,Hỗ trợ,2,260,24,15,68,26,3,4,mirror_reflect,Buff đặc biệt,Buff mạnh đặc biệt,Buff cực mạnh đặc biệt
 qilin_breeze,Kỳ Lân Gió,ky-lan,🦄,SPIRIT,Linh,SUPPORT,Hỗ trợ,4,300,28,17,82,28,3,5,unit_skill_qilin_breeze,Buff đặc biệt,Buff mạnh đặc biệt,Buff cực mạnh đặc biệt
 tiger_fang,Hổ Nanh,ho,🐯,FIRE,Hỏa,FIGHTER,Đấu sĩ,1,240,66,20,14,16,1,3,unit_skill_tiger_fang,15% tỷ lệ gây cháy lan,25% tỷ lệ gây cháy lan,35% tỷ lệ gây cháy lan

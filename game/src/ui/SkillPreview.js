@@ -1,7 +1,7 @@
 /**
  * SkillPreview - Hiển thị preview kỹ năng với grid màu và blink animation
  *
- * Layout grid 3x4:
+ * Layout grid 5x4:
  *   Col 0-1 = bên ta (xanh lá đậm nếu trống)
  *   Col 2-3 = bên địch (đỏ nếu trống)
  *
@@ -25,7 +25,7 @@ const COLOR = {
 };
 
 // ─── Skill pattern → danh sách ô bị ảnh hưởng ────────────────────────────
-// Grid layout: 3 hàng x 4 cột. Cột 0-1 = ta, cột 2-3 = địch.
+// Grid layout: 5 hàng x 4 cột. Cột 0-1 = ta, cột 2-3 = địch.
 // Mỗi ô: { row, col, side: 'ally'|'enemy' }
 function getAffectedCells(skill, unit, star = 1) {
   const effect = String(skill?.effect ?? "");
@@ -101,6 +101,8 @@ function getAffectedCells(skill, unit, star = 1) {
           { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
           { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
           { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+          { row: 3, col: 2, side: "enemy" }, { row: 3, col: 3, side: "enemy" },
+          { row: 4, col: 2, side: "enemy" }, { row: 4, col: 3, side: "enemy" },
         ];
 
       // Cross 5 ô
@@ -120,6 +122,8 @@ function getAffectedCells(skill, unit, star = 1) {
           { row: 0, col: 2, side: "enemy" },
           { row: 1, col: 2, side: "enemy" },
           { row: 2, col: 2, side: "enemy" },
+          { row: 3, col: 2, side: "enemy" },
+          { row: 4, col: 2, side: "enemy" },
         ];
 
       // Global enemy
@@ -131,6 +135,8 @@ function getAffectedCells(skill, unit, star = 1) {
           { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
           { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
           { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+          { row: 3, col: 2, side: "enemy" }, { row: 3, col: 3, side: "enemy" },
+          { row: 4, col: 2, side: "enemy" }, { row: 4, col: 3, side: "enemy" },
         ];
 
       // Self / ally buff
@@ -164,6 +170,8 @@ function getAffectedCells(skill, unit, star = 1) {
           { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
           { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
           { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
+          { row: 3, col: 0, side: "ally" }, { row: 3, col: 1, side: "ally" },
+          { row: 4, col: 0, side: "ally" }, { row: 4, col: 1, side: "ally" },
         ];
 
       // Default single enemy front
@@ -182,11 +190,15 @@ function getAffectedCells(skill, unit, star = 1) {
     { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
     { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
     { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+    { row: 3, col: 2, side: "enemy" }, { row: 3, col: 3, side: "enemy" },
+    { row: 4, col: 2, side: "enemy" }, { row: 4, col: 3, side: "enemy" },
   ];
   const allAllyCells = [
     { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
     { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
     { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
+    { row: 3, col: 0, side: "ally" }, { row: 3, col: 1, side: "ally" },
+    { row: 4, col: 0, side: "ally" }, { row: 4, col: 1, side: "ally" },
   ];
   function pickCells(pool, count) { return pool.slice(0, Math.min(count, pool.length)); }
 
@@ -242,22 +254,28 @@ function getAffectedCells(skill, unit, star = 1) {
         { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
         { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
         { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+        { row: 3, col: 2, side: "enemy" }, { row: 3, col: 3, side: "enemy" },
+        { row: 4, col: 2, side: "enemy" }, { row: 4, col: 3, side: "enemy" },
       ];
 
     case "column_freeze":
     case "cone_shot":
-      // Hình nón: 1★ = 3 ô, 2★+ = 5 ô
+      // Hình nón: 1★ = 5 ô cột, 2★+ = 5 ô cột + 2 ô bên
       if (star >= 2) {
         return [
           { row: 0, col: 2, side: "enemy" },
           { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
           { row: 2, col: 2, side: "enemy" },
+          { row: 3, col: 2, side: "enemy" },
+          { row: 4, col: 2, side: "enemy" },
         ];
       }
       return [
         { row: 0, col: 2, side: "enemy" },
         { row: 1, col: 2, side: "enemy" },
         { row: 2, col: 2, side: "enemy" },
+        { row: 3, col: 2, side: "enemy" },
+        { row: 4, col: 2, side: "enemy" },
       ];
 
     case "fire_breath_cone":
@@ -266,6 +284,8 @@ function getAffectedCells(skill, unit, star = 1) {
         { row: 0, col: 2, side: "enemy" },
         { row: 1, col: 2, side: "enemy" },
         { row: 2, col: 2, side: "enemy" },
+        { row: 3, col: 2, side: "enemy" },
+        { row: 4, col: 2, side: "enemy" },
       ];
 
     case "global_poison_team":
@@ -280,6 +300,8 @@ function getAffectedCells(skill, unit, star = 1) {
         { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
         { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
         { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+        { row: 3, col: 2, side: "enemy" }, { row: 3, col: 3, side: "enemy" },
+        { row: 4, col: 2, side: "enemy" }, { row: 4, col: 3, side: "enemy" },
       ];
 
     // SELF / Heal / Buff
@@ -349,8 +371,8 @@ export class SkillPreview {
     });
     this.container.add(title);
 
-    // Grid setup: 3 rows × 4 cols
-    const ROWS = 3, COLS = 4;
+    // Grid setup: 5 rows × 4 cols
+    const ROWS = 5, COLS = 4;
     const cellSize = Math.floor(Math.min((W - 16) / COLS, (H - 56) / ROWS));
     const gridW = cellSize * COLS;
     const gridH = cellSize * ROWS;
@@ -414,7 +436,7 @@ export class SkillPreview {
     // Unit icon (bên ta, hàng giữa)
     const visual = getUnitVisual(this.unit?.id, this.unit?.classType);
     const attackerCol = this.unit?.classType === "ASSASSIN" ? 1 : 0;
-    const attackerRow = 1;
+    const attackerRow = 2;
     const attackerX = gridX + attackerCol * cellSize + cellSize / 2;
     const attackerY = gridY + attackerRow * cellSize + cellSize / 2;
     this.attackerIcon = this.scene.add.text(attackerX, attackerY, visual.icon, {

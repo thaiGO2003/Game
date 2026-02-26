@@ -1,0 +1,9 @@
+================================================================================
+Traceback (most recent call last):
+  File "P:\DigiGO\games\game\_audit_skills.py", line 42, in <module>
+    print("AUDIT: Skill Star Descriptions - Trφch xu\u1ea5t con s\u1ed1 t\u1eeb m⌠ t\u1ea3")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ea5' in position 41: character maps to <undefined>

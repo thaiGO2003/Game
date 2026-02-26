@@ -65,20 +65,31 @@ export function stripSkillStarNotes(description) {
 
 /**
  * Parse "Mốc sao: 1★ text A, 2★ text B, 3★ text C" từ descriptionVi.
+ * Cũng hỗ trợ format trực tiếp: "... 1★ text; 2★ text; 3★ text" (không cần prefix).
  * Trả về mảng [{star:1, text:'text A'}, ...] hoặc [] nếu không có.
  */
 export function parseStarMilestonesFromDesc(description) {
     const raw = String(description ?? "");
-    const match = raw.match(/Mốc sao:\s*([\s\S]+)$/i);
-    if (!match) return [];
-    const part = match[1].trim();
-    // Tách theo pattern "N★" hoặc "N★"
+    // Thử match với prefix "Mốc sao:" trước
+    let part = "";
+    const prefixMatch = raw.match(/Mốc sao:\s*([\s\S]+)$/i);
+    if (prefixMatch) {
+        part = prefixMatch[1].trim();
+    } else {
+        // Fallback: tìm pattern "1★" trực tiếp trong description
+        const directMatch = raw.match(/(1[★⭐]\s*[\s\S]+)$/);
+        if (directMatch) {
+            part = directMatch[1].trim();
+        }
+    }
+    if (!part) return [];
+    // Tách theo pattern "N★"
     const segments = part.split(/(?=\d[★⭐])/);
     const result = [];
     for (const seg of segments) {
-        const m = seg.match(/^(\d)[★⭐]\s*(.+?)[\.\,]?\s*$/);
+        const m = seg.match(/^(\d)[★⭐]\s*(.+?)[\.\,;]?\s*$/);
         if (m) {
-            result.push({ star: Number(m[1]), text: m[2].trim().replace(/[.,]$/, "") });
+            result.push({ star: Number(m[1]), text: m[2].trim().replace(/[.,;]$/, "") });
         }
     }
     return result;

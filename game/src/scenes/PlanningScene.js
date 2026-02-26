@@ -5941,10 +5941,10 @@ export class PlanningScene extends Phaser.Scene {
       const damageType = attacker?.mods?.basicAttackType === "magic" ? "magic" : "physical";
       const baseStat = basicScaleStat === "matk" ? this.getEffectiveMatk(attacker) : this.getEffectiveAtk(attacker);
       const raw = baseStat + Phaser.Math.Between(-5, 6);
-      this.resolveDamage(attacker, target, raw, damageType, "BASIC");
+      this.resolveDamage(attacker, target, raw, damageType, "ĐÁNH THƯỜNG");
     });
     this.clearCombatBorder(attacker);
-    this.addLog(`${attacker.name} danh ${target.name}.`);
+    this.addLog(`⚔️ ${attacker.name} đánh thường ${target.name}.`);
   }
 
   async castSkill(attacker, target) {
@@ -6815,7 +6815,7 @@ export class PlanningScene extends Phaser.Scene {
     if (attacker && !options.forceHit && damageType === "physical") {
       const evadePct = getEffectiveEvasion(defender);
       if (Math.random() < evadePct) {
-        this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "MISS", "#d3f2ff");
+        this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "TRƯỢT", "#d3f2ff");
         if (!options.noRage) {
           defender.rage = Math.min(defender.rageMax, defender.rage + 1);
           this.updateCombatUnitUi(defender);
@@ -6832,7 +6832,7 @@ export class PlanningScene extends Phaser.Scene {
     if (attacker && damageType === "physical" && Math.random() < attacker.mods.critPct) {
       isPhysicalCrit = true;
       raw *= 1.5;
-      this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CRIT", "#ffd785");
+      this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "BẠO KÍCH", "#ffd785");
     }
 
     let final = raw;
@@ -6859,7 +6859,7 @@ export class PlanningScene extends Phaser.Scene {
       const absorbed = Math.min(defender.shield, damageLeft);
       defender.shield -= absorbed;
       damageLeft -= absorbed;
-      this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `ABS ${absorbed}`, "#86e8ff");
+      this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, `HẤP THỤ ${absorbed}`, "#86e8ff");
     }
 
     if (damageLeft > 0) {
@@ -6895,7 +6895,7 @@ export class PlanningScene extends Phaser.Scene {
       // Standard reflect
       if (defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0) {
         const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
-        this.resolveDamage(defender, attacker, reflected, "true", "REFLECT", {
+        this.resolveDamage(defender, attacker, reflected, "true", "PHẢN ĐÒN", {
           noReflect: true,
           forceHit: true
         });
