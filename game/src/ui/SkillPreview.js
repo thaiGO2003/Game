@@ -34,7 +34,6 @@ function getAffectedCells(skill, unit) {
   // MELEE_FRONT / FIGHTER / TANKER: đánh ô tiền tuyến địch (col 2)
   if (actionPattern === "MELEE_FRONT" || classType === "TANKER" || classType === "FIGHTER") {
     switch (effect) {
-      // Single target front
       case "damage_shield_taunt":
       case "damage_stun":
       case "damage_shield_reflect":
@@ -45,6 +44,17 @@ function getAffectedCells(skill, unit) {
       case "single_armor_break":
       case "single_bleed":
       case "true_single":
+      case "single_strong_poison":
+      case "single_poison_slow":
+      case "single_poison_stack":
+      case "single_silence_lock":
+      case "knockback_charge":
+      case "single_burst_armor_pen":
+      case "execute_heal":
+      case "true_execute":
+      case "lifesteal_disease":
+      case "lifesteal_disease_maxhp":
+      case "double_hit_gold_reward":
       case "komodo_venom":
       case "otter_combo":
       case "kangaroo_uppercut":
@@ -63,6 +73,9 @@ function getAffectedCells(skill, unit) {
       // AoE vùng lớn
       case "aoe_circle":
       case "aoe_poison":
+      case "aoe_circle_stun":
+      case "cleave_armor_break":
+      case "cone_smash":
         return [
           { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
           { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
@@ -110,7 +123,27 @@ function getAffectedCells(skill, unit) {
       case "metamorphosis":
       case "turtle_protection":
       case "pangolin_reflect":
+      case "self_armor_reflect":
+      case "self_shield_immune":
+      case "self_def_fortify":
+      case "resilient_shield":
+      case "self_maxhp_boost":
+      case "self_bersek":
+      case "self_regen_team_heal":
         return [{ row: 1, col: 0, side: "ally" }];
+
+      // Team-wide ally buffs (MELEE_FRONT tankers)
+      case "guardian_pact":
+      case "frost_aura_buff":
+      case "team_rage_self_heal":
+      case "warcry_atk_def":
+      case "team_evade_buff":
+      case "team_shield":
+        return [
+          { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
+          { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
+          { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
+        ];
 
       // Default single enemy front
       default:
@@ -136,10 +169,18 @@ function getAffectedCells(skill, unit) {
 
     case "row_multi":
     case "piercing_shot":
-    case "dive_bomb":
+    case "frost_storm":
       return [
         { row: 1, col: 2, side: "enemy" },
         { row: 1, col: 3, side: "enemy" },
+      ];
+
+    case "dive_bomb":
+    case "ink_blast_debuff":
+      return [
+        { row: 0, col: 2, side: "enemy" },
+        { row: 1, col: 2, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" },
       ];
 
     case "random_multi":
@@ -147,6 +188,9 @@ function getAffectedCells(skill, unit) {
     case "multi_sting_poison":
     case "feather_bleed":
     case "dark_feather_debuff":
+    case "chain_shock":
+    case "random_lightning":
+    case "multi_disarm":
       return [
         { row: 0, col: 2, side: "enemy" },
         { row: 1, col: 3, side: "enemy" },
@@ -155,6 +199,11 @@ function getAffectedCells(skill, unit) {
 
     case "aoe_circle":
     case "fish_bomb_aoe":
+    case "aoe_circle_stun":
+    case "fireball_burn":
+    case "dust_sleep":
+    case "ink_bomb_blind":
+    case "aoe_poison":
       return [
         { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
         { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
@@ -172,7 +221,12 @@ function getAffectedCells(skill, unit) {
 
     case "global_poison_team":
     case "global_stun":
+    case "global_debuff_atk":
+    case "global_fire":
+    case "global_knockback":
     case "plague_spread":
+    case "pollen_confuse":
+    case "flash_blind":
       return [
         { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
         { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
@@ -198,6 +252,11 @@ function getAffectedCells(skill, unit) {
     case "unicorn_atk_buff":
     case "mimic_rage_buff":
     case "peace_heal_reduce_dmg":
+    case "peace_heal_reduce":
+    case "scout_buff_ally":
+    case "pack_howl_rage":
+    case "root_snare_debuff":
+    case "root_snare":
     case "global_tide_evade":
       return [
         { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },

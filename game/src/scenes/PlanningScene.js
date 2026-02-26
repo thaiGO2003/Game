@@ -6064,10 +6064,11 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "single_bleed": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {
           target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
-          const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.3);
+          const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.3 * starScale);
           target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, bleedDmg);
           this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
           this.updateCombatUnitUi(target);
@@ -6140,8 +6141,9 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "self_bersek": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         attacker.statuses.atkBuffTurns = Math.max(attacker.statuses.atkBuffTurns, 5);
-        attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, Math.round(attacker.atk * 0.5));
+        attacker.statuses.atkBuffValue = Math.max(attacker.statuses.atkBuffValue, Math.round(attacker.atk * 0.5 * starScale));
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỒNG NỘ", "#ff0000");
         this.updateCombatUnitUi(attacker);
         break;
@@ -6197,10 +6199,11 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "revive_or_heal": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         const dead = this.combatUnits.find(u => u.side === attacker.side && !u.alive);
         if (dead && Math.random() < 0.5) {
           dead.alive = true;
-          dead.hp = Math.round(dead.maxHp * 0.4);
+          dead.hp = Math.round(dead.maxHp * 0.4 * starScale);
           const revivedTheme = this.getRoleTheme(dead.classType);
           dead.sprite?.setFillStyle?.(revivedTheme.fill, 0.98);
           dead.sprite?.setStrokeStyle?.(3, revivedTheme.stroke, 1);
@@ -6208,7 +6211,7 @@ export class PlanningScene extends Phaser.Scene {
           this.showFloatingText(dead.sprite.x, dead.sprite.y - 45, "HỒI SINH", "#ffff00");
           this.updateCombatUnitUi(dead);
         } else {
-          allies.forEach(a => this.healUnit(attacker, a, rawSkill, "CỨU RỖI"));
+          allies.forEach(a => this.healUnit(attacker, a, Math.round(rawSkill * starScale), "CỨU RỖI"));
         }
         break;
       }
@@ -6347,13 +6350,16 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "ally_row_def_buff": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+        const scaledArmor = Math.max(1, Math.round((skill.armorBuff || 15) * starScale));
+        const scaledMdef = Math.max(1, Math.round((skill.mdefBuff || 10) * starScale));
         allies
           .filter((ally) => ally.row === attacker.row)
           .forEach((ally) => {
             ally.statuses.defBuffTurns = Math.max(ally.statuses.defBuffTurns, skill.turns);
-            ally.statuses.defBuffValue = Math.max(ally.statuses.defBuffValue, skill.armorBuff);
+            ally.statuses.defBuffValue = Math.max(ally.statuses.defBuffValue, scaledArmor);
             ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, skill.turns);
-            ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, skill.mdefBuff);
+            ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, scaledMdef);
             this.updateCombatUnitUi(ally);
             this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "GUARD", "#a9ebff");
           });
@@ -6493,6 +6499,7 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "column_bleed": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         enemies
           .filter((enemy) => enemy.col === target.col)
           .forEach((enemy) => {
@@ -6500,7 +6507,7 @@ export class PlanningScene extends Phaser.Scene {
             this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, { isSplash: !isPrimary });
             if (enemy.alive) {
               enemy.statuses.bleedTurns = Math.max(enemy.statuses.bleedTurns, skill.turns || 3);
-              const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.25);
+              const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.25 * starScale);
               enemy.statuses.bleedDamage = Math.max(enemy.statuses.bleedDamage || 0, bleedDmg);
               this.showFloatingText(enemy.sprite.x, enemy.sprite.y - 45, "CHẢY MÁU", "#ff4444");
               this.updateCombatUnitUi(enemy);
@@ -6523,19 +6530,21 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "dual_heal": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         const targets = allies
           .filter((ally) => ally.alive)
           .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)
           .slice(0, 2);
-        targets.forEach((ally) => this.healUnit(attacker, ally, rawSkill, skill.name));
+        targets.forEach((ally) => this.healUnit(attacker, ally, Math.round(rawSkill * starScale), skill.name));
         break;
       }
       case "shield_cleanse": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         const lowest = allies
           .filter((ally) => ally.alive)
           .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
         if (!lowest) break;
-        const amount = Math.round(skill.shieldBase + this.getEffectiveMatk(attacker) * skill.shieldScale);
+        const amount = Math.round((skill.shieldBase + this.getEffectiveMatk(attacker) * skill.shieldScale) * starScale);
         this.addShield(lowest, amount);
         lowest.statuses.freeze = 0;
         lowest.statuses.stun = 0;
@@ -6559,12 +6568,13 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "column_bless": {
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         allies
           .filter((ally) => ally.col === attacker.col)
           .forEach((ally) => {
             ally.statuses.atkBuffTurns = Math.max(ally.statuses.atkBuffTurns, skill.turns);
-            ally.statuses.atkBuffValue = Math.max(ally.statuses.atkBuffValue, skill.atkBuff);
-            ally.mods.evadePct = Math.max(ally.mods.evadePct, skill.evadeBuff);
+            ally.statuses.atkBuffValue = Math.max(ally.statuses.atkBuffValue, Math.round((skill.atkBuff || 15) * starScale));
+            ally.mods.evadePct = Math.max(ally.mods.evadePct, Math.min(0.5, (skill.evadeBuff || 0.1) * starScale));
             this.updateCombatUnitUi(ally);
           });
         break;
