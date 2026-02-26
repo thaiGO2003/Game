@@ -16,15 +16,15 @@ export const APPLY_HANDLERS = {
   freeze: (unit, effect) => {
     unit.statuses.freeze = Math.max(unit.statuses.freeze ?? 0, effect.duration ?? 1);
   },
-  
+
   stun: (unit, effect) => {
     unit.statuses.stun = Math.max(unit.statuses.stun ?? 0, effect.duration ?? 1);
   },
-  
+
   sleep: (unit, effect) => {
     unit.statuses.sleep = Math.max(unit.statuses.sleep ?? 0, effect.duration ?? 1);
   },
-  
+
   silence: (unit, effect) => {
     unit.statuses.silence = Math.max(unit.statuses.silence ?? 0, effect.duration ?? 1);
   },
@@ -115,6 +115,12 @@ export const APPLY_HANDLERS = {
 
   protecting: (unit, effect) => {
     unit.statuses.isProtecting = effect.duration ?? 1;
+  },
+
+  // Heal over time
+  hot: (unit, effect) => {
+    unit.statuses.hotTurns = Math.max(unit.statuses.hotTurns ?? 0, effect.duration ?? 1);
+    unit.statuses.hotAmount = Math.max(unit.statuses.hotAmount ?? 0, effect.value ?? 0);
   }
 };
 
@@ -355,6 +361,20 @@ export const TICK_HANDLERS = {
     if (unit.statuses.isProtecting > 0) {
       unit.statuses.isProtecting--;
       return { expired: unit.statuses.isProtecting === 0 };
+    }
+    return {};
+  },
+
+  // Heal over time
+  hot: (unit) => {
+    if ((unit.statuses.hotTurns ?? 0) > 0) {
+      const healed = unit.statuses.hotAmount ?? 0;
+      unit.statuses.hotTurns--;
+      const expired = unit.statuses.hotTurns === 0;
+      if (expired) {
+        unit.statuses.hotAmount = 0;
+      }
+      return { healed, expired };
     }
     return {};
   }

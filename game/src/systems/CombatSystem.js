@@ -139,15 +139,13 @@ export function executeAction(state, actor) {
   const isDisarmed = (actor.statuses?.disarmTurns ?? 0) > 0;
 
   if (shouldUseSkill && !isSilenced) {
-    // Use skill - reset rage to 0 (except for MAGE class which keeps rage)
-    const resetRage = actor.classType !== "MAGE";
-
+    // Use skill - always reset rage to 0 (MAGE regains via per-hit mechanic)
     return {
       success: true,
       actionType: 'SKILL',
       useSkill: true,
-      resetRage,
-      rageChange: resetRage ? -currentRage : 0,
+      resetRage: true,
+      rageChange: -currentRage,
       message: `${actor.name} uses skill`
     };
   } else if (isDisarmed) {
@@ -653,7 +651,7 @@ export function tickStatusEffects(unit, state) {
   // Tick all non-control status effects using handlers
   const nonControlStatusTypes = ['silence', 'burn', 'poison', 'bleed', 'disease',
     'armorBreak', 'atkBuff', 'atkDebuff', 'defBuff', 'mdefBuff', 'evadeBuff', 'evadeDebuff',
-    'taunt', 'reflect', 'disarm', 'immune', 'physReflect', 'counter', 'protecting'];
+    'taunt', 'reflect', 'disarm', 'immune', 'physReflect', 'counter', 'protecting', 'hot'];
 
   for (const statusType of nonControlStatusTypes) {
     const handler = TICK_HANDLERS[statusType];
@@ -666,6 +664,13 @@ export function tickStatusEffects(unit, state) {
           type: statusType,
           damage: result.damage,
           spreads: statusType === 'disease' // Disease spreads to adjacent allies
+        });
+      }
+      // If heal was triggered (HoT), add to triggered effects
+      if (result.healed) {
+        triggeredEffects.push({
+          type: statusType,
+          healed: result.healed
         });
       }
     }

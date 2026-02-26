@@ -73,6 +73,14 @@ function getAffectedCells(skill, unit, star = 1) {
           { row: 1, col: 3, side: "enemy" },
         ];
 
+      // Row charge: tất cả kẻ địch cùng hàng
+      case "row_charge":
+        return [
+          { row: 1, col: 2, side: "enemy" },
+          { row: 1, col: 3, side: "enemy" },
+          { row: 1, col: 4, side: "enemy" },
+        ];
+
       // Cone shot at 2★+ expands
       // (RANGED handled below)
 

@@ -4755,7 +4755,7 @@ export class PlanningScene extends Phaser.Scene {
       let iconText = "❔";
       if (base) {
         iconText = visual.icon;
-        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNộ ${base.stats.rageMax} • Tầm ${base.stats.range >= 2 ? "Đánh xa" : "Cận chiến"}`;
+        txt = `${visual.nameVi}\n${getTribeLabelVi(base.tribe)} • ${getClassLabelVi(base.classType)}\nNộ ${base.stats.rageMax}`;
       }
 
       const status = this.add.text(x + 10, y + 8, sold ? "ĐÃ MUA" : "SẴN SÀNG", {
@@ -5750,14 +5750,15 @@ export class PlanningScene extends Phaser.Scene {
       this.addLog(`${actor.name} bo luot (${skipped}).`);
     } else {
       const target = this.selectTarget(actor);
-      if (target) {
+      // SELF-pattern skills don't need enemy target
+      const skill = SKILL_LIBRARY[actor.skillId];
+      const isSelfSkill = skill && (skill.actionPattern === "SELF");
+      if (target || isSelfSkill) {
         if (actor.rage >= actor.rageMax && actor.statuses.silence <= 0) {
-          if (actor.classType !== "MAGE") {
-            actor.rage = 0;
-          }
+          actor.rage = 0;
           this.updateCombatUnitUi(actor);
-          await this.castSkill(actor, target);
-        } else {
+          await this.castSkill(actor, target || actor);
+        } else if (target) {
           await this.basicAttack(actor, target);
         }
       }
@@ -6704,6 +6705,23 @@ export class PlanningScene extends Phaser.Scene {
           .forEach((enemy) => {
             const isPrimary = enemy.row === target.row && enemy.col === target.col;
             this.resolveDamage(attacker, enemy, rawSkill, skill.damageType || "physical", skill.name, { isSplash: !isPrimary });
+          });
+        break;
+      }
+      case "row_charge": {
+        // Ngựa Chiến: gây ST toàn hàng ngang mục tiêu
+        const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+        enemies
+          .filter(e => e.alive && e.row === target.row)
+          .forEach(e => {
+            this.resolveDamage(attacker, e, rawSkill, skill.damageType || "physical", "PHI NƯỚC ĐẠI", skillOpts);
+            if ((attacker?.star ?? 1) >= 3 && e.alive) {
+              const debufVal = Math.round(15 * starScale);
+              e.statuses.armorBreakTurns = Math.max(e.statuses.armorBreakTurns || 0, 2);
+              e.statuses.armorBreakValue = Math.max(e.statuses.armorBreakValue || 0, debufVal);
+              this.showFloatingText(e.sprite.x, e.sprite.y - 45, "-GIÁP", "#ff8855");
+              this.updateCombatUnitUi(e);
+            }
           });
         break;
       }

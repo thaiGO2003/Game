@@ -3364,12 +3364,15 @@ export class CombatScene extends Phaser.Scene {
         const statusResult = CombatSystem.tickStatusEffects(actor, this.combatState);
 
         // Rendering: Apply damage from DoT effects (visual feedback only)
+        const DOT_VI = { burn: 'CHÁY', poison: 'ĐỘC', bleed: 'CHẢY MÁU', disease: 'DỊCH BỆNH' };
+        const CC_VI = { stun: 'choáng', freeze: 'đóng băng', sleep: 'ngủ' };
         if (statusResult.success && statusResult.triggeredEffects) {
           for (const effect of statusResult.triggeredEffects) {
             if (effect.damage > 0) {
               // CombatSystem already applied the damage, we just render it
               const damageResult = CombatSystem.applyDamage(actor, effect.damage, this.combatState);
-              this.resolveDamage(null, actor, effect.damage, "true", effect.type.toUpperCase(), { noRage: true, noReflect: true });
+              this.resolveDamage(null, actor, effect.damage, "true", DOT_VI[effect.type] || effect.type.toUpperCase(), { noRage: true, noReflect: true });
+              this.addLog(`🔥 ${actor.name} chịu ${effect.damage} sát thương ${DOT_VI[effect.type] || effect.type}.`);
 
               // Handle disease spreading (game-specific mechanic)
               if (effect.spreads && effect.type === 'disease') {
@@ -3390,22 +3393,33 @@ export class CombatScene extends Phaser.Scene {
                 });
               }
             }
+            // Handle HoT (heal over time) ticks
+            if (effect.healed > 0 && actor.alive) {
+              this.healUnit(null, actor, effect.healed, "HỒI DẦN");
+              this.updateCombatUnitUi(actor);
+              this.addLog(`💚 ${actor.name} hồi ${effect.healed} HP (hồi dần).`);
+            }
           }
         }
 
         // Check if unit died from DoT
         if (!actor.alive) {
-          this.addLog(`${actor.name} bỏ lượt (dot).`);
+          this.addLog(`💀 ${actor.name} bỏ lượt (sát thương theo lượt).`);
         }
         // Check for control effects (stun, freeze, sleep)
         else if (statusResult.controlStatus) {
-          this.addLog(`${actor.name} bỏ lượt (${statusResult.controlStatus}).`);
+          this.addLog(`🚫 ${actor.name} bỏ lượt (${CC_VI[statusResult.controlStatus] || statusResult.controlStatus}).`);
           this.updateCombatUnitUi(actor);
         }
         // Execute action (skill or basic attack)
         else {
           const target = this.selectTarget(actor);
-          if (target) {
+
+          // SELF-pattern skills don't need enemy target (heals, buffs, self-buffs)
+          const skill = SKILL_LIBRARY[actor.skillId];
+          const isSelfSkill = skill && (skill.actionPattern === "SELF");
+
+          if (target || isSelfSkill) {
             // COMBAT LOGIC DELEGATION: Determine action type using CombatSystem
             // CombatSystem handles: rage check, silence check, disarm check, action type determination
             const actionResult = CombatSystem.executeAction(this.combatState, actor);
@@ -3417,9 +3431,12 @@ export class CombatScene extends Phaser.Scene {
                   actor.rage = 0;
                 }
                 this.updateCombatUnitUi(actor);
-                await this.castSkill(actor, target);
+                // SELF skills use attacker as fallback target
+                await this.castSkill(actor, target || actor);
               } else if (actionResult.actionType === 'DISARMED') {
                 this.showFloatingText(actor.sprite.x, actor.sprite.y - 45, "BỊ CẤM ĐÁNH", "#ffffff");
+              } else if (!target) {
+                // SELF skill was cast but no enemy target for basic attack — skip
               } else {
                 // Basic attack
                 await this.basicAttack(actor, target);
@@ -3490,10 +3507,10 @@ export class CombatScene extends Phaser.Scene {
       const raw = baseStat + Phaser.Math.Between(-5, 6);
       this.audioFx.play("hit");
       this.vfx?.slash(attacker.sprite.x, attacker.sprite.y, target.sprite.x, target.sprite.y, 0xff9f8c);
-      this.resolveDamage(attacker, target, raw, damageType, "BASIC");
+      const dealt = this.resolveDamage(attacker, target, raw, damageType, "ĐÁNH THƯỜNG");
     });
     this.clearCombatBorder(attacker);
-    this.addLog(`${attacker.name} đánh ${target.name}.`);
+    this.addLog(`⚔️ ${attacker.name} đánh thường ${target.name}.`);
   }
 
   async castSkill(attacker, target) {
@@ -3508,14 +3525,19 @@ export class CombatScene extends Phaser.Scene {
     this.setCombatBorder(attacker, "skill");
     const effectivePattern = skill.actionPattern || this.inferBasicActionPattern(attacker.classType, attacker.range);
     await this.runActionPattern(attacker, target, effectivePattern, async () => {
-      this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 8, 0xb6dbff, 16, 220);
+      // SELF skills: pulse on caster, not enemy
+      if (effectivePattern === "SELF") {
+        this.vfx?.pulseAt(attacker.sprite.x, attacker.sprite.y - 8, 0x88ffbb, 16, 220);
+      } else {
+        this.vfx?.pulseAt(target.sprite.x, target.sprite.y - 8, 0xb6dbff, 16, 220);
+      }
       await this.applySkillEffect(attacker, target, skill);
     });
     if (effectivePattern === "RANGED_STATIC" || effectivePattern === "SELF") {
       await this.wait(400);
     }
     this.clearCombatBorder(attacker);
-    this.addLog(`${attacker.name} dùng kỹ năng ${skill.name}.`);
+    this.addLog(`✨ ${attacker.name} dùng [${skill.name}] lên ${target.name !== attacker.name ? target.name : 'bản thân'}.`);
   }
 
   async runActionPattern(attacker, target, pattern, impactFn) {
@@ -4161,6 +4183,24 @@ export class CombatScene extends Phaser.Scene {
           enemies
             .filter((enemy) => Math.abs(enemy.row - target.row) <= coneExpand && Math.abs(enemy.col - target.col) <= coneExpand)
             .forEach((enemy) => this.resolveDamage(attacker, enemy, rawSkill, skill.damageType || "physical", skill.name, skillOpts));
+          break;
+        }
+        case "row_charge": {
+          // Ngựa Chiến: lao thẳng gây ST toàn hàng ngang mục tiêu
+          const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
+          enemies
+            .filter(e => e.alive && e.row === target.row)
+            .forEach(e => {
+              this.resolveDamage(attacker, e, rawSkill, skill.damageType || "physical", "PHI NƯỚC ĐẠI", skillOpts);
+              // 3★: giảm DEF
+              if ((attacker?.star ?? 1) >= 3 && e.alive) {
+                const debufVal = Math.round(15 * starScale);
+                e.statuses.armorBreakTurns = Math.max(e.statuses.armorBreakTurns || 0, 2);
+                e.statuses.armorBreakValue = Math.max(e.statuses.armorBreakValue || 0, debufVal);
+                this.showFloatingText(e.sprite.x, e.sprite.y - 45, "-GIÁP", "#ff8855");
+                this.updateCombatUnitUi(e);
+              }
+            });
           break;
         }
         case "true_single": {
@@ -5468,7 +5508,7 @@ export class CombatScene extends Phaser.Scene {
       // Standard reflect
       if (defender.statuses.reflectTurns > 0 && defender.statuses.reflectPct > 0) {
         const reflected = Math.max(1, Math.round(damageLeft * defender.statuses.reflectPct));
-        this.resolveDamage(defender, attacker, reflected, "true", "REFLECT", {
+        this.resolveDamage(defender, attacker, reflected, "true", "PHẢN ĐÒN", {
           noReflect: true,
           forceHit: true
         });
@@ -5510,6 +5550,7 @@ export class CombatScene extends Phaser.Scene {
       this.audioFx.play("ko", 0.12);
       this.vfx?.pulseAt(defender.sprite.x, defender.sprite.y - 10, 0xffffff, 20, 320);
       this.showFloatingText(defender.sprite.x, defender.sprite.y - 45, "HẠ GỤC", "#ffffff");
+      this.addLog(`💀 ${defender.name} bị hạ gục${attacker ? ' bởi ' + attacker.name : ''}!`);
       if (defender.side === "RIGHT" && attacker?.side !== "RIGHT") {
         this.recordEnemyLootDrop(defender);
       }
