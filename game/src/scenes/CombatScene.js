@@ -75,7 +75,9 @@ import {
   scaledBaseStats,
   starEffectChanceMultiplier,
   starTargetBonus,
-  starAreaBonus
+  starAreaBonus,
+  getStarTurns,
+  getStarDotDamage
 } from "../core/gameUtils.js";
 import {
   UI_FONT, UI_SPACING, UI_COLORS, CLASS_COLORS,
@@ -3581,10 +3583,11 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "single_poison_slow": {
+          const star = attacker?.star ?? 1;
           this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
           if (target.alive) {
-            target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns);
-            target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, skill.poisonPerTurn);
+            target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(star, skill.poisonTurns));
+            target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, getStarDotDamage(star, skill.poisonPerTurn));
             this.updateCombatUnitUi(target);
           }
           break;
@@ -3609,7 +3612,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
           if (target.alive) {
-            target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
+            target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.3 * starScale);
             target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, bleedDmg);
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
@@ -3626,8 +3629,8 @@ export class CombatScene extends Phaser.Scene {
           enemies.forEach(e => {
             this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
             if (e.alive) {
-              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns);
-              e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, skill.selfAtkBuff || 20);
+              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns));
+              e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, Math.round((skill.selfAtkBuff || 20) * this.getStarSkillMultiplier(attacker?.star ?? 1)));
               this.showFloatingText(e.sprite.x, e.sprite.y - 45, "YẾU ỚT", "#ffaaaa");
               this.updateCombatUnitUi(e);
             }
@@ -3688,9 +3691,10 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "single_strong_poison": {
+          const star = attacker?.star ?? 1;
           this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
           if (target.alive) {
-            target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 5);
+            target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(star, 5));
             target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, Math.round(rawSkill * 0.5));
             this.updateCombatUnitUi(target);
           }
@@ -3722,10 +3726,11 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "global_fire": {
+          const star = attacker?.star ?? 1;
           enemies.forEach(e => {
             this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
             if (e.alive) {
-              e.statuses.burnTurns = Math.max(e.statuses.burnTurns, 3);
+              e.statuses.burnTurns = Math.max(e.statuses.burnTurns, getStarTurns(star, 3));
               e.statuses.burnDamage = Math.max(e.statuses.burnDamage, Math.round(rawSkill * 0.2));
               this.updateCombatUnitUi(e);
             }
@@ -4290,7 +4295,7 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "rhino_counter": {
-          attacker.statuses.counterTurns = skill.turns || 3;
+          attacker.statuses.counterTurns = getStarTurns(attacker?.star ?? 1, skill.turns || 3) + (attacker?.star >= 2 ? 1 : 0);
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "TẬP TRUNG PHẢN ĐÒN", "#ffd97b");
           this.updateCombatUnitUi(attacker);
           break;
@@ -4309,9 +4314,9 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const defBuff = Math.max(1, Math.round((skill.armorBuff || 25) * starScale));
           const reflectPct = skill.reflectPct || 0.20;
-          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
           attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
-          attacker.statuses.physReflectTurns = Math.max(attacker.statuses.physReflectTurns, skill.turns || 3);
+          attacker.statuses.physReflectTurns = Math.max(attacker.statuses.physReflectTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "GAI ĐÁ", "#ffa944");
           this.updateCombatUnitUi(attacker);
           break;
@@ -4326,7 +4331,7 @@ export class CombatScene extends Phaser.Scene {
             .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
             .slice(0, maxTargets);
           nearest.forEach(e => {
-            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns || 3);
+            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, debuffValue);
             this.showFloatingText(e.sprite.x, e.sprite.y - 45, "SỢ HÃI", "#ffaaaa");
             this.updateCombatUnitUi(e);
@@ -4340,7 +4345,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const shieldAmt = Math.round(((skill.shieldBase || 50) + this.getEffectiveDef(attacker) * (skill.shieldScale || 0.40)) * starScale);
           this.addShield(attacker, shieldAmt);
-          attacker.statuses.immuneTurns = Math.max(attacker.statuses.immuneTurns, skill.turns || 2);
+          attacker.statuses.immuneTurns = Math.max(attacker.statuses.immuneTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 2));
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "PHÁO ĐÀI", "#83e5ff");
           this.updateCombatUnitUi(attacker);
           break;
@@ -4353,15 +4358,15 @@ export class CombatScene extends Phaser.Scene {
             .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
           if (weakest) {
             weakest.statuses.guardianId = attacker.uid;
-            weakest.statuses.guardianTurns = Math.max(weakest.statuses.guardianTurns || 0, skill.turns || 3);
-            weakest.statuses.guardianAbsorb = 0.30;
+            weakest.statuses.guardianTurns = Math.max(weakest.statuses.guardianTurns || 0, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
+            weakest.statuses.guardianAbsorb = Math.min(0.5, 0.30 * this.getStarSkillMultiplier(attacker?.star ?? 1));
             this.showFloatingText(weakest.sprite.x, weakest.sprite.y - 45, "ĐƯỢC BẢO VỆ", "#9dffba");
             this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "KẸP BẢO VỆ", "#9dffba");
             this.updateCombatUnitUi(weakest);
           }
           // Also self buff DEF
           const defBuff = Math.max(1, Math.round(15 * starScale));
-          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
           attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
           this.updateCombatUnitUi(attacker);
           break;
@@ -4382,9 +4387,9 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const defBuff = Math.max(1, Math.round((skill.armorBuff || 30) * starScale));
           const mdefBuff = Math.max(1, Math.round((skill.mdefBuff || 30) * starScale));
-          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 2);
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 2));
           attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
-          attacker.statuses.mdefBuffTurns = Math.max(attacker.statuses.mdefBuffTurns, skill.turns || 2);
+          attacker.statuses.mdefBuffTurns = Math.max(attacker.statuses.mdefBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 2));
           attacker.statuses.mdefBuffValue = Math.max(attacker.statuses.mdefBuffValue, mdefBuff);
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "CUỘN TRÒN", "#ffd97b");
           this.updateCombatUnitUi(attacker);
@@ -4406,21 +4411,21 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const defBuff = Math.max(1, Math.round((skill.armorBuff || 20) * starScale));
           const mdefBuff = Math.max(1, Math.round((skill.mdefBuff || 15) * starScale));
-          const maxTargets = skill.maxTargets || 2;
+          const maxTargets = (skill.maxTargets || 2) + targetBonus;
           const nearby = allies
             .filter(a => a.alive && a.uid !== attacker.uid)
             .sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))
             .slice(0, maxTargets);
           nearby.forEach(ally => {
-            ally.statuses.defBuffTurns = Math.max(ally.statuses.defBuffTurns, skill.turns || 3);
+            ally.statuses.defBuffTurns = Math.max(ally.statuses.defBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             ally.statuses.defBuffValue = Math.max(ally.statuses.defBuffValue, defBuff);
-            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, skill.turns || 3);
+            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, mdefBuff);
             this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "BĂNG HỘ", "#83e5ff");
             this.updateCombatUnitUi(ally);
           });
           // Also buff self
-          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, skill.turns || 3);
+          attacker.statuses.defBuffTurns = Math.max(attacker.statuses.defBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
           attacker.statuses.defBuffValue = Math.max(attacker.statuses.defBuffValue, defBuff);
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "HÀO QUANG BĂNG", "#83e5ff");
           this.updateCombatUnitUi(attacker);
@@ -4513,7 +4518,7 @@ export class CombatScene extends Phaser.Scene {
           // Sứa Điện: sét lan 3 mục tiêu giảm 20% mỗi lần
           const pool = enemies.filter(e => e.alive);
           let dmg = rawSkill;
-          for (let i = 0; i < Math.min(3, pool.length); i++) {
+          for (let i = 0; i < Math.min(3 + targetBonus, pool.length); i++) {
             const e = pool[Math.floor(Math.random() * pool.length)];
             if (e) this.resolveDamage(attacker, e, dmg, "magic", "SÉT LAN", skillOpts);
             dmg *= 0.8;
@@ -4526,7 +4531,7 @@ export class CombatScene extends Phaser.Scene {
           enemies.filter(e => e.row === target.row).forEach(e => {
             this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
             if (e.alive) {
-              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns || 3);
+              e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
               e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, Math.round(15 * starScale));
               this.showFloatingText(e.sprite.x, e.sprite.y - 45, "ĐÓNG BĂNG", "#83e5ff");
               this.updateCombatUnitUi(e);
@@ -4559,7 +4564,7 @@ export class CombatScene extends Phaser.Scene {
           coneTargets.forEach(e => {
             this.resolveDamage(attacker, e, rawSkill, "magic", "PHUN LỬA", skillOpts);
             if (e.alive) {
-              e.statuses.burnTurns = Math.max(e.statuses.burnTurns || 0, 3);
+              e.statuses.burnTurns = Math.max(e.statuses.burnTurns || 0, getStarTurns(attacker?.star ?? 1, 3));
               e.statuses.burnDamage = Math.max(e.statuses.burnDamage || 0, Math.round(12 * starScale));
               this.updateCombatUnitUi(e);
             }
@@ -4587,8 +4592,8 @@ export class CombatScene extends Phaser.Scene {
           );
           [target, ...neighbors].forEach(e => {
             if (e.alive) {
-              e.statuses.diseaseTurns = Math.max(e.statuses.diseaseTurns || 0, 3);
-              e.statuses.diseaseDamage = Math.max(e.statuses.diseaseDamage || 0, 12);
+              e.statuses.diseaseTurns = Math.max(e.statuses.diseaseTurns || 0, getStarTurns(attacker?.star ?? 1, 3));
+              e.statuses.diseaseDamage = Math.max(e.statuses.diseaseDamage || 0, getStarDotDamage(attacker?.star ?? 1, 12));
               this.showFloatingText(e.sprite.x, e.sprite.y - 45, "DỊCH BỆNH", "#880088");
               this.updateCombatUnitUi(e);
             }
@@ -4758,7 +4763,7 @@ export class CombatScene extends Phaser.Scene {
           // Chim Mỏ To: damage + tước vũ khí (disarm)
           this.resolveDamage(attacker, target, rawSkill, "physical", skill.name, skillOpts);
           if (target.alive) {
-            target.statuses.disarmTurns = Math.max(target.statuses.disarmTurns, 1);
+            target.statuses.disarmTurns = Math.max(target.statuses.disarmTurns, getStarTurns(attacker?.star ?? 1, 1));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "TƯỚC KHÍ", "#ffffff");
             this.updateCombatUnitUi(target);
           }
@@ -4769,7 +4774,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, "physical", "TÊN LỬA", skillOpts);
           if (target.alive) {
-            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, 3);
+            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, getStarTurns(attacker?.star ?? 1, 3));
             target.statuses.burnDamage = Math.max(target.statuses.burnDamage || 0, Math.round(12 * starScale));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỐT CHÁY", "#ff6600");
             this.updateCombatUnitUi(target);
@@ -4894,8 +4899,8 @@ export class CombatScene extends Phaser.Scene {
             if (!target.alive) break;
             this.resolveDamage(attacker, target, rawSkill, "physical", `ĐỘC ${i + 1}`, skillOpts);
             if (target.alive) {
-              target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 3);
-              target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + 10;
+              target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(attacker?.star ?? 1, 3));
+              target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + getStarDotDamage(attacker?.star ?? 1, 10);
               this.updateCombatUnitUi(target);
             }
           }
@@ -4907,7 +4912,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, "physical", "LỬA CÁO", skillOpts);
           if (target.alive) {
-            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, 2);
+            target.statuses.burnTurns = Math.max(target.statuses.burnTurns || 0, getStarTurns(attacker?.star ?? 1, 2));
             target.statuses.burnDamage = Math.max(target.statuses.burnDamage || 0, Math.round(15 * starScale));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỐT CHÁY", "#ff6600");
             this.updateCombatUnitUi(target);
@@ -4919,7 +4924,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, "physical", "KIẾM X", skillOpts);
           if (target.alive) {
-            target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
+            target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, Math.round(this.getEffectiveAtk(attacker) * 0.35 * starScale));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
             this.updateCombatUnitUi(target);
@@ -4931,7 +4936,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, "physical", "MẠNG TƠ", skillOpts);
           if (target.alive) {
-            target.statuses.atkDebuffTurns = Math.max(target.statuses.atkDebuffTurns, skill.turns || 2);
+            target.statuses.atkDebuffTurns = Math.max(target.statuses.atkDebuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 2));
             target.statuses.atkDebuffValue = Math.max(target.statuses.atkDebuffValue, Math.round(20 * starScale));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "MẮC BẪY", "#ffffff");
             this.updateCombatUnitUi(target);
@@ -4957,10 +4962,10 @@ export class CombatScene extends Phaser.Scene {
           // Nai Thần Ca: HoT cho 3 đồng minh
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const targets = allies.filter(a => a.alive)
-            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3);
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, (skill.maxTargets || 3) + targetBonus);
           targets.forEach(ally => {
             const hotAmount = Math.round(ally.maxHp * 0.05 * starScale);
-            ally.statuses.hotTurns = Math.max(ally.statuses.hotTurns || 0, skill.turns || 3);
+            ally.statuses.hotTurns = Math.max(ally.statuses.hotTurns || 0, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
             ally.statuses.hotAmount = Math.max(ally.statuses.hotAmount || 0, hotAmount);
             this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, "HỒI DẦN", "#9dffba");
             this.updateCombatUnitUi(ally);
@@ -4982,7 +4987,7 @@ export class CombatScene extends Phaser.Scene {
             .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
           if (weakest) {
             weakest.statuses.soulLinkId = attacker.uid;
-            weakest.statuses.soulLinkTurns = skill.turns || 2;
+            weakest.statuses.soulLinkTurns = getStarTurns(attacker?.star ?? 1, skill.turns || 2);
             this.showFloatingText(weakest.sprite.x, weakest.sprite.y - 45, "HỘ MỆNH", "#ffff00");
             this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "LIÊN KẾT", "#ffff00");
             this.updateCombatUnitUi(weakest);
@@ -5009,7 +5014,7 @@ export class CombatScene extends Phaser.Scene {
           // Đom Đóm Chữa: xóa 1 debuff + heal nhỏ cho 2 ally
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const targets = allies.filter(a => a.alive)
-            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 2);
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, (skill.maxTargets || 2) + targetBonus);
           targets.forEach(ally => {
             // Remove 1 random debuff
             const debuffs = ["stun", "freeze", "sleep", "silence", "burnTurns", "poisonTurns", "bleedTurns"];
@@ -5043,7 +5048,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const shieldAmt = Math.round(((skill.shieldBase || 40) + this.getEffectiveMatk(attacker) * (skill.shieldScale || 0.3)) * starScale);
           const targets = allies.filter(a => a.alive)
-            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, skill.maxTargets || 2);
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, (skill.maxTargets || 2) + targetBonus);
           targets.forEach(ally => {
             this.addShield(ally, shieldAmt);
             this.showFloatingText(ally.sprite.x, ally.sprite.y - 45, `+${shieldAmt} KHIÊN`, "#ffd97b");
@@ -5056,7 +5061,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           const mdefBuff = Math.max(1, Math.round(20 * starScale));
           allies.forEach(ally => {
-            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, skill.turns || 2);
+            ally.statuses.mdefBuffTurns = Math.max(ally.statuses.mdefBuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 2));
             ally.statuses.mdefBuffValue = Math.max(ally.statuses.mdefBuffValue, mdefBuff);
             this.updateCombatUnitUi(ally);
           });
@@ -5067,7 +5072,7 @@ export class CombatScene extends Phaser.Scene {
           // Bướm Kính: khiên + phản phép cho bản thân
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.addShield(attacker, Math.round(((skill.shieldBase || 50) + this.getEffectiveDef(attacker) * 0.3) * starScale));
-          attacker.statuses.reflectTurns = Math.max(attacker.statuses.reflectTurns, skill.reflectTurns || 2);
+          attacker.statuses.reflectTurns = Math.max(attacker.statuses.reflectTurns, getStarTurns(attacker?.star ?? 1, skill.reflectTurns || 2));
           attacker.statuses.reflectPct = Math.max(attacker.statuses.reflectPct, skill.reflectPct || 0.25);
           this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "VẢY GƯƠNG", "#83e5ff");
           this.updateCombatUnitUi(attacker);
@@ -5076,15 +5081,16 @@ export class CombatScene extends Phaser.Scene {
         case "mass_cleanse": {
           // Tiên Nước: xóa ALL debuff 1 ally + heal 15% HP
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
-          const worst = allies.filter(a => a.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-          if (worst) {
+          const massTargetCount = 1 + targetBonus;
+          const worstList = allies.filter(a => a.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, massTargetCount);
+          worstList.forEach(worst => {
             worst.statuses.freeze = 0; worst.statuses.stun = 0; worst.statuses.sleep = 0;
             worst.statuses.silence = 0; worst.statuses.burnTurns = 0; worst.statuses.poisonTurns = 0;
             worst.statuses.bleedTurns = 0; worst.statuses.diseaseTurns = 0;
             const heal = Math.round(worst.maxHp * 0.15 * starScale);
             this.healUnit(attacker, worst, heal, "THANH TẨY");
             this.updateCombatUnitUi(worst);
-          }
+          });
           break;
         }
         case "scout_buff_ally": {
@@ -5127,13 +5133,13 @@ export class CombatScene extends Phaser.Scene {
         case "mimic_rage_buff": {
           // Vẹt Linh Hô: +3 nộ cho 1 ally nộ thấp nhất
           const rageGain = skill.rageGain || 3;
-          const lowRage = allies.filter(a => a.alive && a.uid !== attacker.uid)
-            .sort((a, b) => a.rage - b.rage)[0];
-          if (lowRage) {
+          const lowRageTargets = allies.filter(a => a.alive && a.uid !== attacker.uid)
+            .sort((a, b) => a.rage - b.rage).slice(0, 1 + targetBonus);
+          lowRageTargets.forEach(lowRage => {
             lowRage.rage = Math.min(lowRage.rageMax, lowRage.rage + rageGain);
             this.showFloatingText(lowRage.sprite.x, lowRage.sprite.y - 45, `+${rageGain} NỘ`, "#b8f5ff");
             this.updateCombatUnitUi(lowRage);
-          }
+          });
           break;
         }
         case "root_snare_debuff":
@@ -5142,7 +5148,7 @@ export class CombatScene extends Phaser.Scene {
           const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
           this.resolveDamage(attacker, target, rawSkill, "magic", "RỄ CÂY", skillOpts);
           if (target.alive) {
-            target.statuses.silence = Math.max(target.statuses.silence || 0, 1);
+            target.statuses.silence = Math.max(target.statuses.silence || 0, getStarTurns(attacker?.star ?? 1, 1));
             this.showFloatingText(target.sprite.x, target.sprite.y - 45, "IM LẶNG", "#9dffba");
             this.updateCombatUnitUi(target);
           }

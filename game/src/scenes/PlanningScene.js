@@ -76,7 +76,9 @@ import {
   getEffectiveEvasion,
   starEffectChanceMultiplier,
   starTargetBonus,
-  starAreaBonus
+  starAreaBonus,
+  getStarTurns,
+  getStarDotDamage
 } from "../core/gameUtils.js";
 import {
   UI_FONT, UI_SPACING, UI_COLORS, CLASS_COLORS,
@@ -6029,10 +6031,11 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "single_poison_slow": {
+        const star = attacker?.star ?? 1;
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {
-          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns);
-          target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, skill.poisonPerTurn);
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(star, skill.poisonTurns));
+          target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, getStarDotDamage(star, skill.poisonPerTurn));
           this.updateCombatUnitUi(target);
         }
         break;
@@ -6040,8 +6043,8 @@ export class PlanningScene extends Phaser.Scene {
       case "single_poison_stack": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {
-          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, skill.poisonTurns || 3);
-          const perTurn = skill.poisonPerTurn || 15;
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(attacker?.star ?? 1, skill.poisonTurns || 3));
+          const perTurn = getStarDotDamage(attacker?.star ?? 1, skill.poisonPerTurn || 15);
           target.statuses.poisonDamage = (target.statuses.poisonDamage || 0) + perTurn;
           this.showFloatingText(target.sprite.x, target.sprite.y - 45, "ĐỘC +", "#880088");
           this.updateCombatUnitUi(target);
@@ -6067,7 +6070,7 @@ export class PlanningScene extends Phaser.Scene {
         const starScale = this.getStarSkillMultiplier(attacker?.star ?? 1);
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {
-          target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, skill.turns || 3);
+          target.statuses.bleedTurns = Math.max(target.statuses.bleedTurns, getStarTurns(attacker?.star ?? 1, skill.turns || 3));
           const bleedDmg = Math.round(this.getEffectiveAtk(attacker) * 0.3 * starScale);
           target.statuses.bleedDamage = Math.max(target.statuses.bleedDamage || 0, bleedDmg);
           this.showFloatingText(target.sprite.x, target.sprite.y - 45, "CHẢY MÁU", "#ff4444");
@@ -6084,8 +6087,8 @@ export class PlanningScene extends Phaser.Scene {
         enemies.forEach(e => {
           this.resolveDamage(attacker, e, rawSkill, skill.damageType, skill.name, skillOpts);
           if (e.alive) {
-            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, skill.turns);
-            e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, skill.selfAtkBuff || 20);
+            e.statuses.atkDebuffTurns = Math.max(e.statuses.atkDebuffTurns, getStarTurns(attacker?.star ?? 1, skill.turns));
+            e.statuses.atkDebuffValue = Math.max(e.statuses.atkDebuffValue, Math.round((skill.selfAtkBuff || 20) * this.getStarSkillMultiplier(attacker?.star ?? 1)));
             this.showFloatingText(e.sprite.x, e.sprite.y - 45, "YẾU ỚT", "#ffaaaa");
             this.updateCombatUnitUi(e);
           }
@@ -6123,9 +6126,10 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "single_strong_poison": {
+        const star = attacker?.star ?? 1;
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {
-          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, 5);
+          target.statuses.poisonTurns = Math.max(target.statuses.poisonTurns, getStarTurns(star, 5));
           target.statuses.poisonDamage = Math.max(target.statuses.poisonDamage, Math.round(rawSkill * 0.5));
           this.updateCombatUnitUi(target);
         }
@@ -6157,10 +6161,11 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "global_fire": {
+        const star = attacker?.star ?? 1;
         enemies.forEach(e => {
           this.resolveDamage(attacker, e, rawSkill, "magic", skill.name, skillOpts);
           if (e.alive) {
-            e.statuses.burnTurns = Math.max(e.statuses.burnTurns, 3);
+            e.statuses.burnTurns = Math.max(e.statuses.burnTurns, getStarTurns(star, 3));
             e.statuses.burnDamage = Math.max(e.statuses.burnDamage, Math.round(rawSkill * 0.2));
             this.updateCombatUnitUi(e);
           }
@@ -6321,7 +6326,7 @@ export class PlanningScene extends Phaser.Scene {
         break;
       }
       case "rhino_counter": {
-        attacker.statuses.counterTurns = skill.turns || 3;
+        attacker.statuses.counterTurns = getStarTurns(attacker?.star ?? 1, skill.turns || 3) + (attacker?.star >= 2 ? 1 : 0);
         this.showFloatingText(attacker.sprite.x, attacker.sprite.y - 45, "TẬP TRUNG PHẢN ĐÒN", "#ffd97b");
         this.updateCombatUnitUi(attacker);
         break;

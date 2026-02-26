@@ -10,6 +10,7 @@
 
 import { getUnitVisual } from "../data/unitVisuals.js";
 import { UI_FONT } from "../core/uiTheme.js";
+import { starTargetBonus, starAreaBonus } from "../core/gameUtils.js";
 
 // ─── Màu sắc ─────────────────────────────────────────────────────────────
 const COLOR = {
@@ -26,10 +27,11 @@ const COLOR = {
 // ─── Skill pattern → danh sách ô bị ảnh hưởng ────────────────────────────
 // Grid layout: 3 hàng x 4 cột. Cột 0-1 = ta, cột 2-3 = địch.
 // Mỗi ô: { row, col, side: 'ally'|'enemy' }
-function getAffectedCells(skill, unit) {
+function getAffectedCells(skill, unit, star = 1) {
   const effect = String(skill?.effect ?? "");
   const actionPattern = String(skill?.actionPattern ?? "");
   const classType = String(unit?.classType ?? "");
+  const tBonus = starTargetBonus(star);
 
   // MELEE_FRONT / FIGHTER / TANKER: đánh ô tiền tuyến địch (col 2)
   if (actionPattern === "MELEE_FRONT" || classType === "TANKER" || classType === "FIGHTER") {
@@ -61,7 +63,11 @@ function getAffectedCells(skill, unit) {
       case "bison_charge":
       case "shark_bite_frenzy":
       case "wolverine_frenzy":
+      case "cone_shot":
         return [{ row: 1, col: 2, side: "enemy" }];
+
+      // Cone shot at 2★+ expands
+      // (RANGED handled below)
 
       // Row cleave (hàng ngang địch)
       case "row_cleave":
@@ -156,6 +162,19 @@ function getAffectedCells(skill, unit) {
     return [{ row: 1, col: 3, side: "enemy" }];
   }
 
+  // Helper: pick N random enemy cells from a pool
+  const allEnemyCells = [
+    { row: 0, col: 2, side: "enemy" }, { row: 0, col: 3, side: "enemy" },
+    { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+    { row: 2, col: 2, side: "enemy" }, { row: 2, col: 3, side: "enemy" },
+  ];
+  const allAllyCells = [
+    { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
+    { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
+    { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
+  ];
+  function pickCells(pool, count) { return pool.slice(0, Math.min(count, pool.length)); }
+
   // RANGED_STATIC — Archer/Mage
   switch (effect) {
     case "cross_5":
@@ -185,17 +204,17 @@ function getAffectedCells(skill, unit) {
 
     case "random_multi":
     case "arrow_rain":
+      return pickCells(allEnemyCells, 3 + tBonus);
+
     case "multi_sting_poison":
+      return pickCells(allEnemyCells, 2 + tBonus);
+
     case "feather_bleed":
     case "dark_feather_debuff":
     case "chain_shock":
     case "random_lightning":
     case "multi_disarm":
-      return [
-        { row: 0, col: 2, side: "enemy" },
-        { row: 1, col: 3, side: "enemy" },
-        { row: 2, col: 2, side: "enemy" },
-      ];
+      return pickCells(allEnemyCells, 3 + tBonus);
 
     case "aoe_circle":
     case "fish_bomb_aoe":
@@ -211,6 +230,21 @@ function getAffectedCells(skill, unit) {
       ];
 
     case "column_freeze":
+    case "cone_shot":
+      // Hình nón: 1★ = 3 ô, 2★+ = 5 ô
+      if (star >= 2) {
+        return [
+          { row: 0, col: 2, side: "enemy" },
+          { row: 1, col: 2, side: "enemy" }, { row: 1, col: 3, side: "enemy" },
+          { row: 2, col: 2, side: "enemy" },
+        ];
+      }
+      return [
+        { row: 0, col: 2, side: "enemy" },
+        { row: 1, col: 2, side: "enemy" },
+        { row: 2, col: 2, side: "enemy" },
+      ];
+
     case "fire_breath_cone":
     case "column_plus_splash":
       return [
@@ -239,7 +273,6 @@ function getAffectedCells(skill, unit) {
     case "heal_over_time":
     case "bless_rain_mdef":
     case "light_purify":
-    case "mass_cleanse":
     case "wind_shield_ally":
     case "soul_link_heal":
     case "phoenix_rebirth":
@@ -250,7 +283,6 @@ function getAffectedCells(skill, unit) {
     case "team_rage":
     case "column_bless":
     case "unicorn_atk_buff":
-    case "mimic_rage_buff":
     case "peace_heal_reduce_dmg":
     case "peace_heal_reduce":
     case "scout_buff_ally":
@@ -258,11 +290,13 @@ function getAffectedCells(skill, unit) {
     case "root_snare_debuff":
     case "root_snare":
     case "global_tide_evade":
-      return [
-        { row: 0, col: 0, side: "ally" }, { row: 0, col: 1, side: "ally" },
-        { row: 1, col: 0, side: "ally" }, { row: 1, col: 1, side: "ally" },
-        { row: 2, col: 0, side: "ally" }, { row: 2, col: 1, side: "ally" },
-      ];
+      return pickCells(allAllyCells, Math.min(6, 3 + tBonus));
+
+    case "mass_cleanse":
+      return pickCells(allAllyCells, 1 + tBonus);
+
+    case "mimic_rage_buff":
+      return pickCells(allAllyCells, 1 + tBonus);
 
     // Single target enemy
     default:
@@ -313,7 +347,7 @@ export class SkillPreview {
     this.gridY = gridY;
 
     // Affected cells set
-    const affected = getAffectedCells(this.skill, this.unit);
+    const affected = getAffectedCells(this.skill, this.unit, this.unit?.star ?? 1);
     const affectedSet = new Set(affected.map(c => `${c.row},${c.col}`));
     const affectedMap = {};
     for (const c of affected) affectedMap[`${c.row},${c.col}`] = c.side;

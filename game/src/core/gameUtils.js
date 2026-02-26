@@ -179,6 +179,21 @@ export function starAreaBonus(star) {
   return Math.max(0, star - 1);
 }
 
+/** Tăng turns theo star: 1★=base, 2★=base, 3★=base+1 */
+export function getStarTurns(star, baseTurns) {
+  const t = Number(baseTurns) || 2;
+  if (star >= 3) return t + 1;
+  return t;
+}
+
+/** Scale DoT damage theo star: 1★=base, 2★=×1.3, 3★=×1.6 */
+export function getStarDotDamage(star, baseDmg) {
+  const d = Number(baseDmg) || 0;
+  if (star >= 3) return Math.round(d * 1.6);
+  if (star === 2) return Math.round(d * 1.3);
+  return d;
+}
+
 export function getWaspMaxTargets(unit, skill) {
   // For wasp_triple_strike skill, maxHits scales with star level
   if (skill.id === "wasp_triple_strike") {
