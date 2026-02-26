@@ -3,6 +3,7 @@ import { SKILL_LIBRARY } from "../data/skills.js";
 import { CRAFT_RECIPES, ITEM_BY_ID } from "../data/items.js";
 import { getClassLabelVi, getTribeLabelVi, getUnitVisual } from "../data/unitVisuals.js";
 import { CLASS_SYNERGY, TRIBE_SYNERGY } from "../data/synergies.js";
+import { getSynergyTier } from "../systems/SynergySystem.js";
 import { getElementLabel } from "../data/elementInfo.js";
 import {
   describeBasicAttack,
@@ -461,8 +462,6 @@ export class LibraryModal {
 
     const visual = getUnitVisual(unit.id, unit.classType);
     const skill = SKILL_LIBRARY[unit.skillId];
-
-    // Lấy stats từ unit.stats (không fallback sang unit.hp vì không tồn tại)
     const stats = unit.stats || {};
     const hp = toNumber(stats.hp, 100);
     const atk = toNumber(stats.atk, 50);
@@ -471,141 +470,158 @@ export class LibraryModal {
     const mdef = toNumber(stats.mdef, 20);
     const range = toNumber(stats.range, 1);
     const rageMax = toNumber(stats.rageMax, 3);
-
-    // Accuracy & Evasion from shared helpers (species-based from CSV)
     const accuracy = getClassAccuracy(unit.classType, unit.tier);
     const evasion = getSpeciesEvasion(unit.species);
-
-    // Element label
     const elementLabel = getElementLabel(unit.tribe);
 
-    const back = this.scene.add.text(0, y, "← Quay lại danh sách", {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: "#7ab8f5"
-    }).setInteractive({ useHandCursor: true });
-    back.on("pointerdown", () => {
-      this.detailUnitId = null;
-      this.scrollY = 0;
-      this.refresh();
+    // Synergy info
+    const classDef = CLASS_SYNERGY[unit.classType];
+    const tribeDef = TRIBE_SYNERGY[unit.tribe];
+    const classMarks = classDef ? classDef.thresholds.join("/") : "-";
+    const tribeMarks = tribeDef ? tribeDef.thresholds.join("/") : "-";
+
+    // Synergy bonus descriptions for each tier
+    const classBonusTexts = classDef ? classDef.thresholds.map((t, i) => {
+      const b = classDef.bonuses[i];
+      const parts = [];
+      if (b.defFlat) parts.push(`+${b.defFlat}DEF`);
+      if (b.mdefFlat) parts.push(`+${b.mdefFlat}MDEF`);
+      if (b.atkPct) parts.push(`+${Math.round(b.atkPct * 100)}%ATK`);
+      if (b.matkPct) parts.push(`+${Math.round(b.matkPct * 100)}%MATK`);
+      if (b.hpPct) parts.push(`+${Math.round(b.hpPct * 100)}%HP`);
+      if (b.healPct) parts.push(`+${Math.round(b.healPct * 100)}%Hồi`);
+      return `${t}: ${parts.join(", ")}`;
+    }) : [];
+    const tribeBonusTexts = tribeDef ? tribeDef.thresholds.map((t, i) => {
+      const b = tribeDef.bonuses[i];
+      const parts = [];
+      if (b.shieldStart) parts.push(`+${b.shieldStart}Khiên`);
+      if (b.atkPct) parts.push(`+${Math.round(b.atkPct * 100)}%ATK`);
+      if (b.matkPct) parts.push(`+${Math.round(b.matkPct * 100)}%MATK`);
+      if (b.burnOnHit) parts.push(`Cháy ${b.burnOnHit}`);
+      if (b.mdefFlat) parts.push(`+${b.mdefFlat}KP`);
+      if (b.healPct) parts.push(`+${Math.round(b.healPct * 100)}%Hồi`);
+      if (b.critPct) parts.push(`+${Math.round(b.critPct * 100)}%Chí mạng`);
+      if (b.startingRage) parts.push(`+${b.startingRage}Nộ`);
+      if (b.poisonOnHit) parts.push(`Độc ${b.poisonOnHit}`);
+      if (b.evadePct) parts.push(`+${Math.round(b.evadePct * 100)}%Né`);
+      if (b.hpPct) parts.push(`+${Math.round(b.hpPct * 100)}%HP`);
+      return `${t}: ${parts.join(", ")}`;
+    }) : [];
+
+    // Skill damage type icon
+    let skillIcon = "✨";
+    if (skill?.damageType === "physical") skillIcon = "🗡️";
+    else if (skill?.damageType === "magic") skillIcon = "🪄";
+    else if (skill?.damageType === "true") skillIcon = "💠";
+
+    const W = this.layout.viewportW - 14;
+    const add = (txt) => { this.contentContainer.add(txt); return txt; };
+    const textStyle = (fontSize = 14, color = "#c0ddf5") => ({
+      fontFamily: UI_FONT, fontSize: `${fontSize}px`, color,
+      lineSpacing: 7, wordWrap: { width: W - 32 }
     });
-    this.contentContainer.add(back);
+
+    // ── Back button ──
+    const back = add(this.scene.add.text(0, y, "← Quay lại danh sách", textStyle(14, "#7ab8f5"))
+      .setInteractive({ useHandCursor: true }));
+    back.on("pointerdown", () => { this.detailUnitId = null; this.scrollY = 0; this.refresh(); });
     y += 28;
 
-    const panelH = 500;
-    const panel = this.scene.add.rectangle(0, y, this.layout.viewportW - 14, panelH, 0x0f1e30, 0.95).setOrigin(0, 0);
-    panel.setStrokeStyle(1, 0x5a8ab0, 0.8);
-    this.contentContainer.add(panel);
+    // ── Header: Name + Tier ──
+    add(this.scene.add.text(16, y, `${visual.icon} ${visual.nameVi}`, {
+      ...textStyle(26, "#ffeab0"), fontStyle: "bold"
+    }));
+    add(this.scene.add.text(W - 24, y + 4, `Bậc ${unit.tier}`, textStyle(16, "#8df2ff")).setOrigin(1, 0));
+    y += 40;
 
-    const title = this.scene.add.text(16, y + 12, `${visual.icon} ${visual.nameVi}`, {
-      fontFamily: UI_FONT,
-      fontSize: "26px",
-      color: "#ffeab0",
-      fontStyle: "bold"
-    });
-    const tier = this.scene.add.text(this.layout.viewportW - 40, y + 16, `Bậc ${unit.tier}`, {
-      fontFamily: UI_FONT,
-      fontSize: "16px",
-      color: "#8df2ff"
-    }).setOrigin(1, 0);
+    // ── Stats block (giống tooltip col 1) ──
+    const statsLines = [
+      `🏷️ ${elementLabel ?? ""} ${getTribeLabelVi(unit.tribe)} / ${getClassLabelVi(unit.classType)} | Tầm: ${range >= 2 ? "Đánh xa" : "Cận chiến"}`,
+      `❤️ HP:${hp}  🗡️ ATK:${atk}  🛡️ DEF:${def}`,
+      `✨ MATK:${matk}  🔰 MDEF:${mdef}`,
+      `🎯 Chính xác: ${accuracy}%  💨 Né tránh: ${evasion}%`,
+      `🔥 Nộ tối đa: ${rageMax}`,
+      `📊 Mốc nghề (${classMarks}): ${classBonusTexts.join(" | ") || "-"}`,
+      `🌿 Mốc tộc (${tribeMarks}): ${tribeBonusTexts.join(" | ") || "-"}`
+    ];
+    const statsTxt = add(this.scene.add.text(16, y, statsLines.join("\n"), textStyle(13, "#c0ddf5")));
+    y += statsTxt.height + 10;
 
-    const desc = [
-      `${elementLabel ? elementLabel + " " : ""}🏷️ Tộc: ${getTribeLabelVi(unit.tribe)}    ⚔️ Nghề: ${getClassLabelVi(unit.classType)}`,
-      `❤️ HP: ${hp}    🗡️ ATK: ${atk}    🛡️ DEF: ${def}`,
-      `✨ MATK: ${matk}    🔰 MDEF: ${mdef}`,
-      `🎯 Chính xác: ${accuracy}%    💨 Né tránh: ${evasion}%`,
-      `🔥 Nộ: ${rageMax}`
-    ].join("\n");
-    const meta = this.scene.add.text(16, y + 52, desc, {
-      fontFamily: UI_FONT,
-      fontSize: "14px",
-      color: "#c0ddf5",
-      lineSpacing: 10
-    });
-
-    const skillTitle = this.scene.add.text(16, y + 180, "⚡ KỸ NĂNG:", {
-      fontFamily: UI_FONT,
-      fontSize: "15px",
-      color: "#ffd580",
-      fontStyle: "bold"
-    });
-    const skillName = this.scene.add.text(16, y + 206, skill?.name ?? unit.skillId, {
-      fontFamily: UI_FONT,
-      fontSize: "18px",
-      color: "#8df2ff",
-      fontStyle: "bold"
-    });
-    const skillDesc = this.scene.add.text(16, y + 236, skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.", {
-      fontFamily: UI_FONT,
-      fontSize: "13px",
-      color: "#d0eaff",
-      lineSpacing: 6,
-      wordWrap: { width: this.layout.viewportW - 48 }
-    });
-
-    // Element effect lines per star
-    const skillElementLines = describeSkillWithElement(skill, unit.tribe, unit);
-    const elementEffectsText = skillElementLines.filter(l => l.startsWith("⭐")).join("\n");
-    const elementSection = this.scene.add.text(16, y + 290, elementEffectsText, {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#b8e8b0",
-      lineSpacing: 6,
-      wordWrap: { width: this.layout.viewportW - 48 }
-    });
-
-    // Basic attack description
+    // ── Basic attack ──
+    add(this.scene.add.rectangle(16, y, W - 32, 1, 0x3a5a7a, 0.6).setOrigin(0, 0));
+    y += 6;
     const basicAtkLines = describeBasicAttack(unit.classType, range, stats);
-    const basicAtkSection = this.scene.add.text(16, y + 340, `🎯 Đánh thường:\n${basicAtkLines.map(l => `  • ${l}`).join("\n")}`, {
-      fontFamily: UI_FONT,
-      fontSize: "12px",
-      color: "#c8d8f0",
-      lineSpacing: 5,
-      wordWrap: { width: this.layout.viewportW - 48 }
-    });
+    const basicSection = `👊 Đánh thường:\n${basicAtkLines.map(l => `  • ${l}`).join("\n")}`;
+    const basicTxt = add(this.scene.add.text(16, y, basicSection, textStyle(13, "#c8d8f0")));
+    y += basicTxt.height + 10;
 
-    this.contentContainer.add([title, tier, meta, skillTitle, skillName, skillDesc, elementSection, basicAtkSection]);
+    // ════ SEPARATOR ════
+    add(this.scene.add.rectangle(16, y, W - 32, 2, 0x5a8ab0, 0.8).setOrigin(0, 0));
+    y += 10;
 
-    let currentY = y + panelH + 16;
+    // ── Skill section (giống tooltip col 2) ──
+    add(this.scene.add.text(16, y, `${skillIcon} Chiêu thức: ${skill?.name ?? "Không có"}`, {
+      ...textStyle(16, "#ffd580"), fontStyle: "bold"
+    }));
+    y += 26;
 
-    // Add preview section
-    const previewTitle = this.scene.add.text(16, currentY, "🎯 PREVIEW TARGETING:", {
-      fontFamily: UI_FONT,
-      fontSize: "15px",
-      color: "#ffd580",
-      fontStyle: "bold"
-    });
-    this.contentContainer.add(previewTitle);
-    currentY += 28;
+    // Skill description
+    const descText = skill?.descriptionVi ?? skill?.description ?? "Chưa có mô tả.";
+    const descTxt = add(this.scene.add.text(16, y, descText, textStyle(13, "#d0eaff")));
+    y += descTxt.height + 8;
 
-    // Create previews side by side
-    const previewW = Math.floor((this.layout.viewportW - 48) / 2);
+    // Element label
+    if (elementLabel) {
+      const elemTxt = add(this.scene.add.text(16, y, `Nguyên tố: ${elementLabel}`, textStyle(13, "#ffcc80")));
+      y += elemTxt.height + 6;
+    }
+
+    // ── Full describeSkillWithElement output (Mốc sao chi tiết) ──
+    const skillLines = describeSkillWithElement(skill, unit.tribe, unit);
+    if (skillLines.length > 0) {
+      add(this.scene.add.text(16, y, "Mốc sao:", { ...textStyle(14, "#ffd580"), fontStyle: "bold" }));
+      y += 20;
+      const formattedLines = skillLines.join("\n");
+      const milestoneTxt = add(this.scene.add.text(24, y, formattedLines, {
+        ...textStyle(13, "#b8e8b0"),
+        lineSpacing: 4
+      }));
+      y += milestoneTxt.height + 10;
+    }
+
+    // ── Star Descriptions from units.csv ──
+    if (unit.star1Desc || unit.star2Desc || unit.star3Desc) {
+      add(this.scene.add.rectangle(16, y, W - 32, 1, 0x3a5a7a, 0.6).setOrigin(0, 0));
+      y += 6;
+      add(this.scene.add.text(16, y, "◆ Biến thể theo sao:", { ...textStyle(14, "#ffd580"), fontStyle: "bold" }));
+      y += 20;
+      const starDescs = [
+        unit.star1Desc ? `⭐ 1 sao: ${unit.star1Desc}` : null,
+        unit.star2Desc ? `⭐⭐ 2 sao: ${unit.star2Desc}` : null,
+        unit.star3Desc ? `⭐⭐⭐ 3 sao: ${unit.star3Desc}` : null
+      ].filter(Boolean).join("\n");
+      const starDescTxt = add(this.scene.add.text(24, y, starDescs, textStyle(13, "#e0d0ff")));
+      y += starDescTxt.height + 10;
+    }
+
+    // ── Preview section ──
+    add(this.scene.add.rectangle(16, y, W - 32, 2, 0x5a8ab0, 0.8).setOrigin(0, 0));
+    y += 10;
+    add(this.scene.add.text(16, y, "🎯 PREVIEW TARGETING:", { ...textStyle(15, "#ffd580"), fontStyle: "bold" }));
+    y += 28;
+
+    const previewW = Math.floor((W - 48) / 2);
     const previewH = 180;
 
-    this.attackPreview = new AttackPreview(
-      this.scene,
-      16,
-      currentY,
-      previewW,
-      previewH,
-      unit
-    );
+    this.attackPreview = new AttackPreview(this.scene, 16, y, previewW, previewH, unit);
     this.contentContainer.add(this.attackPreview.container);
 
-    this.skillPreview = new SkillPreview(
-      this.scene,
-      16 + previewW + 16,
-      currentY,
-      previewW,
-      previewH,
-      unit,
-      skill
-    );
+    this.skillPreview = new SkillPreview(this.scene, 16 + previewW + 16, y, previewW, previewH, unit, skill);
     this.contentContainer.add(this.skillPreview.container);
 
-    currentY += previewH + 16;
-
-    return currentY;
+    y += previewH + 16;
+    return y;
   }
 
   renderRecipesTab(y) {

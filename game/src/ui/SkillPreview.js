@@ -602,18 +602,31 @@ export class SkillPreview {
 
   showHitAt({ x, y, side }) {
     if (!this.container?.active) return;
-    const emoji = side === "ally" ? "✨" : "💥";
-    const hit = this.scene.add.text(x, y - 8, emoji, { fontSize: "14px" }).setOrigin(0.5);
+
+    // Context-aware icon based on skill effect + target side
+    let emoji = "💥"; // default enemy hit
+    if (side === "ally") {
+      const fx = String(this.skill?.effect ?? "").toLowerCase();
+      if (/shield|taunt|reflect|armor|protect|fortif|immune|pangolin|turtle|resilient/.test(fx)) {
+        emoji = "🛡️";
+      } else if (/heal|regen|cleanse|peace|soul_link|spring|rebirth|revive|phoenix/.test(fx)) {
+        emoji = "💚";
+      } else {
+        emoji = "✨"; // buff (ATK, DEF, evade, rage, etc.)
+      }
+    }
+
+    const hit = this.scene.add.text(x, y - 8, emoji, { fontSize: "16px" }).setOrigin(0.5);
     this.container.add(hit);
     const t = this.scene.tweens.add({
-      targets: hit, y: y - 20, alpha: 0, duration: 380,
+      targets: hit, y: y - 22, alpha: 0, duration: 420,
       onComplete: () => hit.destroy()
     });
     this.tweens.push(t);
 
-    // Shake enemy icons in affected cells
-    this.enemyIcons.forEach(({ icon, row, col }) => {
-      const key = `${row},${col}`;
+    // Shake affected unit icons
+    const iconList = side === "ally" ? [] : this.enemyIcons;
+    iconList.forEach(({ icon, row, col }) => {
       const affected = this.targetCenters.some(
         tc => Math.abs(tc.x - (this.gridX + col * this.cellSize + this.cellSize / 2)) < 5
           && Math.abs(tc.y - (this.gridY + row * this.cellSize + this.cellSize / 2)) < 5

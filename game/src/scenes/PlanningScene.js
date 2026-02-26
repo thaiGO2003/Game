@@ -109,7 +109,7 @@ export class PlanningScene extends Phaser.Scene {
   constructor() {
     super("PlanningScene");
     this.phase = PHASE.PLANNING;
-    this.aiMode = "MEDIUM";
+    this.aiMode = "EASY";
     this.tileLookup = new Map();
     this.playerCellZones = [];
     this.buttons = {};
@@ -196,7 +196,7 @@ export class PlanningScene extends Phaser.Scene {
 
   resetTransientSceneState() {
     this.phase = PHASE.PLANNING;
-    this.aiMode = "MEDIUM";
+    this.aiMode = null; // Will be set by applyRuntimeSettings or restoreFromSavedState
     this.benchUpgradeLevel = 0;
     this.tileLookup = new Map();
     this.playerCellZones = [];
@@ -684,8 +684,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   toggleLoseCondition() {
-    const next = this.getLoseCondition() === "NO_UNITS" ? "NO_HEARTS" : "NO_UNITS";
-    this.setLoseCondition(next);
+    // Only NO_UNITS mode - no toggle needed
   }
 
   startNewRun() {
@@ -731,7 +730,7 @@ export class PlanningScene extends Phaser.Scene {
   }
 
   applyRunState(state) {
-    this.aiMode = state.aiMode ?? "MEDIUM";
+    this.aiMode = state.aiMode ?? this.aiMode ?? this.runtimeSettings?.aiMode ?? "EASY";
     this.audioFx.setEnabled(state.audioEnabled !== false);
     this.player = state.player;
     this.ensurePlayerStateFields();
@@ -4110,13 +4109,16 @@ export class PlanningScene extends Phaser.Scene {
     this.drawAttackPreviewSword(impact.primary.row, impact.primary.col, unit);
     // Normal attack preview is always fist icon for all roles.
     this.drawAttackPreviewPrimaryIcon(impact.primary.row, impact.primary.col, "👊", -11);
-    if (impact.skillPrimary) {
-      const primaryIcon = this.getPreviewSkillIcon(unit, skill);
-      const sameCell =
-        impact.skillPrimary.row === impact.primary.row &&
-        impact.skillPrimary.col === impact.primary.col;
-      const iconYOffset = sameCell ? 10 : -11;
-      this.drawAttackPreviewPrimaryIcon(impact.skillPrimary.row, impact.skillPrimary.col, primaryIcon, iconYOffset);
+    // Draw skill icons on ALL affected skill cells with per-cell icon
+    if (impact.skillCells && impact.skillCells.length > 0) {
+      impact.skillCells.forEach(cell => {
+        // Determine if cell is ally or enemy based on column position
+        const isAllyCell = unit.side === "LEFT" ? cell.col < PLAYER_COLS : cell.col >= PLAYER_COLS;
+        const cellIcon = this.getPreviewSkillIcon(unit, skill, isAllyCell);
+        const sameAsBasic = cell.row === impact.primary.row && cell.col === impact.primary.col;
+        const iconYOffset = sameAsBasic ? 10 : -11;
+        this.drawAttackPreviewPrimaryIcon(cell.row, cell.col, cellIcon, iconYOffset);
+      });
     }
   }
 
@@ -4137,19 +4139,41 @@ export class PlanningScene extends Phaser.Scene {
     this.attackPreviewIcons = [];
   }
 
-  getPreviewSkillIcon(attacker, skill) {
-    const effect = skill?.effect ?? null;
-    const shieldEffects = new Set(["shield_immune", "team_buff_def", "team_def_buff", "ally_row_def_buff", "shield_cleanse", "column_bless"]);
-    const healBuffEffects = new Set(["revive_or_heal", "dual_heal", "team_rage"]);
+  getPreviewSkillIcon(attacker, skill, isAllyCell = false) {
+    const fx = String(skill?.effect ?? "").toLowerCase();
 
-    if (effect === "global_tide_evade") return "💚";
-    if (effect === "global_knockback") return "🌊";
-    if (shieldEffects.has(effect)) return "🛡️";
-    if (healBuffEffects.has(effect)) return "💚";
+    // For ally cells: show appropriate buff/heal/shield icon
+    if (isAllyCell) {
+      if (/shield|taunt|reflect|armor|protect|fortif|immune|pangolin|turtle|resilient|damage_shield|team_def|team_buff_def|ally_row_def|column_bless|guardian/.test(fx)) {
+        return "🛡️";
+      }
+      if (/heal|regen|cleanse|peace|soul_link|spring|rebirth|revive|phoenix|hot|cure|dual_heal/.test(fx)) {
+        return "💚";
+      }
+      // Default ally icon: buff sparkle
+      return "✨";
+    }
+
+    // For enemy cells: show appropriate damage/debuff icon
+    if (/debuff|disarm|slow|weaken|curse|roar_debuff/.test(fx)) {
+      return "🔻";
+    }
+    if (/stun|freeze|sleep|paralyze|confuse/.test(fx)) {
+      return "❄️";
+    }
+    if (/knockback/.test(fx)) return "🌊";
+    if (/fire|burn/.test(fx)) return "🔥";
+    if (/poison/.test(fx)) return "☠️";
+    if (/bleed/.test(fx)) return "🩸";
+    if (/silence|blind/.test(fx)) return "🚫";
+
+    // Role-based enemy icon fallbacks
+    if (attacker?.classType === "SUPPORT") return "✨";
     if (attacker?.classType === "ARCHER") return "🏹";
     if (attacker?.classType === "ASSASSIN") return "🗡️";
-    if (attacker?.classType === "MAGE" || skill?.damageType === "magic") return "✨";
-    // Offensive non-ranged/non-assassin/non-mage skills fallback to fist.
+    if (attacker?.classType === "MAGE" || skill?.damageType === "magic") return "🪄";
+
+    // Offensive melee fallback
     return "👊";
   }
 
@@ -4227,7 +4251,7 @@ export class PlanningScene extends Phaser.Scene {
         ? attackCell
         : [...skillCells].sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b))[0] ?? null;
     }
-    return { primary: attackCell, skillPrimary, cells: impactCells };
+    return { primary: attackCell, skillPrimary, skillCells, cells: impactCells };
   }
 
   collectSkillPreviewCells(attacker, target, skill, allies, enemies) {
@@ -4281,7 +4305,36 @@ export class PlanningScene extends Phaser.Scene {
       case "revive_or_heal":
       case "team_buff_def":
       case "team_def_buff":
+      case "heal_over_time":
+      case "team_evade_buff":
+      case "warcry_atk_def":
+      case "team_rage_self_heal":
+      case "frost_aura_buff":
+      case "bless_rain_mdef":
+      case "spring_aoe_heal":
+      case "mass_cleanse":
+      case "mimic_rage_buff":
+      case "unicorn_atk_buff":
+      case "soul_link_heal":
+      case "wind_shield_ally":
+      case "phoenix_rebirth":
+      case "team_shield":
+      case "light_purify":
+      case "mirror_reflect":
+      case "peace_heal_reduce_dmg":
+      case "self_regen_team_heal":
+      case "scout_buff_ally":
+      case "pack_howl_rage":
         pushUnits(allies);
+        break;
+      // Self-only buff effects
+      case "self_armor_reflect":
+      case "self_def_fortify":
+      case "self_shield_immune":
+      case "self_maxhp_boost":
+      case "resilient_shield":
+      case "guardian_pact":
+        pushCell(attacker.row, attacker.col);
         break;
       case "damage_shield_taunt":
         pushCell(target.row, target.col);
@@ -4400,6 +4453,50 @@ export class PlanningScene extends Phaser.Scene {
       case "column_bless":
         pushUnits(allies.filter((ally) => ally.col === attacker.col));
         break;
+
+      // ── AoE circle effects (enemies around target) ──
+      case "frost_storm":
+      case "fish_bomb_aoe":
+      case "ink_bomb_blind":
+      case "pollen_confuse":
+      case "dust_sleep":
+        pushUnits(enemies.filter(e => Math.abs(e.row - target.row) <= 1 && Math.abs(e.col - target.col) <= 1));
+        break;
+
+      // ── Cone AoE effects ──
+      case "fire_breath_cone":
+        enemies.filter(e => Math.abs(e.row - target.row) <= 1 && e.col >= target.col)
+          .forEach(e => pushCell(e.row, e.col));
+        break;
+
+      // ── Row charge effects ──
+      case "row_charge":
+        pushUnits(enemies.filter(e => e.row === target.row));
+        break;
+
+      // ── Multi-hit / chain / multi-target ──
+      case "arrow_rain":
+      case "rapid_fire":
+      case "multi_sting_poison":
+      case "chain_shock":
+      case "flame_combo":
+      case "plague_spread": {
+        const pool = enemies.filter(e => e.alive !== false);
+        const maxT = skill?.maxHits ?? skill?.maxTargets ?? 3;
+        pushUnits(pool.sort((a, b) => manhattan(attacker, a) - manhattan(attacker, b)).slice(0, maxT));
+        break;
+      }
+
+      // ── Double hit (same target x2, just show target) ──
+      case "double_hit":
+      case "double_poison_hit":
+      case "x_slash_bleed":
+      case "feather_bleed":
+      case "dark_feather_debuff":
+      case "flash_blind":
+        pushCell(target.row, target.col);
+        break;
+
       default:
         pushCell(target.row, target.col);
         break;

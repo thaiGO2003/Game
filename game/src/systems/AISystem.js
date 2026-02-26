@@ -28,8 +28,14 @@ export const AI_SETTINGS = {
     budgetMult: 0.9,
     levelBonus: 0,
     maxTierBonus: 0,
-    star2Bonus: -0.05,
-    star3Bonus: -0.02
+    maxStar: 1,
+    star2Bonus: -1,
+    star3Bonus: -1,
+    equipStartRound: 8,      // Trang bị từ round 8
+    equipBaseChance: 0.10,   // 10% cơ bản
+    equipGrowth: 0.02,       // +2% mỗi round
+    equipMaxChance: 0.35,    // Cap 35%
+    equipMaxTier: 1
   },
   MEDIUM: {
     label: "Trung bình",
@@ -38,14 +44,21 @@ export const AI_SETTINGS = {
     matkMult: 0.93,
     rageGain: 1,
     randomTargetChance: 0.3,
-    teamSizeBonus: 1,
-    teamGrowthEvery: 4,
-    teamGrowthCap: 2,
+    teamSizeBonus: 0,       // Giống EASY
+    teamGrowthEvery: 5,     // Giống EASY
+    teamGrowthCap: 1,       // Giống EASY
     budgetMult: 1,
     levelBonus: 0,
     maxTierBonus: 0,
-    star2Bonus: -0.01,
-    star3Bonus: -0.01
+    maxStar: 2,              // Tối đa 2★
+    minStar2Round: 5,        // Guarantee 1× 2★ từ round 5
+    star2Bonus: -0.02,
+    star3Bonus: -1,           // Không cho 3★
+    equipStartRound: 6,      // Trang bị từ round 6
+    equipBaseChance: 0.12,   // 12% cơ bản
+    equipGrowth: 0.03,       // +3% mỗi round
+    equipMaxChance: 0.55,    // Cap 55%
+    equipMaxTier: 2
   },
   HARD: {
     label: "Khó",
@@ -54,14 +67,22 @@ export const AI_SETTINGS = {
     matkMult: 1.04,
     rageGain: 1,
     randomTargetChance: 0.12,
-    teamSizeBonus: 2,
-    teamGrowthEvery: 3,
-    teamGrowthCap: 3,
-    budgetMult: 1.08,
+    teamSizeBonus: 1,
+    teamGrowthEvery: 4,
+    teamGrowthCap: 2,
+    budgetMult: 1.05,
     levelBonus: 1,
     maxTierBonus: 1,
+    maxStar: 3,              // Cho phép 3★
+    minStar2Round: 4,        // Guarantee 1× 2★ từ round 4
+    minStar3Round: 14,       // Guarantee 1× 3★ từ round 14
     star2Bonus: 0,
-    star3Bonus: 0.01
+    star3Bonus: 0,
+    equipStartRound: 5,
+    equipBaseChance: 0.15,
+    equipGrowth: 0.04,
+    equipMaxChance: 0.70,
+    equipMaxTier: 3
   }
 };
 
@@ -259,11 +280,14 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
 
     // Determine star level based on round progression
     let star = 1;
-    const starRoll = Math.random();
-    const twoStarChance = clamp((round - 6) * 0.045 + (ai.star2Bonus ?? 0), 0, 0.38);
-    const threeStarChance = clamp((round - 11) * 0.018 + (ai.star3Bonus ?? 0), 0, 0.08);
-    if (starRoll < threeStarChance) star = 3;
-    else if (starRoll < threeStarChance + twoStarChance) star = 2;
+    const maxStar = ai.maxStar ?? 3;
+    if (maxStar >= 2) {
+      const starRoll = Math.random();
+      const twoStarChance = clamp((round - 6) * 0.045 + (ai.star2Bonus ?? 0), 0, 0.38);
+      const threeStarChance = maxStar >= 3 ? clamp((round - 11) * 0.018 + (ai.star3Bonus ?? 0), 0, 0.08) : 0;
+      if (starRoll < threeStarChance) star = 3;
+      else if (starRoll < threeStarChance + twoStarChance) star = 2;
+    }
 
     picks.push({ baseId: pick.id, classType: pick.classType, tier: pick.tier, star });
     if (pick.classType === "TANKER" || pick.classType === "FIGHTER") frontCount += 1;
@@ -278,6 +302,39 @@ export function generateEnemyTeam(round, budget, difficulty = 'MEDIUM', sandbox 
   if (!picks.length) {
     const fallback = randomItem(UNIT_CATALOG.filter((u) => u.tier === 1));
     picks.push({ baseId: fallback.id, classType: fallback.classType, tier: fallback.tier, star: 1 });
+  }
+
+  // ── Star guarantee: nâng random units lên 2★/3★ nếu chưa đủ ──
+  const minStar2Round = ai.minStar2Round ?? Infinity;
+  const minStar3Round = ai.minStar3Round ?? Infinity;
+  const maxStar = ai.maxStar ?? 3;
+
+  if (round >= minStar2Round && maxStar >= 2) {
+    // Số lượng 2★ guarantee: 1 ở minRound, thêm 1 mỗi 4 rounds
+    const guaranteed2Star = clamp(1 + Math.floor((round - minStar2Round) / 4), 1, Math.ceil(picks.length * 0.5));
+    let current2Plus = picks.filter(p => p.star >= 2).length;
+    // Nâng random units lên 2★ cho đến khi đủ
+    for (let i = 0; i < picks.length && current2Plus < guaranteed2Star; i++) {
+      if (picks[i].star < 2) {
+        picks[i].star = 2;
+        current2Plus++;
+      }
+    }
+  }
+
+  if (round >= minStar3Round && maxStar >= 3) {
+    // Guarantee 1× 3★ ở minRound, thêm 1 mỗi 6 rounds
+    const guaranteed3Star = clamp(1 + Math.floor((round - minStar3Round) / 6), 1, Math.ceil(picks.length * 0.25));
+    let current3 = picks.filter(p => p.star >= 3).length;
+    // Nâng unit tier cao nhất lên 3★
+    const sorted = picks.map((p, idx) => ({ idx, tier: p.tier })).sort((a, b) => b.tier - a.tier);
+    for (const { idx } of sorted) {
+      if (current3 >= guaranteed3Star) break;
+      if (picks[idx].star < 3) {
+        picks[idx].star = 3;
+        current3++;
+      }
+    }
   }
 
   // Assign positions based on unit roles

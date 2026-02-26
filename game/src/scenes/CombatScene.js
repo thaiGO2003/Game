@@ -555,12 +555,8 @@ export class CombatScene extends Phaser.Scene {
     }
     this.runStatePayload = hydrated;
 
-    // Use game mode config for AI difficulty, fallback to saved aiMode or MEDIUM
-    if (this.gameModeConfig?.aiDifficulty) {
-      this.aiMode = this.gameModeConfig.aiDifficulty;
-    } else {
-      this.aiMode = hydrated.aiMode ?? "MEDIUM";
-    }
+    // User's aiMode takes priority over game mode default
+    this.aiMode = hydrated.aiMode ?? this.gameModeConfig?.aiDifficulty ?? "EASY";
 
     this.audioFx.setEnabled(hydrated.audioEnabled !== false);
     this.audioFx.startBgm("bgm_combat", 0.2);
@@ -2001,13 +1997,26 @@ export class CombatScene extends Phaser.Scene {
       if (!base) return;
       const owned = this.createOwnedUnit(base.id, ref.star ?? 1);
 
-      // Apply equipment for HARD difficulty
+      // Progressive equipment based on difficulty + round
       const ai = getAISettings(this.aiMode);
-      if (ai.difficulty === "HARD" && EQUIPMENT_ITEMS.length > 0) {
-        const equipChance = clamp(0.15 + (this.player.round - 5) * 0.04, 0, 0.65);
-        if (Math.random() < equipChance) {
-          const eq = randomItem(EQUIPMENT_ITEMS);
-          owned.equips = eq?.id ? [eq.id] : [];
+      const equipStart = ai.equipStartRound ?? 99;
+      if (this.player.round >= equipStart && EQUIPMENT_ITEMS.length > 0) {
+        const roundsSinceStart = this.player.round - equipStart;
+        const rawChance = (ai.equipBaseChance ?? 0.1) + roundsSinceStart * (ai.equipGrowth ?? 0.02);
+        const maxTier = ai.equipMaxTier ?? 1;
+        const eligibleItems = EQUIPMENT_ITEMS.filter(e => (e.tier ?? 1) <= maxTier);
+        if (eligibleItems.length > 0) {
+          // rawChance > 1.0 = guarantee 1 equip, chance for 2nd; > 2.0 = guarantee 2, etc.
+          const cappedChance = Math.min(rawChance, (ai.equipMaxChance ?? 0.5) + Math.max(0, roundsSinceStart - 15) * 0.05);
+          const guaranteedSlots = Math.floor(cappedChance);
+          const extraChance = cappedChance - guaranteedSlots;
+          const totalEquips = guaranteedSlots + (Math.random() < extraChance ? 1 : 0);
+          const equips = [];
+          for (let e = 0; e < Math.min(totalEquips, 3); e++) {
+            const eq = randomItem(eligibleItems);
+            if (eq?.id && !equips.includes(eq.id)) equips.push(eq.id);
+          }
+          if (equips.length > 0) owned.equips = equips;
         }
       }
 
@@ -2911,17 +2920,27 @@ export class CombatScene extends Phaser.Scene {
     const skillDescLines = _describeSkillWithElement(skill, unit.tribe, baseUnit);
     skillDescLines.forEach((line) => rightLines.push(line));
 
+    // --- 3rd column: equipment ---
     const equippedItems = Array.isArray(unit.equips)
       ? unit.equips.map((id) => ITEM_BY_ID[id]).filter((x) => x?.kind === "equipment")
       : [];
-    if (equippedItems.length) {
-      rightLines.push("");
-      rightLines.push("🛡️ Trang bị đang mặc");
+    const equipCount = equippedItems.length;
+    const col3Lines = [
+      `📦 Trang bị (${equipCount}/3)`,
+      ""
+    ];
+
+    if (equipCount > 0) {
       equippedItems.forEach((item) => {
         const recipe = RECIPE_BY_ID[item.fromRecipe];
-        const desc = recipe?.description ? ` (${recipe.description})` : "";
-        rightLines.push(`  ${item.icon} ${item.name}${desc}`);
+        col3Lines.push(`${item.icon} ${item.name}`);
+        if (recipe?.description) {
+          col3Lines.push(`  ${recipe.description}`);
+        }
+        col3Lines.push("");
       });
+    } else {
+      col3Lines.push("Chưa có trang bị.");
     }
 
     const baseEvasion = unit.mods.evadePct ?? 0;
@@ -2975,7 +2994,8 @@ export class CombatScene extends Phaser.Scene {
     return {
       title: `${visual.icon} ${visual.nameVi} ${unit.star}★ [${unit.side === "LEFT" ? "Ta" : "Địch"}]`,
       body: bodyLines.join("\n"),
-      rightBody: rightLines.join("\n")
+      rightBody: rightLines.join("\n"),
+      col3Body: col3Lines.join("\n")
     };
   }
   getSynergyTooltip() {
@@ -3615,10 +3635,16 @@ export class CombatScene extends Phaser.Scene {
           break;
         }
         case "aoe_circle_stun": {
+          // Voi Thiết Giáp: nhảy đến ô ngẫu nhiên trên sân địch, dập đất AoE
           const goldMultiplier = getGoldReserveScaling(this.player.gold);
           const expandAoe = 1 + areaBonus;
+          // Chọn ô ngẫu nhiên — lấy 1 kẻ địch sống ngẫu nhiên làm tâm AoE
+          const aliveEnemies = enemies.filter(e => e.alive);
+          const aoeCenter = aliveEnemies.length > 0
+            ? aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)]
+            : target;
           enemies
-            .filter((enemy) => Math.abs(enemy.row - target.row) <= expandAoe && Math.abs(enemy.col - target.col) <= expandAoe)
+            .filter((enemy) => Math.abs(enemy.row - aoeCenter.row) <= expandAoe && Math.abs(enemy.col - aoeCenter.col) <= expandAoe)
             .forEach((enemy) => {
               this.resolveDamage(attacker, enemy, rawSkill, skill.damageType, skill.name, skillOpts);
               const effectiveStunChance = Math.min(1, skill.stunChance * starChanceMult * goldMultiplier);

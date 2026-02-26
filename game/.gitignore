@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output (deploy riêng)
+# dist/
+
+# Temp/analysis scripts
+_*.py
+_*.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docs (không deploy)
+*.md
+!README.md
+
+# Environment
+.env
+.env.*

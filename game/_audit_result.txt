@@ -1,9 +1,850 @@
 ================================================================================
-Traceback (most recent call last):
-  File "P:\DigiGO\games\game\_audit_skills.py", line 42, in <module>
-    print("AUDIT: Skill Star Descriptions - Trφch xu\u1ea5t con s\u1ed1 t\u1eeb m⌠ t\u1ea3")
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
-    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
-           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-UnicodeEncodeError: 'charmap' codec can't encode character '\u1ea5' in position 41: character maps to <undefined>
+AUDIT: Skill Star Descriptions
+================================================================================
+
+____________________________________________________________
+bear_roar (effect: roar_debuff_heal)
+  CSV: base= scale= turns=3 maxT=1 maxH=
+  *1: giảm 15%ATK 3 lượt 1 mục tiêu, hồi 10%HP
+  *2: giảm 20%ATK 3 lượt 2 mục tiêu, hồi 15%HP
+  *3: giảm 25%ATK 4 lượt 3 mục tiêu, hồi 20%HP
+
+____________________________________________________________
+unit_skill_ant_guard (effect: ally_row_def_buff)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: +15 Giáp/+10 KP 2 lượt
+  *2: +20 Giáp/+14 KP 3 lượt
+  *3: +25 Giáp/+18 KP 3 lượt + lan sang hàng bên cạnh
+
+____________________________________________________________
+badger_thorns (effect: self_armor_reflect)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: +15 Giáp phản 15% 3 lượt
+  *2: +20 Giáp phản 25% 3 lượt
+  *3: +30 Giáp phản 35% 4 lượt + gai lan sang đồng minh kề
+
+____________________________________________________________
+ram_headbutt (effect: ram_charge_pierce)
+  CSV: base=18 scale=0.8 turns= maxT= maxH=
+  *1: ST gốc + 60% ST xuyên kẻ sau
+  *2: +20% ST cả hai
+  *3: +40% ST cả hai + phá 10 giáp mục tiêu chính
+
+____________________________________________________________
+crab_guard (effect: guardian_pact)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: hấp thụ 30% ST 3 lượt 1 đồng minh
+  *2: hấp thụ 40% ST 3 lượt 1 đồng minh
+  *3: hấp thụ 50% ST 4 lượt 2 đồng minh yếu nhất
+
+____________________________________________________________
+armadillo_roll (effect: self_def_fortify)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: +20 DEF/MDEF 2 lượt giảm 30% đòn kế
+  *2: +30 DEF/MDEF 2 lượt giảm 40% đòn kế
+  *3: +40 DEF/MDEF 3 lượt giảm 50% đòn kế
+
+____________________________________________________________
+snail_fortress (effect: self_shield_immune)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: khiên (40+30%DEF) 2 lượt
+  *2: khiên (60+40%DEF) 2 lượt
+  *3: khiên (80+50%DEF) 3 lượt + khiên tóe sang đồng minh cùng hàng (25% giá trị)
+
+____________________________________________________________
+ox_endure (effect: self_maxhp_boost)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: +12% HP vĩnh viễn hồi 12%HP ngay
+  *2: +18% HP vĩnh viễn hồi 18%HP ngay
+  *3: +25% HP vĩnh viễn hồi 25%HP ngay + tăng 5 DEF vĩnh viễn
+
+____________________________________________________________
+turtle_shell (effect: resilient_shield)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: khiên (60+40%DEF) hồi 15%HP nếu còn
+  *2: khiên (80+50%DEF) hồi 20%HP nếu còn
+  *3: khiên (100+60%DEF) hồi 25%HP + hồi thêm 5%HP/lượt 2 lượt
+
+____________________________________________________________
+unit_skill_pangolin_plate (effect: pangolin_reflect)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: phản 80% ST vật lý 3 lượt
+  *2: phản 100% ST vật lý 3 lượt
+  *3: phản 100% ST vật lý 4 lượt + phản 30% ST phép
+
+____________________________________________________________
+walrus_frost_aura (effect: frost_aura_buff)
+  CSV: base= scale= turns=3 maxT=2 maxH=
+  *1: 2 đồng minh +15DEF/+12KP 3 lượt
+  *2: 3 đồng minh +20DEF/+16KP 3 lượt
+  *3: 4 đồng minh +25DEF/+20KP 4 lượt
+
+____________________________________________________________
+golem_anchor (effect: damage_shield_taunt)
+  CSV: base=15 scale=0.4 turns= maxT= maxH=
+  *1: taunt 2 lượt khiên (50+25%DEF)
+  *2: taunt 3 lượt khiên (70+35%DEF) +10 phản công
+  *3: taunt 3 lượt khiên (90+45%DEF) +20 phản công toàn đội
+
+____________________________________________________________
+buffalo_mist_veil (effect: team_evade_buff)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: +15% né tránh 2 lượt
+  *2: +20% né tránh 3 lượt
+  *3: +25% né tránh 3 lượt + 15% phản công khi né thành công
+
+____________________________________________________________
+unit_skill_elephant_guard (effect: aoe_circle_stun)
+  CSV: base=35 scale=1.0 turns= maxT= maxH=
+  *1: 8 ô ST gốc 35% choáng 1 lượt
+  *2: 8 ô +20% ST 50% choáng 1 lượt
+  *3: 8 ô +40% ST 65% choáng 2 lượt
+
+____________________________________________________________
+yak_warcry (effect: warcry_atk_def)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: +15%ATK toàn đội 2 lượt +20 DEF bản thân 3 lượt
+  *2: +20%ATK toàn đội 3 lượt +30 DEF bản thân
+  *3: +25%ATK toàn đội 3 lượt +40 DEF bản thân + cộng +5 nộ toàn đội
+
+____________________________________________________________
+mammoth_rally (effect: team_rage_self_heal)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: +2 nộ toàn đội hồi 12%HP bản thân
+  *2: +3 nộ toàn đội hồi 18%HP bản thân
+  *3: +4 nộ toàn đội hồi 25%HP bản thân + hồi 8%HP cho toàn đội
+
+____________________________________________________________
+kraken_grasp (effect: single_silence_lock)
+  CSV: base=40 scale=0.8 turns=2 maxT= maxH=
+  *1: ST gốc silence 2 lượt 1 mục tiêu
+  *2: +20% ST silence 2 lượt 2 mục tiêu
+  *3: +40% ST silence 3 lượt 2 mục tiêu + giảm 25% ST chúng
+
+____________________________________________________________
+unit_skill_titan_earth (effect: team_def_buff)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: +25 Giáp/KP 3 lượt hồi 60HP yếu nhất
+  *2: +35 Giáp/KP 3 lượt hồi 90HP yếu nhất
+  *3: +45 Giáp/KP 4 lượt hồi 120HP 2 đồng minh yếu nhất
+
+____________________________________________________________
+hydra_regen (effect: self_regen_team_heal)
+  CSV: base= scale= turns= maxT=2 maxH=
+  *1: hồi 10%HP bản thân 3 lượt heal 5%HP cho 2 đồng minh
+  *2: hồi 15%HP bản thân 3 lượt heal 5%HP cho 3 đồng minh
+  *3: hồi 20%HP bản thân 4 lượt heal 8%HP toàn đội
+
+____________________________________________________________
+dragon_earth_wall (effect: team_shield)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: khiên toàn đội (40+25%DEF) 3 lượt
+  *2: khiên (60+35%DEF) 3 lượt
+  *3: khiên (80+45%DEF) 4 lượt + gai 15 phản công khi khiên bị phá
+
+____________________________________________________________
+unit_skill_tiger_fang (effect: column_bleed)
+  CSV: base=18 scale=0.85 turns=2 maxT= maxH=
+  *1: ST gốc, chảy máu 2 lượt
+  *2: +20% ST, chảy máu 3 lượt
+  *3: +40% ST, chảy máu 4 lượt
+
+____________________________________________________________
+unit_skill_triceratops_charge (effect: knockback_charge)
+  CSV: base=20 scale=0.8 turns= maxT= maxH=
+  *1: ST gốc đẩy 1 ô
+  *2: +20% ST đẩy 1 ô +30% choáng
+  *3: +40% ST đẩy 2 ô +50% choáng
+
+____________________________________________________________
+scout_buff_ally (effect: scout_buff_ally)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: +10 ATK +1 nộ
+  *2: +15 ATK +2 nộ
+  *3: +20 ATK +3 nộ
+
+____________________________________________________________
+komodo_venom (effect: single_strong_poison)
+  CSV: base=18 scale=0.8 turns= maxT= maxH=
+  *1: ST gốc, độc 15/lượt 3 lượt
+  *2: +20% ST, độc 20/lượt 3 lượt
+  *3: +40% ST, độc 25/lượt 4 lượt
+
+____________________________________________________________
+unit_skill_rhino_quake (effect: rhino_counter)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: phản đòn 3 lượt
+  *2: phản đòn 4 lượt +15% ST phản
+  *3: phản đòn 5 lượt +30% ST phản
+
+____________________________________________________________
+otter_combo (effect: single_delayed_echo)
+  CSV: base=20 scale=0.85 turns= maxT= maxH=
+  *1: đòn chính + echo
+  *2: +20% ST cả 2 đòn
+  *3: +40% ST và echo gây thêm chảy máu 2 lượt
+
+____________________________________________________________
+kangaroo_uppercut (effect: double_hit)
+  CSV: base=22 scale=0.9 turns= maxT= maxH=
+  *1: 2 đòn ST gốc
+  *2: 2 đòn +20% ST
+  *3: 3 đòn +40% ST
+
+____________________________________________________________
+pack_howl_rage (effect: pack_howl_rage)
+  CSV: base= scale= turns= maxT=2 maxH=
+  *1: +2 nộ cho 2 đồng minh
+  *2: +3 nộ cho 3 đồng minh
+  *3: +4 nộ cho toàn hàng
+
+____________________________________________________________
+unit_skill_hippo_maul (effect: cone_smash)
+  CSV: base=28 scale=1.1 turns= maxT= maxH=
+  *1: 3 ô ST gốc
+  *2: 5 ô +20% ST
+  *3: 8 ô +40% ST
+
+____________________________________________________________
+wolverine_frenzy (effect: self_bersek)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: +35% ATK 3 lượt
+  *2: +50% ATK 3 lượt
+  *3: +65% ATK 4 lượt
+
+____________________________________________________________
+bison_charge (effect: damage_stun)
+  CSV: base=28 scale=1.05 turns= maxT= maxH=
+  *1: ST gốc 45% choáng
+  *2: +20% ST 60% choáng
+  *3: +40% ST 75% choáng
+
+____________________________________________________________
+horse_row_charge (effect: row_charge)
+  CSV: base=20 scale=0.85 turns= maxT= maxH=
+  *1: gây ST gốc lên tất cả mục tiêu cùng hàng
+  *2: +20% ST
+  *3: +40% ST + giảm 15% DEF 2 lượt
+
+____________________________________________________________
+shark_bite_frenzy (effect: single_burst_lifesteal)
+  CSV: base=30 scale=1.1 turns= maxT= maxH=
+  *1: ST gốc hút 25%
+  *2: +20% ST hút 35%
+  *3: +40% ST hút 45%
+
+____________________________________________________________
+unit_skill_beetle_drill (effect: true_single)
+  CSV: base=35 scale=1.2 turns= maxT= maxH=
+  *1: ST gốc 1 mục tiêu
+  *2: +20% ST +phá 10 giáp 2 lượt
+  *3: +40% ST +phá 20 giáp 2 lượt
+
+____________________________________________________________
+unit_skill_scorpion_king (effect: single_poison_slow)
+  CSV: base=32 scale=1.15 turns= maxT= maxH=
+  *1: độc 18/lượt 2 lượt
+  *2: độc 25/lượt 3 lượt lan 1 ô
+  *3: độc 35/lượt 3 lượt lan 2 ô
+
+____________________________________________________________
+unit_skill_crocodile_bite (effect: single_bleed)
+  CSV: base=38 scale=1.4 turns= maxT= maxH=
+  *1: ST gốc, máu 15/lượt 3 lượt
+  *2: +20% ST, máu 20/lượt 3 lượt
+  *3: +40% ST, máu 30/lượt 4 lượt
+
+____________________________________________________________
+unit_skill_gorilla_smash (effect: cleave_armor_break)
+  CSV: base=35 scale=1.2 turns=2 maxT= maxH=
+  *1: 3 ô, phá 15 giáp 2 lượt
+  *2: 5 ô, phá 20 giáp 2 lượt
+  *3: 8 ô, phá 25 giáp 3 lượt
+
+____________________________________________________________
+unit_skill_lion_general (effect: global_stun)
+  CSV: base=40 scale=1.0 turns= maxT= maxH=
+  *1: ST gốc 40% choáng
+  *2: +20% ST 55% choáng
+  *3: +40% ST 70% choáng 2 lượt
+
+____________________________________________________________
+unit_skill_trex_bite (effect: single_armor_break)
+  CSV: base=55 scale=2.2 turns=2 maxT= maxH=
+  *1: ST gốc, phá 20 giáp
+  *2: +20% ST, phá 30 giáp
+  *3: +40% ST, phá 40 giáp xuyên 20% DEF
+
+____________________________________________________________
+unit_skill_whale_song (effect: global_knockback)
+  CSV: base=45 scale=1.1 turns= maxT= maxH=
+  *1: ST gốc đẩy 1 ô
+  *2: +20% ST đẩy 1 ô +choáng 30%
+  *3: +40% ST đẩy 2 ô +choáng 50%
+
+____________________________________________________________
+unit_skill_chimera_flame (effect: global_poison_team)
+  CSV: base=42 scale=1.0 turns= maxT= maxH=
+  *1: ST gốc, cháy 15/lượt 3 lượt
+  *2: +20% ST, cháy 22/lượt 3 lượt
+  *3: +40% ST, cháy 30/lượt 4 lượt
+
+____________________________________________________________
+poison_spit (effect: single_poison_stack)
+  CSV: base=15 scale=0.6 turns= maxT= maxH=
+  *1: độc 12/lượt 2 lượt
+  *2: độc 18/lượt 3 lượt
+  *3: độc 25/lượt 3 lượt
+
+____________________________________________________________
+fire_breath_cone (effect: fire_breath_cone)
+  CSV: base=18 scale=0.7 turns= maxT= maxH=
+  *1: 3 ô hình nón cháy 10/lượt 2 lượt
+  *2: 5 ô nón lớn cháy 15/lượt 2 lượt
+  *3: 5 ô nón lớn cháy 20/lượt 3 lượt
+
+____________________________________________________________
+fireball_burn (effect: fireball_burn)
+  CSV: base=20 scale=0.75 turns= maxT= maxH=
+  *1: nổ 9 ô ST gốc
+  *2: nổ 9 ô +20% ST kèm cháy 10/lượt 2 lượt
+  *3: nổ 16 ô +40% ST kèm cháy 15/lượt 3 lượt
+
+____________________________________________________________
+chain_shock (effect: chain_shock)
+  CSV: base=18 scale=0.65 turns= maxT= maxH=
+  *1: lan 2 mục tiêu ST gốc
+  *2: lan 3 mục tiêu +20% ST
+  *3: lan 4 mục tiêu +40% ST
+
+____________________________________________________________
+frost_storm (effect: frost_storm)
+  CSV: base=22 scale=0.8 turns=2 maxT= maxH=
+  *1: ST gốc −15% ATK 2 lượt
+  *2: +20% ST −20% ATK 2 lượt
+  *3: +40% ST −25% ATK 3 lượt
+
+____________________________________________________________
+ice_blast_freeze (effect: ice_blast_freeze)
+  CSV: base=25 scale=0.85 turns= maxT= maxH=
+  *1: 40% đóng băng 1 lượt
+  *2: 55% đóng băng 1 lượt
+  *3: 70% đóng băng 2 lượt
+
+____________________________________________________________
+ink_bomb_blind (effect: ink_bomb_blind)
+  CSV: base=20 scale=0.7 turns= maxT= maxH=
+  *1: nổ 9 ô −chính xác 2 lượt
+  *2: nổ 9 ô +20% ST −chính xác 3 lượt
+  *3: nổ 16 ô +40% ST −chính xác 3 lượt
+
+____________________________________________________________
+ink_blast_debuff (effect: ink_blast_debuff)
+  CSV: base=22 scale=0.75 turns=2 maxT= maxH=
+  *1: ST gốc −15% DEF 2 lượt
+  *2: +20% ST −20% DEF 2 lượt
+  *3: +40% ST −25% DEF 3 lượt
+
+____________________________________________________________
+unit_skill_storm_mage (effect: column_plus_splash)
+  CSV: base=30 scale=1.0 turns= maxT= maxH=
+  *1: dội cột + lan 2 địch ST gốc
+  *2: dội cột + lan 3 địch +20% ST
+  *3: dội cột + lan toàn địch +40% ST
+
+____________________________________________________________
+unit_skill_worm_queen (effect: metamorphosis)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: +50% MATK đòn thường chuyển ST phép
+  *2: +50% MATK +buff né 12% toàn đội
+  *3: +70% MATK +buff né 20% toàn đội
+
+____________________________________________________________
+flash_blind (effect: flash_blind)
+  CSV: base=18 scale=0.55 turns= maxT= maxH=
+  *1: −15% CX 2 lượt
+  *2: −20% CX 2 lượt +30% mù 1 lượt
+  *3: −25% CX 3 lượt +45% mù 1 lượt
+
+____________________________________________________________
+dust_sleep (effect: dust_sleep)
+  CSV: base=22 scale=0.7 turns= maxT= maxH=
+  *1: nổ 9 ô 30% ngủ 1 lượt
+  *2: nổ 9 ô +20% ST 45% ngủ 1 lượt
+  *3: nổ 16 ô +40% ST 60% ngủ 2 lượt
+
+____________________________________________________________
+unit_skill_spore_mage (effect: aoe_poison)
+  CSV: base=32 scale=1.0 turns= maxT= maxH=
+  *1: AoE 9 ô ST gốc độc 15/lượt 2 lượt
+  *2: AoE 9 ô +20% ST độc 22/lượt 3 lượt
+  *3: AoE 16 ô +40% ST độc 30/lượt 3 lượt
+
+____________________________________________________________
+plague_spread (effect: plague_spread)
+  CSV: base=28 scale=0.85 turns= maxT= maxH=
+  *1: ST gốc độc 12/lượt 3 lượt lan 1 ô kề
+  *2: +20% ST độc 18/lượt lan 2 ô kề
+  *3: +40% ST độc 25/lượt lan toàn địch
+
+____________________________________________________________
+pollen_confuse (effect: pollen_confuse)
+  CSV: base=20 scale=0.6 turns= maxT= maxH=
+  *1: toàn địch ST gốc 35% silence 1 lượt
+  *2: +20% ST 50% silence 1 lượt
+  *3: +40% ST 65% silence 2 lượt
+
+____________________________________________________________
+unit_skill_beetle_mystic (effect: column_freeze)
+  CSV: base=35 scale=1.1 turns= maxT= maxH=
+  *1: cột dọc ST gốc 40% đóng băng 1 lượt
+  *2: +20% ST 55% đóng băng 1 lượt
+  *3: +40% ST 70% đóng băng 2 lượt
+
+____________________________________________________________
+unit_skill_dragon_breath (effect: global_poison_team)
+  CSV: base=42 scale=1.1 turns= maxT= maxH=
+  *1: toàn địch ST gốc cháy 18/lượt 3 lượt
+  *2: +20% ST cháy 25/lượt 3 lượt
+  *3: +40% ST cháy 35/lượt 4 lượt
+
+____________________________________________________________
+unit_skill_kraken_void (effect: random_multi)
+  CSV: base=40 scale=1.2 turns= maxT= maxH=4
+  *1: 4 xúc tu ST gốc
+  *2: 5 xúc tu +20% ST/xúc tu
+  *3: 6 xúc tu +40% ST/xúc tu
+
+____________________________________________________________
+unit_skill_kirin_thunder (effect: global_stun)
+  CSV: base=45 scale=1.1 turns= maxT= maxH=
+  *1: toàn địch ST gốc 40% choáng 1 lượt
+  *2: +20% ST 55% choáng 1 lượt
+  *3: +40% ST 70% choáng 2 lượt
+
+____________________________________________________________
+unit_skill_lich_undead (effect: column_freeze)
+  CSV: base=48 scale=1.3 turns= maxT= maxH=
+  *1: cột dọc ST gốc 50% đóng băng 1 lượt
+  *2: +20% ST 65% đóng băng 1 lượt
+  *3: +40% ST 80% đóng băng 2 lượt
+
+____________________________________________________________
+rock_throw_stun (effect: rock_throw_stun)
+  CSV: base=18 scale=0.7 turns= maxT= maxH=
+  *1: ST gốc 35% choáng 1 lượt
+  *2: +20% ST 50% choáng 1 lượt
+  *3: +40% ST 65% choáng 1 lượt
+
+____________________________________________________________
+multi_sting_poison (effect: multi_sting_poison)
+  CSV: base=15 scale=0.65 turns= maxT= maxH=2
+  *1: 2 kim độc 10/lượt 2 lượt
+  *2: 3 kim +20% ST độc 15/lượt 2 lượt
+  *3: 4 kim +40% ST độc 20/lượt 3 lượt
+
+____________________________________________________________
+heat_seek (effect: heat_seek)
+  CSV: base=20 scale=0.75 turns= maxT= maxH=
+  *1: ST gốc x2 nếu mục tiêu <50% HP
+  *2: +20% ST x2 nếu <50% HP
+  *3: +40% ST x2 nếu <40% HP
+
+____________________________________________________________
+piercing_shot (effect: piercing_shot)
+  CSV: base=18 scale=0.7 turns= maxT= maxH=
+  *1: xuyên hàng ST gốc
+  *2: +20% ST xuyên +giảm ATK 10% 1 lượt
+  *3: +40% ST xuyên +giảm ATK 15% 2 lượt
+
+____________________________________________________________
+arrow_rain (effect: arrow_rain)
+  CSV: base=12 scale=0.5 turns= maxT= maxH=4
+  *1: bắn 4 tên ST gốc
+  *2: bắn 5 tên +20% ST/tên
+  *3: bắn 6 tên +40% ST/tên
+
+____________________________________________________________
+snipe_execute (effect: snipe_execute)
+  CSV: base=22 scale=0.85 turns= maxT= maxH=
+  *1: ST gốc x2 nếu <30% HP
+  *2: +20% ST x2 nếu <30% HP
+  *3: +40% ST x2 nếu <40% HP xuyên 25% giáp
+
+____________________________________________________________
+beak_disarm (effect: beak_disarm)
+  CSV: base=20 scale=0.8 turns=1 maxT= maxH=
+  *1: ST gốc vô hiệu đòn 1 lượt
+  *2: +20% ST vô hiệu 2 lượt
+  *3: +40% ST vô hiệu 2 lượt +giảm ATK 15% 1 lượt
+
+____________________________________________________________
+rapid_fire (effect: rapid_fire)
+  CSV: base=10 scale=0.45 turns= maxT= maxH=3
+  *1: 3 phát ST gốc
+  *2: 4 phát +20% ST/phát
+  *3: 5 phát +40% ST/phát
+
+____________________________________________________________
+unit_skill_owl_nightshot (effect: single_sleep)
+  CSV: base=28 scale=1.05 turns= maxT= maxH=
+  *1: ST gốc 35% ru ngủ 1 mục tiêu 1 lượt
+  *2: +20% ST 35% ru ngủ 2 mục tiêu 1 lượt
+  *3: +40% ST 35% ru ngủ 3 mục tiêu 1 lượt
+
+____________________________________________________________
+fish_bomb_aoe (effect: fish_bomb_aoe)
+  CSV: base=25 scale=0.9 turns= maxT= maxH=
+  *1: nổ 9 ô ST gốc 30% choáng
+  *2: nổ 9 ô +20% ST 45% choáng
+  *3: nổ 16 ô +40% ST 60% choáng
+
+____________________________________________________________
+sniper_crit (effect: sniper_crit)
+  CSV: base=32 scale=1.15 turns= maxT= maxH=
+  *1: ST gốc xuyên 50% giáp
+  *2: +20% ST xuyên 50% giáp +giảm ATK 10% 1 lượt
+  *3: +40% ST xuyên 65% giáp +giảm ATK 15% 2 lượt
+
+____________________________________________________________
+fire_arrow_burn (effect: fire_arrow_burn)
+  CSV: base=28 scale=1.0 turns= maxT= maxH=
+  *1: ST gốc cháy 12/lượt 3 lượt
+  *2: +20% ST cháy 18/lượt 3 lượt
+  *3: +40% ST cháy 25/lượt 4 lượt lan 1 ô kề
+
+____________________________________________________________
+unit_skill_cat_goldbow (effect: single_armor_break)
+  CSV: base=32 scale=1.25 turns=2 maxT= maxH=
+  *1: ST gốc phá 15 giáp 2 lượt
+  *2: +20% ST phá 22 giáp 2 lượt gây cháy 10/lượt
+  *3: +40% ST phá 30 giáp 3 lượt gây cháy 15/lượt
+
+____________________________________________________________
+dark_feather_debuff (effect: dark_feather_debuff)
+  CSV: base=25 scale=0.85 turns=2 maxT= maxH=3
+  *1: 3 lông vũ ST gốc −15% ATK 2 lượt
+  *2: 4 lông vũ +20% ST −20% ATK 2 lượt
+  *3: 5 lông vũ +40% ST −25% ATK 3 lượt
+
+____________________________________________________________
+dive_bomb (effect: dive_bomb)
+  CSV: base=35 scale=1.3 turns=2 maxT= maxH=
+  *1: cột dọc ST gốc phá 15 giáp 2 lượt
+  *2: +20% ST phá 22 giáp 2 lượt
+  *3: +40% ST phá 30 giáp 3 lượt +30% choáng
+
+____________________________________________________________
+feather_bleed (effect: feather_bleed)
+  CSV: base=30 scale=1.1 turns= maxT= maxH=3
+  *1: 3 lông vũ ST gốc chảy máu 10/lượt 2 lượt
+  *2: 4 lông vũ +20% ST chảy máu 15/lượt 3 lượt
+  *3: 5 lông vũ +40% ST chảy máu 20/lượt 3 lượt
+
+____________________________________________________________
+unit_skill_phoenix_arrow (effect: cone_shot)
+  CSV: base=45 scale=1.6 turns= maxT= maxH=
+  *1: nón 3 ô ST gốc
+  *2: nón 5 ô +20% ST cháy 15/lượt 2 lượt
+  *3: nón 5 ô +40% ST cháy 22/lượt 3 lượt
+
+____________________________________________________________
+unit_skill_garuda_divine (effect: random_multi)
+  CSV: base=42 scale=1.5 turns= maxT= maxH=3
+  *1: bắn 3 kim ST gốc
+  *2: bắn 4 kim +20% ST/kim
+  *3: bắn 5 kim +40% ST/kim
+
+____________________________________________________________
+unit_skill_thunderbird_storm (effect: row_multi)
+  CSV: base=48 scale=1.7 turns= maxT= maxH=4
+  *1: xuyên hàng tối đa 4 mục tiêu 25% choáng
+  *2: +20% ST 4 mục tiêu 40% choáng
+  *3: +40% ST 5 mục tiêu 55% choáng
+
+____________________________________________________________
+unit_skill_roc_legend (effect: cross_5)
+  CSV: base=50 scale=1.8 turns= maxT= maxH=
+  *1: hình + ST gốc
+  *2: hình + +20% ST +30% choáng 1 lượt
+  *3: hình + +40% ST +50% choáng 1 lượt
+
+____________________________________________________________
+flame_combo_assassin (effect: flame_combo)
+  CSV: base=18 scale=0.75 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+quick_strike_rage (effect: quick_strike_rage)
+  CSV: base=15 scale=0.6 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+web_trap_slow (effect: web_trap_slow)
+  CSV: base=18 scale=0.7 turns=2 maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+sting_paralyze (effect: sting_paralyze)
+  CSV: base=20 scale=0.8 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_wolf_alpha (effect: self_atk_and_assist)
+  CSV: base=22 scale=0.9 turns=2 maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_mosquito_toxic (effect: lifesteal_disease)
+  CSV: base=25 scale=0.95 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+stealth_strike (effect: stealth_strike)
+  CSV: base=24 scale=0.9 turns=2 maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+double_poison_hit (effect: double_poison_hit)
+  CSV: base=12 scale=0.5 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_bat_blood (effect: single_burst_lifesteal)
+  CSV: base=30 scale=1.15 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+x_slash_bleed (effect: x_slash_bleed)
+  CSV: base=28 scale=1.1 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+backstab_crit (effect: backstab_crit)
+  CSV: base=30 scale=1.2 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+silent_kill_stealth (effect: silent_kill_stealth)
+  CSV: base=32 scale=1.2 turns=2 maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_lynx_echo (effect: single_delayed_echo)
+  CSV: base=35 scale=1.35 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_cobra_venom (effect: single_strong_poison)
+  CSV: base=35 scale=1.3 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+scavenge_heal (effect: scavenge_heal)
+  CSV: base=38 scale=1.4 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_wasp_assassin (effect: single_burst_armor_pen)
+  CSV: base=40 scale=1.5 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_panther_void (effect: assassin_execute_rage_refund)
+  CSV: base=55 scale=2.2 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+death_mark (effect: death_mark)
+  CSV: base=40 scale=1.5 turns=2 maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_wraith_shadow (effect: double_hit)
+  CSV: base=50 scale=1.8 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+unit_skill_reaper_void (effect: single_burst)
+  CSV: base=60 scale=2.5 turns= maxT= maxH=
+  *1: sát thương gốc
+  *2: +20% sát thương
+  *3: +40% sát thương
+
+____________________________________________________________
+heal_over_time (effect: heal_over_time)
+  CSV: base= scale= turns=3 maxT=3 maxH=
+  *1: 3 đồng minh hồi 5%HP/lượt 3 lượt
+  *2: 4 đồng minh hồi 7%HP/lượt 3 lượt
+  *3: toàn đội hồi 8%HP/lượt 4 lượt
+
+____________________________________________________________
+peace_heal_reduce (effect: peace_heal_reduce_dmg)
+  CSV: base=20 scale=0.6 turns=1 maxT= maxH=
+  *1: hồi (20+0.6xMATK) HP giảm 20% ST nhận 1 lượt
+  *2: hồi (30+0.8xMATK) HP giảm 25% ST nhận 2 lượt
+  *3: hồi (40+1.0xMATK) HP giảm 30% ST nhận 2 lượt cho 2 đồng minh yếu nhất
+
+____________________________________________________________
+bless_rain_mdef (effect: bless_rain_mdef)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: +15 MDEF toàn đội 2 lượt
+  *2: +20 MDEF toàn đội 3 lượt
+  *3: +25 MDEF toàn đội 3 lượt + 10% giảm ST phép nhận vĩnh viễn 2 lượt
+
+____________________________________________________________
+light_purify (effect: light_purify)
+  CSV: base= scale= turns= maxT=2 maxH=
+  *1: xóa 1 debuff 2 đồng minh hồi 20HP mỗi người
+  *2: xóa 2 debuff 3 đồng minh hồi 30HP mỗi người
+  *3: xóa 2 debuff đồng đội hồi 40HP mỗi người + tạo khiên 20HP
+
+____________________________________________________________
+mirror_reflect (effect: mirror_reflect)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: khiên (40+20%MATK) phản 25% phép 2 lượt
+  *2: khiên (60+30%MATK) phản 35% phép 2 lượt
+  *3: khiên (80+40%MATK) phản 45% phép 3 lượt lan khiên sang đồng minh kề
+
+____________________________________________________________
+unicorn_atk_buff (effect: unicorn_atk_buff)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: buff ATK +25% 3 lượt 1 đồng minh
+  *2: buff ATK +35% 3 lượt 1 đồng minh khư xắc vào đập
+  *3: buff ATK +45% 4 lượt 2 đồng minh ATK cao nhất
+
+____________________________________________________________
+spring_aoe_heal (effect: spring_aoe_heal)
+  CSV: base=25 scale=0.5 turns= maxT= maxH=
+  *1: toàn đội hồi (25+0.5xMATK) HP
+  *2: toàn đội hồi (35+0.7xMATK) HP + xóa 1 debuff
+  *3: toàn đội hồi (45+0.9xMATK) HP + xóa 1 debuff + tạo khiên 20
+
+____________________________________________________________
+root_snare (effect: root_snare_debuff)
+  CSV: base=18 scale=0.6 turns=1 maxT= maxH=
+  *1: ST gốc silence 1 lượt hồi 10%HP bản thân
+  *2: +20% ST silence 2 lượt hồi 15%HP bản thân
+  *3: +40% ST silence 2 lượt hồi 20%HP + rễ quấn 2 mục tiêu
+
+____________________________________________________________
+mimic_rage_buff (effect: mimic_rage_buff)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: sao chép 1 buff +1 nộ cho 1 đồng minh
+  *2: sao chép 2 buff +2 nộ cho 2 đồng minh
+  *3: sao chép 2 buff +3 nộ cho toàn đội + kéo dài buff gốc thêm 1 lượt
+
+____________________________________________________________
+soul_link_heal (effect: soul_link_heal)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: hồi 100% ST nhận 2 lượt 1 đồng minh
+  *2: hồi 120% ST nhận 2 lượt 1 đồng minh
+  *3: hồi 150% ST nhận 3 lượt 2 đồng minh yếu nhất
+
+____________________________________________________________
+mass_cleanse (effect: mass_cleanse)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: xóa cả debuff 1 đồng minh hồi 15%HP
+  *2: xóa cả debuff 2 đồng minh hồi 15%HP mỗi người
+  *3: xóa cả debuff toàn đội hồi 20%HP mỗi người
+
+____________________________________________________________
+wind_shield_ally (effect: wind_shield_ally)
+  CSV: base= scale= turns= maxT=2 maxH=
+  *1: khiên (35+30%MATK) 2 đồng minh yếu nhất
+  *2: khiên (50+40%MATK) 2 đồng minh yếu nhất
+  *3: khiên (65+50%MATK) 3 đồng minh yếu nhất + né 10% 2 lượt
+
+____________________________________________________________
+unit_skill_qilin_breeze (effect: column_bless)
+  CSV: base= scale= turns=2 maxT= maxH=
+  *1: cột dọc +12ATK +12% né 2 lượt
+  *2: cột dọc +16ATK +16% né 3 lượt
+  *3: cột dọc +20ATK +20% né 3 lượt + lan hàng ngang kề cột (+10ATK +10% né)
+
+____________________________________________________________
+unit_skill_peacock_dazzle (effect: global_debuff_atk)
+  CSV: base=22 scale=0.65 turns=2 maxT= maxH=
+  *1: toàn địch −30% ATK 2 lượt
+  *2: toàn địch −35% ATK 3 lượt 35% silence 1 lượt
+  *3: toàn địch −40% ATK 3 lượt 50% silence 1 lượt
+
+____________________________________________________________
+unit_skill_swan_grace (effect: shield_cleanse)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: khiên (70+0.9xMATK) xóa 1 debuff 1 đồng minh
+  *2: khiên (95+1.1xMATK) xóa 2 debuff 1 đồng minh
+  *3: khiên (120+1.3xMATK) xóa 2 debuff 2 đồng minh yếu nhất
+
+____________________________________________________________
+revive_or_heal (effect: revive_or_heal)
+  CSV: base=30 scale=0.4 turns= maxT= maxH=
+  *1: 50% hồi sinh đồng minh chết gần nhất 30%HP; không ai chết heal (30+0.4xMATK)
+  *2: 60% hồi sinh 2 đồng minh 35%HP; heal (40+0.6xMATK)
+  *3: 70% hồi sinh 2 đồng minh 40%HP; heal (50+0.8xMATK) + xóa 1 debuff toàn đội
+
+____________________________________________________________
+phoenix_rebirth (effect: phoenix_rebirth)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: hồi sinh 1 lần 30%HP; dùng skill heal đồng minh yếu nhất 40%HP
+  *2: hồi sinh 1 lần 40%HP; heal 2 đồng minh 45%HP
+  *3: hồi sinh 1 lần 50%HP; heal toàn đội 30%HP + thiêu cả địch 25 khi phượng hoàng tái sinh
+
+____________________________________________________________
+unit_skill_lizard_elder (effect: team_def_buff)
+  CSV: base= scale= turns=3 maxT= maxH=
+  *1: toàn đội +22Giáp/+22KP 3 lượt hồi 55HP yếu nhất
+  *2: +30Giáp/+30KP 3 lượt hồi 80HP 2 yếu nhất
+  *3: +38Giáp/+38KP 4 lượt hồi 110HP 2 yếu nhất + khiên (40+20%DEF) bản thân
+
+____________________________________________________________
+unit_skill_seraphim_light (effect: dual_heal)
+  CSV: base=45 scale=1.3 turns= maxT=3 maxH=
+  *1: 3 đồng minh hồi (45+1.3xMATK) HP
+  *2: 4 đồng minh hồi (60+1.6xMATK) HP
+  *3: toàn đội hồi (75+2.0xMATK) HP + xóa 1 debuff mỗi đồng minh
+
+____________________________________________________________
+unit_skill_oracle_wisdom (effect: team_rage)
+  CSV: base= scale= turns= maxT= maxH=
+  *1: +2 nộ toàn đội
+  *2: +3 nộ toàn đội + hồi 10%HP yếu nhất
+  *3: +4 nộ toàn đội + hồi 15%HP 2 đồng minh yếu nhất

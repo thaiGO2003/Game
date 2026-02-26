@@ -360,27 +360,26 @@ function formatBonusSet(bonus) {
 
   const parts = [];
 
-  // Common stat bonuses
-  if (bonus.attack) parts.push(`+${bonus.attack} Tấn công`);
-  if (bonus.defense) parts.push(`+${bonus.defense} Phòng thủ`);
-  if (bonus.hp) parts.push(`+${bonus.hp} HP`);
-  if (bonus.accuracy) parts.push(`+${bonus.accuracy}% Chính xác`);
-  if (bonus.evasion) parts.push(`+${bonus.evasion}% Né tránh`);
-  if (bonus.critChance) parts.push(`+${bonus.critChance}% Chí mạng`);
-  if (bonus.critDamage) parts.push(`+${bonus.critDamage}% Sát thương chí mạng`);
+  // Flat stat bonuses (from CSV)
+  if (bonus.defFlat) parts.push(`+${bonus.defFlat} Giáp`);
+  if (bonus.mdefFlat) parts.push(`+${bonus.mdefFlat} Kháng phép`);
 
-  // Special bonuses
-  if (bonus.shieldStart) parts.push(`+${bonus.shieldStart} Giáp ban đầu`);
-  if (bonus.startingRage) parts.push(`+${bonus.startingRage} Nộ khí ban đầu`);
-  if (bonus.lifeSteal) parts.push(`+${bonus.lifeSteal}% Hút máu`);
-  if (bonus.damageReduction) parts.push(`+${bonus.damageReduction}% Giảm sát thương`);
-  if (bonus.healingBonus) parts.push(`+${bonus.healingBonus}% Hồi máu`);
+  // Percentage stat bonuses
+  if (bonus.hpPct) parts.push(`+${Math.round(bonus.hpPct * 100)}% HP`);
+  if (bonus.atkPct) parts.push(`+${Math.round(bonus.atkPct * 100)}% Tấn công`);
+  if (bonus.matkPct) parts.push(`+${Math.round(bonus.matkPct * 100)}% Phép thuật`);
+  if (bonus.healPct) parts.push(`+${Math.round(bonus.healPct * 100)}% Hồi máu`);
+  if (bonus.evadePct) parts.push(`+${Math.round(bonus.evadePct * 100)}% Né tránh`);
+  if (bonus.critPct) parts.push(`+${Math.round(bonus.critPct * 100)}% Chí mạng`);
+  if (bonus.lifestealPct) parts.push(`+${Math.round(bonus.lifestealPct * 100)}% Hút máu`);
+
+  // Starting combat bonuses
+  if (bonus.shieldStart) parts.push(`+${bonus.shieldStart} Khiên ban đầu`);
+  if (bonus.startingRage) parts.push(`+${bonus.startingRage} Nộ ban đầu`);
 
   // Status effect bonuses
-  if (bonus.poisonOnHit) parts.push(`Độc ${bonus.poisonOnHit} khi đánh`);
-  if (bonus.burnOnHit) parts.push(`Bỏng ${bonus.burnOnHit} khi đánh`);
-  if (bonus.stunChance) parts.push(`+${bonus.stunChance}% Choáng`);
-  if (bonus.knockbackChance) parts.push(`+${bonus.knockbackChance}% Đẩy lùi`);
+  if (bonus.poisonOnHit) parts.push(`Độc ${bonus.poisonOnHit}/lượt khi đánh`);
+  if (bonus.burnOnHit) parts.push(`Cháy ${bonus.burnOnHit}/lượt khi đánh`);
 
   return parts.join(", ") || "Không có bonus";
 }
