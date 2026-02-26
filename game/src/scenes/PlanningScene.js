@@ -6095,6 +6095,22 @@ export class PlanningScene extends Phaser.Scene {
         });
         break;
       }
+      case "ram_charge_pierce": {
+        // Cừu Núi: húc xuyên — ST mục tiêu + kẻ phía sau
+        const star = attacker?.star ?? 1;
+        const starScale = this.getStarSkillMultiplier(star);
+        this.resolveDamage(attacker, target, rawSkill, skill.damageType, "SỪNG HÚC", skillOpts);
+        const pushDir = attacker.side === "LEFT" ? 1 : -1;
+        const behindCol = target.col + pushDir;
+        const behind = enemies.find(e => e.alive && e.row === target.row && e.col === behindCol);
+        if (behind) {
+          const splashDmg = Math.round(rawSkill * 0.6 * starScale);
+          this.resolveDamage(attacker, behind, splashDmg, skill.damageType, "XUYÊN QUA", { isSplash: true });
+          this.showFloatingText(behind.sprite.x, behind.sprite.y - 45, "HÚC XUYÊN", "#ffa944");
+          this.updateCombatUnitUi(behind);
+        }
+        break;
+      }
       case "knockback_charge": {
         this.resolveDamage(attacker, target, rawSkill, skill.damageType, skill.name, skillOpts);
         if (target.alive) {

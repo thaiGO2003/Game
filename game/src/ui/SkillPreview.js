@@ -66,6 +66,13 @@ function getAffectedCells(skill, unit, star = 1) {
       case "cone_shot":
         return [{ row: 1, col: 2, side: "enemy" }];
 
+      // Ram pierce: target + kẻ phía sau
+      case "ram_charge_pierce":
+        return [
+          { row: 1, col: 2, side: "enemy" },
+          { row: 1, col: 3, side: "enemy" },
+        ];
+
       // Cone shot at 2★+ expands
       // (RANGED handled below)
 
