@@ -100,6 +100,7 @@ export class TooltipController {
     let title = safeContent.title ?? "";
     let body = safeContent.body ?? "";
     const rightBody = safeContent.rightBody ?? "";
+    const col3Body = safeContent.col3Body ?? "";
 
     if (!String(body).trim() && unit) {
       const hp = `${unit.hp ?? 0}/${unit.maxHp ?? 0}`;
@@ -124,7 +125,7 @@ export class TooltipController {
       title = "Linh thú";
     }
 
-    this.show(pointer, title, body, rightBody);
+    this.show(pointer, title, body, rightBody, col3Body);
   }
 
   show(pointer, title, body, rightBody = "", col3Body = "") {

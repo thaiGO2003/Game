@@ -50,7 +50,10 @@ const EndlessPvEClassicMode = createGameModeConfig('EndlessPvEClassic', {
     goldScaling: (round) => 10,
 
     // Enemy strength scales linearly with round number
-    enemyScaling: (round) => round
+    enemyScaling: (round) => {
+        if (round <= 10) return 1;
+        return 1 + (round - 10) * 0.04;
+    }
 })
 
 // Register the mode in the registry

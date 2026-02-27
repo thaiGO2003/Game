@@ -5,7 +5,7 @@ import { PlanningScene } from "./scenes/PlanningScene.js";
 import { CombatScene } from "./scenes/CombatScene.js";
 import GameModeRegistry from "./gameModes/GameModeRegistry.js";
 import "./gameModes/EndlessPvEClassicMode.js"; // Auto-registers EndlessPvEClassic mode
-import "./gameModes/EndlessMode.js"; // Auto-registers ENDLESS mode
+
 import "./gameModes/PVPMode.js"; // Auto-registers PVP mode (stub)
 
 const BASE_WIDTH = 1600;
